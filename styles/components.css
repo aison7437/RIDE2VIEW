@@ -1,0 +1,9 @@
+.btn-primary { background: var(--brand); color: #fff; border: none; border-radius: var(--r-sm); padding: 14px 22px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.15); transition: all .2s; }
+.btn-primary:active { transform: scale(.97); }
+.btn-secondary { background: transparent; border: 1.5px solid var(--border); border-radius: var(--r-sm); padding: 13px 20px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
+.card-base { background: var(--card); border-radius: var(--r); border: .5px solid var(--border); box-shadow: var(--sh-xs); }
+.tier-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 100px; font-size: 10px; font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.tbg { background: var(--tier-g-bg); color: var(--tier-g); }
+.tbw { background: var(--tier-w-bg); color: var(--tier-w); }
+.tbs { background: var(--tier-s-bg); color: var(--tier-s); }
+.tbv { background: var(--tier-v-bg); color: var(--tier-v-l); }
