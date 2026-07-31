@@ -1,4 +1,3 @@
-/* Reusable components */
 .btn-primary { background: var(--brand); color: #fff; border: none; border-radius: var(--r-sm); padding: 14px 22px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.15); transition: all .2s; }
 .btn-primary:active { transform: scale(.97); }
 .btn-secondary { background: transparent; border: 1.5px solid var(--border); border-radius: var(--r-sm); padding: 13px 20px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink); }
