@@ -4,7 +4,7 @@
  *
  * Purpose:
  * Orchestrates location context, opportunity discovery,
- * and opportunity scoring into a ranked recommendation.
+ * and opportunity scoring into ranked recommendations.
  *
  * This workflow does not directly execute payments,
  * bookings, purchases, or other consequential actions.
@@ -23,35 +23,59 @@ const {
 } = require("../models/opportunity-scoring");
 
 
+/**
+ * Generate lifestyle recommendations.
+ *
+ * @param {Object} input - Workflow input
+ * @returns {Object} Structured recommendation result
+ */
 async function generateLifestyleRecommendations(input = {}) {
+
   const {
     user = {},
     context = {}
   } = input;
 
-  // 1. Build normalized location context
+
+  // -----------------------------------------
+  // 1. Normalize location
+  // -----------------------------------------
+
   const location = getLocationContext(
     context.location || {}
   );
 
-  // 2. Build the context used by opportunity discovery
+
+  // -----------------------------------------
+  // 2. Build discovery context
+  // -----------------------------------------
+
   const discoveryContext = {
     userGoal: context.userGoal || null,
     location,
-    budget: context.budget || null,
-    availableTime: context.availableTime || null
+    budget: context.budget ?? null,
+    availableTime: context.availableTime ?? null
   };
 
-  // 3. Discover possible opportunities
+
+  // -----------------------------------------
+  // 3. Discover opportunities
+  // -----------------------------------------
+
   const discoveryResult =
     discoverOpportunities(discoveryContext);
+
 
   const opportunities =
     Array.isArray(discoveryResult?.opportunities)
       ? discoveryResult.opportunities
       : [];
 
+
+  // -----------------------------------------
   // 4. Score and rank opportunities
+  // -----------------------------------------
+
   const rankedOpportunities =
     rankOpportunities(
       opportunities,
@@ -61,11 +85,18 @@ async function generateLifestyleRecommendations(input = {}) {
       }
     );
 
-  // 5. Return structured recommendation result
-  return {
-    success: true,
 
-    agent: "ride2view-lifestyle-agent",
+  // -----------------------------------------
+  // 5. Return structured result
+  // -----------------------------------------
+
+  return {
+
+    success:
+      discoveryResult?.success === true,
+
+    agent:
+      "ride2view-lifestyle-agent",
 
     context: {
       user,
@@ -73,13 +104,18 @@ async function generateLifestyleRecommendations(input = {}) {
     },
 
     discovery: {
-      success: discoveryResult?.success ?? true,
-      count: opportunities.length
+      success:
+        discoveryResult?.success ?? false,
+
+      count:
+        opportunities.length
     },
 
-    recommendations: rankedOpportunities,
+    recommendations:
+      rankedOpportunities,
 
-    timestamp: new Date().toISOString()
+    timestamp:
+      new Date().toISOString()
   };
 }
 
