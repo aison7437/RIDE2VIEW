@@ -4,9 +4,12 @@
  * Main execution entry point.
  *
  * Pipeline:
+ *
  * User Request
  *      ↓
- * Context
+ * Lifestyle Recommendation Workflow
+ *      ↓
+ * Location Context
  *      ↓
  * Opportunity Discovery
  *      ↓
@@ -18,41 +21,42 @@
  */
 
 const {
-  discoverOpportunities
-} = require("./tools/opportunity-discovery");
-
-const {
-  rankOpportunities
-} = require("./models/opportunity-scoring");
+  generateLifestyleRecommendations
+} = require("./workflows/lifestyle-recommendation");
 
 
 /**
- * Run the Lifestyle Agent.
+ * Run the Ride2View Lifestyle Agent.
  *
  * @param {Object} request - User request
  * @param {Object} context - User/context information
- * @returns {Object} Ranked opportunities
+ * @returns {Object} Structured lifestyle recommendations
  */
-async function runLifestyleAgent(request = {}, context = {}) {
+async function runLifestyleAgent(
+  request = {},
+  context = {}
+) {
 
-  // 1. Discover available opportunities
-  const opportunities = await discoverOpportunities(
-    request,
-    context
-  );
+  // Combine request and contextual information
+  // into the workflow input.
+  const workflowInput = {
+    user: context.user || {},
+    context: {
+      ...context,
+      request
+    }
+  };
 
-  // 2. Score and rank opportunities
-  const rankedOpportunities = rankOpportunities(
-    opportunities,
-    context
-  );
+  // Execute the recommendation workflow.
+  const result =
+    await generateLifestyleRecommendations(
+      workflowInput
+    );
 
-  // 3. Return structured result
   return {
     agent: "ride2view-lifestyle-agent",
     request,
-    recommendations: rankedOpportunities,
-    timestamp: new Date().toISOString()
+    ...result
   };
 }
 
