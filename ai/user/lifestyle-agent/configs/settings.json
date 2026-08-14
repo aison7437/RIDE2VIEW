@@ -1,0 +1,12 @@
+{
+  "agent": "lifestyle-agent",
+  "version": "1.0.0",
+  "enabled": true,
+  "personalization": true,
+  "learning": true,
+  "maxRecommendations": 10,
+  "defaultCountry": "Kenya",
+  "defaultCurrency": "KES",
+  "language": "en",
+  "requireConfirmationForActions": true
+}
