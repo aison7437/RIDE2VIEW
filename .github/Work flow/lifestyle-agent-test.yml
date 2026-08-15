@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   test-lifestyle-agent:
@@ -19,7 +20,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
+
+      - name: Verify Node.js version
+        run: node --version
 
       - name: Run Lifestyle Agent test
         working-directory: ai/user/lifestyle-agent
