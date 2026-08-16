@@ -141,6 +141,77 @@ function formatRecommendations(
 module.exports = {
   formatRecommendations:
     formatRecommendations
+};      opportunity.availableTime ||
+      context.availableTime ||
+      null;
+
+    return {
+
+      rank:
+        index + 1,
+
+      id:
+        opportunity.id ||
+        null,
+
+      title:
+        title,
+
+      description:
+        description,
+
+      category:
+        category,
+
+      service:
+        opportunity.service ||
+        null,
+
+      relevance:
+        opportunity.relevance ||
+        null,
+
+      reason:
+        opportunity.reason ||
+        "",
+
+      recommendation:
+        recommendation,
+
+      location:
+        location,
+
+      score:
+        score,
+
+      baseScore:
+        Number(rankedItem.baseScore) || 0,
+
+      reasoningScore:
+        reasoningScore,
+
+      reasoningContribution:
+        Number(
+          rankedItem.reasoningContribution
+        ) || 0,
+
+      reasoningFactors:
+        reasoningFactors,
+
+      budget:
+        budget,
+
+      availableTime:
+        availableTime
+
+    };
+
+  });
+}
+
+module.exports = {
+  formatRecommendations:
+    formatRecommendations
 };      context.budget ||
       null;
 
