@@ -3,67 +3,114 @@
  * Recommendation Formatter
  *
  * Converts ranked opportunities into
- * clean, structured user recommendations.
+ * structured user recommendations.
  */
 
-
-/**
- * Format ranked opportunities.
- *
- * @param {Array} rankedOpportunities
- * @param {Object} agentContext
- * @returns {Array}
- */
 function formatRecommendations(
-  rankedOpportunities = [],
-  agentContext = {}
+  rankedOpportunities,
+  agentContext
 ) {
 
   if (!Array.isArray(rankedOpportunities)) {
     return [];
   }
 
-  return rankedOpportunities.map(
-    (opportunity, index) => {
+  var context = agentContext || {};
 
-      const score =
-        Number(
-          opportunity?.score ??
-          opportunity?.rankingScore ??
-          opportunity?.totalScore ??
-          0
-        ) || 0;
+  return rankedOpportunities.map(function (opportunity, index) {
 
+    opportunity = opportunity || {};
 
-      const title =
-        opportunity?.title ??
-        opportunity?.name ??
-        "Lifestyle Opportunity";
+    var score = Number(opportunity.score);
 
+    if (!score) {
+      score = Number(opportunity.rankingScore);
+    }
 
-      const description =
-        opportunity?.description ??
-        opportunity?.summary ??
-        "";
+    if (!score) {
+      score = Number(opportunity.totalScore);
+    }
 
+    if (!score) {
+      score = 0;
+    }
 
-      const category =
-        opportunity?.category ??
-        null;
+    var title =
+      opportunity.title ||
+      opportunity.name ||
+      "Lifestyle Opportunity";
 
+    var description =
+      opportunity.description ||
+      opportunity.summary ||
+      "";
 
-      const recommendation =
-        opportunity?.recommendation ??
-        opportunity?.reason ??
-        description;
+    var category =
+      opportunity.category ||
+      null;
 
+    var location =
+      opportunity.location ||
+      context.location ||
+      null;
 
-      const reasoningFactors =
-        Array.isArray(
-          opportunity?.reasoningFactors
-        )
-          ? opportunity.reasoningFactors
-          : [];
+    var reasoningScore =
+      Number(opportunity.reasoningScore) || 0;
+
+    var reasoningFactors =
+      Array.isArray(opportunity.reasoningFactors)
+        ? opportunity.reasoningFactors
+        : [];
+
+    var recommendation =
+      opportunity.recommendation ||
+      opportunity.reason ||
+      description;
+
+    var budget =
+      opportunity.budget ||
+      context.budget ||
+      null;
+
+    var availableTime =
+      opportunity.availableTime ||
+      context.availableTime ||
+      null;
+
+    return {
+      rank: index + 1,
+
+      id:
+        opportunity.id ||
+        null,
+
+      title: title,
+
+      description: description,
+
+      category: category,
+
+      location: location,
+
+      score: score,
+
+      reasoningScore: reasoningScore,
+
+      reasoningFactors: reasoningFactors,
+
+      recommendation: recommendation,
+
+      budget: budget,
+
+      availableTime: availableTime
+    };
+
+  });
+}
+
+module.exports = {
+  formatRecommendations: formatRecommendations
+};          : [];
 
 
       const reasoningScore =
