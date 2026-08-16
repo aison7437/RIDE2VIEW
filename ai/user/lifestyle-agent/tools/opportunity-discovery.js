@@ -4,12 +4,14 @@
  *
  * Purpose:
  * Finds potentially useful Ride2View opportunities
- * based on the user's current goal and context.
- *
- * This layer also generates deterministic
- * compatibility signals for the reasoning
- * and scoring engines.
+ * and normalizes them through the canonical
+ * Opportunity Schema.
  */
+
+const {
+  createOpportunity
+} = require("../models/opportunity-schema");
+
 
 function discoverOpportunities(context = {}) {
 
@@ -24,7 +26,7 @@ function discoverOpportunities(context = {}) {
 
 
   // -----------------------------------------
-  // Helper signals
+  // Compatibility signals
   // -----------------------------------------
 
   const hasLocation =
@@ -55,26 +57,260 @@ function discoverOpportunities(context = {}) {
     userGoal === "housing"
   ) {
 
-    opportunities.push({
+    opportunities.push(
+      createOpportunity({
 
-      id: "property-search",
+        id: "property-search",
 
-      type: "property",
+        type: "property",
 
-      category: "property",
+        category: "property",
 
-      service: "property-search",
+        service: "property-search",
 
-      title: "Property Search",
+        title: "Property Search",
 
-      description:
-        "Find properties that match the user's location, budget and housing requirements.",
+        description:
+          "Find properties that match the user's location, budget and housing requirements.",
 
-      relevance: "high",
+        relevance: "high",
 
-      reason:
-        "The user is looking for a property.",
+        reason:
+          "The user is looking for a property.",
 
+        recommendation:
+          "Search for suitable properties in the requested location and compare options against the user's budget and available time.",
+
+        location: location,
+
+        budget: budget,
+
+        availableTime: availableTime,
+
+        locationMatch:
+          hasLocation,
+
+        budgetCompatible:
+          hasBudget,
+
+        timeCompatible:
+          hasAvailableTime,
+
+        preferenceMatch:
+          userGoal === "property",
+
+        source:
+          "ride2view"
+
+      })
+    );
+  }
+
+
+  // -----------------------------------------
+  // Mobility opportunity
+  // -----------------------------------------
+
+  if (
+    userGoal === "transport" ||
+    userGoal === "property" ||
+    userGoal === "shopping"
+  ) {
+
+    opportunities.push(
+      createOpportunity({
+
+        id: "ride-service",
+
+        type: "mobility",
+
+        category: "mobility",
+
+        service: "ride",
+
+        title: "Ride Service",
+
+        description:
+          "Arrange transportation that can support the user's journey.",
+
+        relevance: "medium",
+
+        reason:
+          "Transportation may improve the user's journey.",
+
+        recommendation:
+          "Consider a suitable ride when transportation is needed for viewing properties, shopping or reaching a destination.",
+
+        location: location,
+
+        budget: budget,
+
+        availableTime: availableTime,
+
+        locationMatch:
+          hasLocation,
+
+        budgetCompatible:
+          hasBudget,
+
+        timeCompatible:
+          hasAvailableTime,
+
+        preferenceMatch:
+          userGoal === "transport",
+
+        source:
+          "ride2view"
+
+      })
+    );
+  }
+
+
+  // -----------------------------------------
+  // Food opportunity
+  // -----------------------------------------
+
+  if (
+    userGoal === "food" ||
+    userGoal === "daily-planning"
+  ) {
+
+    opportunities.push(
+      createOpportunity({
+
+        id: "food-delivery",
+
+        type: "food",
+
+        category: "food",
+
+        service: "food-delivery",
+
+        title: "Food Delivery",
+
+        description:
+          "Find food delivery options that fit the user's current needs.",
+
+        relevance: "medium",
+
+        reason:
+          "Food services may be relevant to the user's current need.",
+
+        recommendation:
+          "Consider nearby food delivery options that fit the user's preferences and available time.",
+
+        location: location,
+
+        budget: budget,
+
+        availableTime: availableTime,
+
+        locationMatch:
+          hasLocation,
+
+        budgetCompatible:
+          hasBudget,
+
+        timeCompatible:
+          hasAvailableTime,
+
+        preferenceMatch:
+          userGoal === "food",
+
+        source:
+          "ride2view"
+
+      })
+    );
+  }
+
+
+  // -----------------------------------------
+  // Marketplace opportunity
+  // -----------------------------------------
+
+  if (
+    userGoal === "shopping" ||
+    userGoal === "moving" ||
+    userGoal === "housing"
+  ) {
+
+    opportunities.push(
+      createOpportunity({
+
+        id: "marketplace",
+
+        type: "commerce",
+
+        category: "commerce",
+
+        service: "marketplace",
+
+        title: "Marketplace",
+
+        description:
+          "Find products and services that may support the user's goal.",
+
+        relevance: "medium",
+
+        reason:
+          "Marketplace products may support the user's goal.",
+
+        recommendation:
+          "Consider relevant marketplace products or services that fit the user's requirements.",
+
+        location: location,
+
+        budget: budget,
+
+        availableTime: availableTime,
+
+        locationMatch:
+          hasLocation,
+
+        budgetCompatible:
+          hasBudget,
+
+        timeCompatible:
+          hasAvailableTime,
+
+        preferenceMatch:
+          userGoal === "shopping",
+
+        source:
+          "ride2view"
+
+      })
+    );
+  }
+
+
+  return {
+
+    success: true,
+
+    context: {
+
+      userGoal,
+
+      location,
+
+      budget,
+
+      availableTime
+
+    },
+
+    opportunities
+
+  };
+}
+
+
+module.exports = {
+  discoverOpportunities
+};
       recommendation:
         "Search for suitable properties in the requested location and compare options against the user's budget and available time.",
 
