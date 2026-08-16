@@ -3,8 +3,13 @@
  * Lifestyle Recommendation Workflow
  *
  * Purpose:
- * Orchestrates location context, opportunity discovery,
- * and opportunity scoring into ranked recommendations.
+ * Orchestrates:
+ * location context,
+ * opportunity discovery,
+ * reasoning,
+ * scoring,
+ * and ranking
+ * into structured lifestyle recommendations.
  *
  * This workflow does not directly execute payments,
  * bookings, purchases, or other consequential actions.
@@ -17,6 +22,10 @@ const {
 const {
   discoverOpportunities
 } = require("../tools/opportunity-discovery");
+
+const {
+  reasonAboutOpportunities
+} = require("../reasoning/reasoning-engine");
 
 const {
   rankOpportunities
@@ -47,14 +56,32 @@ async function generateLifestyleRecommendations(input = {}) {
 
 
   // -----------------------------------------
-  // 2. Build discovery context
+  // 2. Build unified agent context
   // -----------------------------------------
 
-  const discoveryContext = {
-    userGoal: context.userGoal || null,
+  const agentContext = {
+
+    user,
+
+    userGoal:
+      context.userGoal || null,
+
+    goal:
+      context.userGoal || null,
+
     location,
-    budget: context.budget ?? null,
-    availableTime: context.availableTime ?? null
+
+    budget:
+      context.budget ?? null,
+
+    availableTime:
+      context.availableTime ?? null,
+
+    currentActivity:
+      context.currentActivity || null,
+
+    destination:
+      context.destination || null
   };
 
 
@@ -63,31 +90,67 @@ async function generateLifestyleRecommendations(input = {}) {
   // -----------------------------------------
 
   const discoveryResult =
-    discoverOpportunities(discoveryContext);
+    discoverOpportunities(agentContext);
 
 
   const opportunities =
-    Array.isArray(discoveryResult?.opportunities)
+    Array.isArray(
+      discoveryResult?.opportunities
+    )
       ? discoveryResult.opportunities
       : [];
 
 
   // -----------------------------------------
-  // 4. Score and rank opportunities
+  // 4. Reason about opportunities
   // -----------------------------------------
 
-  const rankedOpportunities =
-    rankOpportunities(
-      opportunities,
-      {
-        user,
-        ...discoveryContext
-      }
+  const reasoningResult =
+    reasonAboutOpportunities(
+      agentContext,
+      opportunities
     );
 
 
   // -----------------------------------------
-  // 5. Return structured result
+  // 5. Attach reasoning signals
+  //    to discovered opportunities
+  // -----------------------------------------
+
+  const reasonedOpportunities =
+    opportunities.map((opportunity) => {
+
+      const reasoning =
+        reasoningResult.find(
+          (item) =>
+            item.opportunity === opportunity
+        );
+
+      return {
+        ...opportunity,
+
+        reasoningScore:
+          reasoning?.reasoningScore ?? 0,
+
+        reasoningFactors:
+          reasoning?.factors ?? []
+      };
+    });
+
+
+  // -----------------------------------------
+  // 6. Score and rank opportunities
+  // -----------------------------------------
+
+  const rankedOpportunities =
+    rankOpportunities(
+      reasonedOpportunities,
+      agentContext
+    );
+
+
+  // -----------------------------------------
+  // 7. Return structured result
   // -----------------------------------------
 
   return {
@@ -98,17 +161,136 @@ async function generateLifestyleRecommendations(input = {}) {
     agent:
       "ride2view-lifestyle-agent",
 
-    context: {
-      user,
-      ...discoveryContext
-    },
+    context:
+      agentContext,
 
     discovery: {
+
       success:
         discoveryResult?.success ?? false,
 
       count:
         opportunities.length
+    },
+
+    reasoning: {
+
+      enabled: true,
+
+      count:
+        reasoningResult.length
+    },
+
+    recommendations:
+      rankedOpportunities,
+
+    timestamp:
+      new Date().toISOString()
+  };
+}
+
+
+module.exports = {
+  generateLifestyleRecommendations
+};    destination:
+      context.destination || null
+  };
+
+
+  // -----------------------------------------
+  // 3. Discover opportunities
+  // -----------------------------------------
+
+  const discoveryResult =
+    discoverOpportunities(agentContext);
+
+
+  const opportunities =
+    Array.isArray(
+      discoveryResult?.opportunities
+    )
+      ? discoveryResult.opportunities
+      : [];
+
+
+  // -----------------------------------------
+  // 4. Reason about opportunities
+  // -----------------------------------------
+
+  const reasoningResult =
+    reasonAboutOpportunities(
+      agentContext,
+      opportunities
+    );
+
+
+  // -----------------------------------------
+  // 5. Attach reasoning signals
+  //    to discovered opportunities
+  // -----------------------------------------
+
+  const reasonedOpportunities =
+    opportunities.map((opportunity) => {
+
+      const reasoning =
+        reasoningResult.find(
+          (item) =>
+            item.opportunity === opportunity
+        );
+
+      return {
+        ...opportunity,
+
+        reasoningScore:
+          reasoning?.reasoningScore ?? 0,
+
+        reasoningFactors:
+          reasoning?.factors ?? []
+      };
+    });
+
+
+  // -----------------------------------------
+  // 6. Score and rank opportunities
+  // -----------------------------------------
+
+  const rankedOpportunities =
+    rankOpportunities(
+      reasonedOpportunities,
+      agentContext
+    );
+
+
+  // -----------------------------------------
+  // 7. Return structured result
+  // -----------------------------------------
+
+  return {
+
+    success:
+      discoveryResult?.success === true,
+
+    agent:
+      "ride2view-lifestyle-agent",
+
+    context:
+      agentContext,
+
+    discovery: {
+
+      success:
+        discoveryResult?.success ?? false,
+
+      count:
+        opportunities.length
+    },
+
+    reasoning: {
+
+      enabled: true,
+
+      count:
+        reasoningResult.length
     },
 
     recommendations:
