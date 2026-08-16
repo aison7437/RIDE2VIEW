@@ -3,11 +3,12 @@
  * Recommendation Formatter
  *
  * Converts ranked opportunities into
- * clean, user-facing recommendation objects.
+ * clean, structured user recommendations.
  */
 
+
 /**
- * Format ranked opportunities into structured recommendations.
+ * Format ranked opportunities.
  *
  * @param {Array} rankedOpportunities
  * @param {Object} agentContext
@@ -22,48 +23,105 @@ function formatRecommendations(
     return [];
   }
 
-  return rankedOpportunities.map((opportunity, index) => {
+  return rankedOpportunities.map(
+    (opportunity, index) => {
 
-    const score =
-      Number(
-        opportunity?.score ??
-        opportunity?.rankingScore ??
-        opportunity?.totalScore ??
-        0
-      ) || 0;
+      const score =
+        Number(
+          opportunity?.score ??
+          opportunity?.rankingScore ??
+          opportunity?.totalScore ??
+          0
+        ) || 0;
 
-    return {
 
-      rank:
-        index + 1,
-
-      id:
-        opportunity?.id ?? null,
-
-      title:
+      const title =
         opportunity?.title ??
         opportunity?.name ??
-        "Lifestyle Opportunity",
+        "Lifestyle Opportunity";
 
-      description:
+
+      const description =
         opportunity?.description ??
         opportunity?.summary ??
-        "",
+        "";
 
-      category:
+
+      const category =
         opportunity?.category ??
-        null,
+        null;
 
-      location:
-        opportunity?.location ??
-        agentContext?.location ??
-        null,
 
-      score,
+      const recommendation =
+        opportunity?.recommendation ??
+        opportunity?.reason ??
+        description;
 
-      reasoningScore:
+
+      const reasoningFactors =
+        Array.isArray(
+          opportunity?.reasoningFactors
+        )
+          ? opportunity.reasoningFactors
+          : [];
+
+
+      const reasoningScore =
         Number(
           opportunity?.reasoningScore
+        ) || 0;
+
+
+      return {
+
+        rank:
+          index + 1,
+
+        id:
+          opportunity?.id ?? null,
+
+        title,
+
+        description,
+
+        category,
+
+        location:
+          opportunity?.location ??
+          agentContext?.location ??
+          null,
+
+        score,
+
+        reasoningScore,
+
+        reasoningFactors,
+
+        recommendation,
+
+        budget:
+          opportunity?.budget ??
+          agentContext?.budget ??
+          null,
+
+        availableTime:
+          opportunity?.availableTime ??
+          agentContext?.availableTime ??
+          null
+
+      };
+
+    }
+  );
+}
+
+
+/**
+ * Export formatter.
+ */
+module.exports = {
+  formatRecommendations
+};          opportunity?.reasoningScore
         ) || 0,
 
       reasoningFactors:
