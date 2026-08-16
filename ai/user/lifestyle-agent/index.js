@@ -17,12 +17,14 @@
  *      ↓
  * Ranking
  *      ↓
- * Recommendation
+ * Recommendation Formatter
+ *      ↓
+ * Structured Recommendation
  */
 
 const {
   generateLifestyleRecommendations
-} = require("./workflows/lifestyle-recommendation");
+} = require("./workflows/recommendation");
 
 
 /**
