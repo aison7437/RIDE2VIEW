@@ -1,69 +1,102 @@
 /**
  * Ride2View Lifestyle Agent
- * Lifestyle Recommendation Workflow
- *
- * Pipeline:
- *
- * Location Context
- *       ↓
- * Opportunity Discovery
- *       ↓
- * Reasoning Engine
- *       ↓
- * Opportunity Scoring
- *       ↓
- * Ranked Recommendations
- *       ↓
  * Recommendation Formatter
  *
- * This workflow does not directly execute:
- * payments, bookings, purchases,
- * or other consequential actions.
+ * Converts ranked opportunities into
+ * clean, user-facing recommendation objects.
  */
-
-const {
-  getLocationContext
-} = require("../tools/location");
-
-const {
-  discoverOpportunities
-} = require("../tools/opportunity-discovery");
-
-const {
-  reasonAboutOpportunities
-} = require("../reasoning/reasoning-engine");
-
-const {
-  rankOpportunities
-} = require("../models/opportunity-scoring");
-
-const {
-  formatRecommendations
-} = require("../recommendation/recommendation-formatter");
-
 
 /**
- * Generate lifestyle recommendations.
+ * Format ranked opportunities into structured recommendations.
  *
- * @param {Object} input
- * @returns {Object}
+ * @param {Array} rankedOpportunities
+ * @param {Object} agentContext
+ * @returns {Array}
  */
-async function generateLifestyleRecommendations(input = {}) {
+function formatRecommendations(
+  rankedOpportunities = [],
+  agentContext = {}
+) {
 
-  const {
-    user = {},
-    context = {}
-  } = input;
+  if (!Array.isArray(rankedOpportunities)) {
+    return [];
+  }
+
+  return rankedOpportunities.map((opportunity, index) => {
+
+    const score =
+      Number(
+        opportunity?.score ??
+        opportunity?.rankingScore ??
+        opportunity?.totalScore ??
+        0
+      ) || 0;
+
+    return {
+
+      rank:
+        index + 1,
+
+      id:
+        opportunity?.id ?? null,
+
+      title:
+        opportunity?.title ??
+        opportunity?.name ??
+        "Lifestyle Opportunity",
+
+      description:
+        opportunity?.description ??
+        opportunity?.summary ??
+        "",
+
+      category:
+        opportunity?.category ??
+        null,
+
+      location:
+        opportunity?.location ??
+        agentContext?.location ??
+        null,
+
+      score,
+
+      reasoningScore:
+        Number(
+          opportunity?.reasoningScore
+        ) || 0,
+
+      reasoningFactors:
+        Array.isArray(
+          opportunity?.reasoningFactors
+        )
+          ? opportunity.reasoningFactors
+          : [],
+
+      recommendation:
+        opportunity?.recommendation ??
+        opportunity?.reason ??
+        opportunity?.description ??
+        "",
+
+      budget:
+        opportunity?.budget ??
+        agentContext?.budget ??
+        null,
+
+      availableTime:
+        opportunity?.availableTime ??
+        agentContext?.availableTime ??
+        null
+    };
+
+  });
+}
 
 
-  // -----------------------------------------
-  // 1. Normalize location
-  // -----------------------------------------
-
-  const location = getLocationContext(
-    context.location || {}
-  );
-
+module.exports = {
+  formatRecommendations
+};
 
   // -----------------------------------------
   // 2. Build unified agent context
