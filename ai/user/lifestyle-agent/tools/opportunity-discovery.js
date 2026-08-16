@@ -5,6 +5,10 @@
  * Purpose:
  * Finds potentially useful Ride2View opportunities
  * based on the user's current goal and context.
+ *
+ * This layer also generates deterministic
+ * compatibility signals for the reasoning
+ * and scoring engines.
  */
 
 function discoverOpportunities(context = {}) {
@@ -17,6 +21,28 @@ function discoverOpportunities(context = {}) {
     budget = null,
     availableTime = null
   } = context;
+
+
+  // -----------------------------------------
+  // Helper signals
+  // -----------------------------------------
+
+  const hasLocation =
+    !!(
+      location &&
+      (
+        location.city ||
+        location.country
+      )
+    );
+
+  const hasBudget =
+    budget !== null &&
+    budget !== undefined;
+
+  const hasAvailableTime =
+    availableTime !== null &&
+    availableTime !== undefined;
 
 
   // -----------------------------------------
@@ -56,7 +82,19 @@ function discoverOpportunities(context = {}) {
 
       budget: budget,
 
-      availableTime: availableTime
+      availableTime: availableTime,
+
+      locationMatch:
+        hasLocation,
+
+      budgetCompatible:
+        hasBudget,
+
+      timeCompatible:
+        hasAvailableTime,
+
+      preferenceMatch:
+        userGoal === "property"
 
     });
   }
@@ -99,7 +137,19 @@ function discoverOpportunities(context = {}) {
 
       budget: budget,
 
-      availableTime: availableTime
+      availableTime: availableTime,
+
+      locationMatch:
+        hasLocation,
+
+      budgetCompatible:
+        hasBudget,
+
+      timeCompatible:
+        hasAvailableTime,
+
+      preferenceMatch:
+        userGoal === "transport"
 
     });
   }
@@ -141,7 +191,19 @@ function discoverOpportunities(context = {}) {
 
       budget: budget,
 
-      availableTime: availableTime
+      availableTime: availableTime,
+
+      locationMatch:
+        hasLocation,
+
+      budgetCompatible:
+        hasBudget,
+
+      timeCompatible:
+        hasAvailableTime,
+
+      preferenceMatch:
+        userGoal === "food"
 
     });
   }
@@ -184,7 +246,19 @@ function discoverOpportunities(context = {}) {
 
       budget: budget,
 
-      availableTime: availableTime
+      availableTime: availableTime,
+
+      locationMatch:
+        hasLocation,
+
+      budgetCompatible:
+        hasBudget,
+
+      timeCompatible:
+        hasAvailableTime,
+
+      preferenceMatch:
+        userGoal === "shopping"
 
     });
   }
@@ -195,10 +269,15 @@ function discoverOpportunities(context = {}) {
     success: true,
 
     context: {
+
       userGoal,
+
       location,
+
       budget,
+
       availableTime
+
     },
 
     opportunities
