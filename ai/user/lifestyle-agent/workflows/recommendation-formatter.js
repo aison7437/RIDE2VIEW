@@ -17,23 +17,26 @@ function formatRecommendations(
 
   var context = agentContext || {};
 
-  return rankedOpportunities.map(function (opportunity, index) {
+  return rankedOpportunities.map(function (rankedItem, index) {
 
-    opportunity = opportunity || {};
+    rankedItem = rankedItem || {};
 
-    var score = Number(opportunity.score);
+    // The scoring model stores the original
+    // opportunity inside rankedItem.opportunity.
+    var opportunity =
+      rankedItem.opportunity ||
+      rankedItem;
 
-    if (!score) {
-      score = Number(opportunity.rankingScore);
-    }
+    var score =
+      Number(rankedItem.score) || 0;
 
-    if (!score) {
-      score = Number(opportunity.totalScore);
-    }
+    var reasoningScore =
+      Number(rankedItem.reasoningScore) || 0;
 
-    if (!score) {
-      score = 0;
-    }
+    var reasoningFactors =
+      Array.isArray(opportunity.reasoningFactors)
+        ? opportunity.reasoningFactors
+        : [];
 
     var title =
       opportunity.title ||
@@ -47,29 +50,98 @@ function formatRecommendations(
 
     var category =
       opportunity.category ||
+      opportunity.type ||
       null;
+
+    var recommendation =
+      opportunity.recommendation ||
+      opportunity.reason ||
+      opportunity.description ||
+      "";
 
     var location =
       opportunity.location ||
       context.location ||
       null;
 
-    var reasoningScore =
-      Number(opportunity.reasoningScore) || 0;
-
-    var reasoningFactors =
-      Array.isArray(opportunity.reasoningFactors)
-        ? opportunity.reasoningFactors
-        : [];
-
-    var recommendation =
-      opportunity.recommendation ||
-      opportunity.reason ||
-      description;
-
     var budget =
       opportunity.budget ||
       context.budget ||
+      null;
+
+    var availableTime =
+      opportunity.availableTime ||
+      context.availableTime ||
+      null;
+
+    return {
+
+      rank:
+        index + 1,
+
+      id:
+        opportunity.id ||
+        null,
+
+      title:
+        title,
+
+      description:
+        description,
+
+      category:
+        category,
+
+      service:
+        opportunity.service ||
+        null,
+
+      relevance:
+        opportunity.relevance ||
+        null,
+
+      reason:
+        opportunity.reason ||
+        "",
+
+      recommendation:
+        recommendation,
+
+      location:
+        location,
+
+      score:
+        score,
+
+      baseScore:
+        Number(rankedItem.baseScore) || 0,
+
+      reasoningScore:
+        reasoningScore,
+
+      reasoningContribution:
+        Number(
+          rankedItem.reasoningContribution
+        ) || 0,
+
+      reasoningFactors:
+        reasoningFactors,
+
+      budget:
+        budget,
+
+      availableTime:
+        availableTime
+
+    };
+
+  });
+}
+
+module.exports = {
+  formatRecommendations:
+    formatRecommendations
+};      context.budget ||
       null;
 
     var availableTime =
