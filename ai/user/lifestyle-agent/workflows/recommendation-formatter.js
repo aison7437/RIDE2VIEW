@@ -1,69 +1,45 @@
 /**
  * Ride2View Lifestyle Agent
  * Recommendation Formatter
- *
- * Converts ranked opportunities into
- * structured user recommendations.
  */
 
-function formatRecommendations(
-  rankedOpportunities,
-  agentContext
-) {
+function formatRecommendations(rankedOpportunities, agentContext) {
 
   if (!Array.isArray(rankedOpportunities)) {
     return [];
   }
 
-  var context = agentContext || {};
-
   return rankedOpportunities.map(function (opportunity, index) {
 
-    opportunity = opportunity || {};
+    var item = opportunity || {};
 
-    var score = Number(opportunity.score);
+    return {
+      rank: index + 1,
+      id: item.id || null,
+      title: item.title || item.name || "Lifestyle Opportunity",
+      description: item.description || item.summary || "",
+      category: item.category || null,
+      score: Number(item.score || item.rankingScore || item.totalScore || 0),
+      reasoningScore: Number(item.reasoningScore || 0),
+      reasoningFactors: Array.isArray(item.reasoningFactors)
+        ? item.reasoningFactors
+        : [],
+      recommendation:
+        item.recommendation ||
+        item.reason ||
+        item.description ||
+        "",
+      location: item.location || null,
+      budget: item.budget || null,
+      availableTime: item.availableTime || null
+    };
 
-    if (!score) {
-      score = Number(opportunity.rankingScore);
-    }
+  });
+}
 
-    if (!score) {
-      score = Number(opportunity.totalScore);
-    }
-
-    if (!score) {
-      score = 0;
-    }
-
-    var title =
-      opportunity.title ||
-      opportunity.name ||
-      "Lifestyle Opportunity";
-
-    var description =
-      opportunity.description ||
-      opportunity.summary ||
-      "";
-
-    var category =
-      opportunity.category ||
-      null;
-
-    var location =
-      opportunity.location ||
-      context.location ||
-      null;
-
-    var reasoningScore =
-      Number(opportunity.reasoningScore) || 0;
-
-    var reasoningFactors =
-      Array.isArray(opportunity.reasoningFactors)
-        ? opportunity.reasoningFactors
-        : [];
-
-    var recommendation =
-      opportunity.recommendation ||
+module.exports = {
+  formatRecommendations: formatRecommendations
+};      opportunity.recommendation ||
       opportunity.reason ||
       description;
 
