@@ -39,31 +39,7 @@ function formatRecommendations(rankedOpportunities, agentContext) {
 
 module.exports = {
   formatRecommendations: formatRecommendations
-};      opportunity.recommendation ||
-      opportunity.reason ||
-      description;
-
-    var budget =
-      opportunity.budget ||
-      context.budget ||
-      null;
-
-    var availableTime =
-      opportunity.availableTime ||
-      context.availableTime ||
-      null;
-
-    return {
-      rank: index + 1,
-
-      id:
-        opportunity.id ||
-        null,
-
-      title: title,
-
-      description: description,
-
+};
       category: category,
 
       location: location,
