@@ -1,0 +1,1 @@
+module.exports=Object.freeze({weights:{pickup_eta:0.30,segment_fit:0.20,reliability:0.15,vehicle_fit:0.10,acceptance:0.10,utilization:0.10,economics:0.05},maxCandidates:5,maxPickupKm:25,locationFreshnessMs:5*60*1000});
