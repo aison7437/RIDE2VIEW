@@ -23,6 +23,18 @@ function openStore(path) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS safety_decisions(
+      id TEXT PRIMARY KEY,
+      correlation_id TEXT,
+      operation TEXT NOT NULL,
+      subject_id TEXT,
+      decision TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      evidence TEXT NOT NULL,
+      policy_version TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS safety_correlation ON safety_decisions(correlation_id);
     CREATE INDEX IF NOT EXISTS booking_customer ON bookings(customer_id);
     CREATE INDEX IF NOT EXISTS dispatch_booking ON dispatch_assignments(booking_id);
     CREATE INDEX IF NOT EXISTS dispatch_driver_status ON dispatch_assignments(driver_id,status);`);
