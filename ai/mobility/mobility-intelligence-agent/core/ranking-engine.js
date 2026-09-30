@@ -1,0 +1,5 @@
+const cfg=require('../configs/matching.config');
+function n(v,d=.5){v=Number(v);return Number.isFinite(v)?Math.max(0,Math.min(1,v)):d;}
+function score(c,r){const eta=Math.max(0,Number(c.pickupEtaMinutes||60));const etaScore=Math.max(0,1-Math.min(eta,60)/60);const seg=c.segmentFit==null?1:n(c.segmentFit);const comp={pickup_eta:etaScore,segment_fit:seg,reliability:n(c.reliability),vehicle_fit:n(c.vehicleFit),acceptance:n(c.acceptanceProbability),utilization:n(c.utilizationScore),economics:n(c.economicEfficiency)};let total=0;for(const [k,w] of Object.entries(cfg.weights))total+=comp[k]*w;return {score:Number(total.toFixed(6)),components:comp};}
+function rank(cs,r){return cs.map(c=>({...c,ranking:score(c,r)})).sort((a,b)=>b.ranking.score-a.ranking.score||String(a.id).localeCompare(String(b.id)));}
+module.exports={score,rank};
