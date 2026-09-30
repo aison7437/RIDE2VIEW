@@ -6,6 +6,7 @@ const trustSafetyIntelligence = require('../../../trust-safety/trust-safety-inte
 const logisticsIntelligence = require('../../../logistics/logistics-intelligence-agent');
 const rideplateCommerceIntelligence = require('../../../commerce/rideplate-commerce-intelligence-agent');
 const schedulingIntelligence = require('../../../scheduling/scheduling-intelligence-agent');
+const supportRecovery = require('../../../support/support-recovery-agent');
 function unavailable(name){return {name,async execute(task){return {schema_version:'1.0',task_id:task.task_id,journey_id:task.journey_id,agent:name,status:'UNAVAILABLE',data:{},confidence:null,source:[],timestamp:new Date().toISOString(),warnings:['Agent not implemented'],requires_confirmation:false,error:{code:'NOT_IMPLEMENTED'}};},async healthCheck(){return {status:'UNAVAILABLE'};}};}
 function createRegistry(overrides={}){
   const lifestyleAdapter={name:'lifestyle-agent',async execute(task,context){const result=await lifestyle.runLifestyleAgent(task.input||{},context||{});return {schema_version:'1.0',task_id:task.task_id,journey_id:task.journey_id,agent:'lifestyle-agent',status:result?.success===false?'FAILED':'SUCCESS',data:result,confidence:null,source:['lifestyle-agent'],timestamp:new Date().toISOString(),warnings:[],requires_confirmation:false,error:result?.success===false?{code:'LIFESTYLE_FAILED'}:null};},async healthCheck(){return {status:'OK'};}};
@@ -18,7 +19,7 @@ function createRegistry(overrides={}){
     'trust-safety-agent':trustSafetyIntelligence,
     'logistics-agent':logisticsIntelligence,
     'rideplate-agent':rideplateCommerceIntelligence,
-    'support-agent':unavailable('support-agent')
+    'support-agent':supportRecovery
   };
   return {...base,...overrides};
 }
