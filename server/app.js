@@ -4,7 +4,7 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { openStore } = require('./store');
 const { validateListing } = require('./validation');
-const { orchestrate } = require('../ai/Core/orchestrator');
+const { searchProperties } = require('../ai/Core/journey-orchestrator/search-adapter');
 const TIERS = Object.freeze({general:650, women:750, students:450, vip:2000});
 const passwordHash = password => { const salt=randomBytes(16).toString('hex'); return salt+':'+scryptSync(password,salt,64).toString('hex'); };
 function passwordMatches(password, stored) { const [salt,hash]=stored.split(':'); const a=scryptSync(password,salt,64); const b=Buffer.from(hash,'hex'); return a.length===b.length && timingSafeEqual(a,b); }
@@ -93,8 +93,8 @@ function createApp(options={}) {
         const message=String(body.message||'').trim();if(!message || message.length>2000)fail(400,'Search message is required (maximum 2000 characters)');
         if(body.budget!=null && (!Number.isFinite(Number(body.budget)) || Number(body.budget)<=0))fail(400,'Budget must be positive');
         const listings=db.prepare('SELECT * FROM listings WHERE approved=1 AND available=1').all().map(r=>({...JSON.parse(r.payload),id:r.id}));
-        const result=await orchestrate({message,searchText:message,userGoal:'property',location:{city:String(body.city||'Nairobi'),country:'Kenya'},budget:body.budget==null?undefined:Number(body.budget),availableTime:body.availableTime,propertyOpportunities:listings,mobilityOpportunities:[]});
-        return send(200,result.primary?.result || {success:false,recommendations:[],summary:result.summary});
+        const result=await searchProperties({message,searchText:message,userGoal:'property',location:{city:String(body.city||'Nairobi'),country:'Kenya'},budget:body.budget==null?undefined:Number(body.budget),availableTime:body.availableTime,properties:listings,propertyOpportunities:listings});
+        return send(200,result);
       }
       if(path==='/api/bookings' && method==='POST') {
         requireRole(user,'customer');const listing=db.prepare('SELECT * FROM listings WHERE id=? AND approved=1 AND available=1').get(body.listingId);if(!listing)fail(409,'Listing is unavailable or not approved');

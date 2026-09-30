@@ -3,6 +3,7 @@ const {mkdtempSync,rmSync}=require('node:fs'),{tmpdir}=require('node:os'),{join}
 const {createApp}=require('../server/app');
 const {enrichOpportunityReasoning,minutes}=require('../ai/user/lifestyle-agent/reasoning/reasoning-engine');
 const {normalizeContext}=require('../ai/Core/orchestrator');
+const {searchProperties}=require('../ai/Core/journey-orchestrator/search-adapter');
 test('measured viewing duration and normalized input',()=>{
  assert.equal(minutes('1 hour'),60);assert.equal(minutes('1.5 hours'),90);assert.equal(minutes(0),null);
  assert.equal(enrichOpportunityReasoning({availableTime:'1 hour'},{timing:{duration:90}}).timeCompatible,false);
@@ -47,4 +48,13 @@ test('persistent complete journey, authorization, and payment replay protection'
  await call('/auth/logout','POST',{},customer.cookie);await call('/auth/me','GET',undefined,customer.cookie,401);
  const cross=await fetch(base+'/api/bookings',{method:'POST',headers:{Origin:'https://attacker.invalid','Content-Type':'application/json',Cookie:other.cookie},body:JSON.stringify(request)});assert.equal(cross.status,403);
  await call('/listings/'+listing.id,'PATCH',{available:false},agent.cookie);await call('/bookings','POST',request,other.cookie,409);
+});
+
+test('search adapter preserves public search recommendations contract',async()=>{
+ const result=await searchProperties(
+   {message:'Find a 2 bedroom property in Nairobi',budget:50000,properties:[{id:'P1',title:'Kilimani 2 bedroom',price:45000,location:{city:'Nairobi'},property:{bedrooms:2}}]},
+ );
+ assert.equal(result.success,true);
+ assert.equal(result.recommendations[0].id,'P1');
+ assert.equal(typeof result.journeyId,'string');
 });

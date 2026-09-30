@@ -17,3 +17,10 @@ test('critical failure blocks contaminated downstream nodes and preserves proven
  assert.equal(j.nodes.find(n=>n.node_id==='payment').status,'BLOCKED');
  assert.equal(j.debug.root_failure.failure.code,'LISTING_UNAVAILABLE');
 });
+test('property discovery workflow stops before transactional nodes',async()=>{
+ const adapters={'lifestyle-agent':ok('lifestyle-agent'),'property-agent':ok('property-agent',{properties:[{id:'P1'}]})};
+ const o=new JourneyOrchestrator({adapters});const j=await o.run({workflow:'property-discovery',message:'Find a property'});
+ assert.equal(j.completed,true);
+ assert.deepEqual(j.nodes.map(n=>n.node_id),['intent','property-search']);
+ assert.equal(j.nodes.some(n=>['booking','payment','driver','complete'].includes(n.node_id)),false);
+});
