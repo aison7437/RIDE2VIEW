@@ -108,6 +108,41 @@ function openStore(path) {
       idempotency_key TEXT NOT NULL UNIQUE,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS support_cases(
+      id TEXT PRIMARY KEY,
+      customer_id TEXT,
+      journey_id TEXT,
+      incident_type TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      affected_entity TEXT,
+      correlation_id TEXT,
+      status TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS support_case_events(
+      id TEXT PRIMARY KEY,
+      case_id TEXT NOT NULL REFERENCES support_cases(id),
+      event_type TEXT NOT NULL,
+      evidence_ref TEXT,
+      actor_id TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS support_recovery_actions(
+      id TEXT PRIMARY KEY,
+      case_id TEXT NOT NULL REFERENCES support_cases(id),
+      domain TEXT NOT NULL,
+      action TEXT NOT NULL,
+      authority_entity_id TEXT NOT NULL,
+      evidence_ref TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS support_customer ON support_cases(customer_id);
+    CREATE INDEX IF NOT EXISTS support_journey ON support_cases(journey_id);
+    CREATE INDEX IF NOT EXISTS support_correlation ON support_cases(correlation_id);
+    CREATE INDEX IF NOT EXISTS support_case_events_case ON support_case_events(case_id);
     CREATE INDEX IF NOT EXISTS reservation_resource_time ON reservations(resource_id,start_at,end_at,status);
     CREATE INDEX IF NOT EXISTS reservation_customer ON reservations(customer_id);
     CREATE INDEX IF NOT EXISTS reservation_events_reservation ON reservation_events(reservation_id);
