@@ -34,6 +34,29 @@ function openStore(path) {
       policy_version TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS logistics_shipments(
+      id TEXT PRIMARY KEY,
+      customer_id TEXT NOT NULL,
+      shipment_class TEXT NOT NULL,
+      weight_kg REAL NOT NULL,
+      pickup TEXT NOT NULL,
+      destination TEXT NOT NULL,
+      status TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS logistics_events(
+      id TEXT PRIMARY KEY,
+      shipment_id TEXT NOT NULL REFERENCES logistics_shipments(id),
+      event_type TEXT NOT NULL,
+      evidence_ref TEXT,
+      actor_id TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS logistics_customer ON logistics_shipments(customer_id);
+    CREATE INDEX IF NOT EXISTS logistics_events_shipment ON logistics_events(shipment_id);
     CREATE INDEX IF NOT EXISTS safety_correlation ON safety_decisions(correlation_id);
     CREATE INDEX IF NOT EXISTS booking_customer ON bookings(customer_id);
     CREATE INDEX IF NOT EXISTS dispatch_booking ON dispatch_assignments(booking_id);
