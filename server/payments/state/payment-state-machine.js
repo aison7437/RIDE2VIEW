@@ -1,0 +1,2 @@
+const allowed=Object.freeze({pending:['paid','failed','cancelled'],paid:['refund_pending'],refund_pending:['refunded','refund_failed'],failed:[],cancelled:[],refunded:[],refund_failed:['refund_pending']});
+function canTransition(from,to){return Boolean(allowed[from]?.includes(to));}function assertTransition(from,to){if(!canTransition(from,to)){const e=new Error('INVALID_PAYMENT_TRANSITION');e.code='INVALID_PAYMENT_TRANSITION';throw e;}return true;}module.exports={allowed,canTransition,assertTransition};
