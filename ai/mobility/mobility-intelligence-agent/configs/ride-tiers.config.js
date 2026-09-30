@@ -1,0 +1,1 @@
+module.exports=Object.freeze({general:{fare:650,priorityClasses:['standard','premium']},women:{fare:750,hard:{femaleDriver:true}},students:{fare:450,priorityClasses:['economy','standard']},vip:{fare:2000,priorityClasses:['premium','luxury']}});
