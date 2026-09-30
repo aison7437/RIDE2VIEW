@@ -1,0 +1,1 @@
+module.exports=Object.freeze({weights:Object.freeze({intentFit:.25,contextFit:.20,timingFit:.15,budgetFit:.15,trust:.10,availability:.10,crossServiceValue:.05}),supportedDomains:Object.freeze(['PROPERTY','MOBILITY','COMMERCE','LOGISTICS','EXPERIENCES','TRAVEL']),version:'1.0'});
