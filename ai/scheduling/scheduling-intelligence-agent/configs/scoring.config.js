@@ -1,0 +1,1 @@
+module.exports=Object.freeze({weights:Object.freeze({preference:0.25,travelEfficiency:0.20,waitingEfficiency:0.15,resourceUtilization:0.10,costEfficiency:0.10,bufferAdequacy:0.10,resilience:0.10}),version:'1.0'});
