@@ -1,0 +1,1 @@
+module.exports=Object.freeze({currency:'KES',tiers:Object.freeze({general:650,women:750,students:450,vip:2000}),driverPayout:Object.freeze({general:350,women:400,students:250,vip:900})});
