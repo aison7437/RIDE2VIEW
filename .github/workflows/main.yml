@@ -1,28 +1,28 @@
-name: Lifestyle Agent Tests
-
+name: Ride2View Tests
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
-  test-lifestyle-agent:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
-      - name: Run Lifestyle Agent tests
-        working-directory: ai/user/lifestyle-agent
-        run: node test.js
-      - name: Run Lifestyle Agent scenario tests
-        working-directory: ai/user/lifestyle-agent
-        run: node scenario-test.js
+      - run: npm ci
+      - name: Check all JavaScript syntax
+        run: npm run check
+      - name: Test persistence, permissions, payments, and full journey
+        run: npm test
+      - name: Test existing Lifestyle Agent scenarios
+        run: npm run test:agent
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test customer, administrator, and driver browser journey
+        run: npm run test:browser
