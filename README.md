@@ -34,7 +34,8 @@ Repository ownership and structural conventions are documented in [`docs/reposit
 - `server/`: HTTP API, input validation, role-based access, SQLite schema, payment ledger, audit and notifications.
 - `js/app.js`: connected customer and operations workspace; safe text rendering and a single voice-search controller.
 - `js/preview.js`, `css/style.css`: existing sample design split from the HTML. Transaction controls redirect to the connected workspace.
-- `ai/Core/orchestrator/`: registered Lifestyle Agent routing.
+- `ai/Core/journey-orchestrator/`: active orchestration control plane. Public property search uses its read-only discovery workflow, which stops after recommendations and cannot book, charge, or dispatch.
+- `ai/Core/orchestrator/`: legacy compatibility implementation retained temporarily while remaining callers/tests are migrated; `/api/search` no longer depends on it.
 - `ai/user/lifestyle-agent/`: active workflow in `workflows/recommendation.js`, reasoning, overall-score ranking and recommendation formatting. Other legacy experimental modules are retained for compatibility and are not the active workflow.
 
 Search injects approved database listings into the discovery provider. Time compatibility uses measured duration in minutes; a request limit is not treated as measured travel time. Missing timing remains unknown. This duration covers the supplied viewing estimate, not live traffic or travel predictions.
