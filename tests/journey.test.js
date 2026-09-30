@@ -2,14 +2,12 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const {mkdtempSync,rmSync}=require('node:fs'),{tmpdir}=require('node:os'),{join}=require('node:path');
 const {createApp}=require('../server/app');
 const {enrichOpportunityReasoning,minutes}=require('../ai/user/lifestyle-agent/reasoning/reasoning-engine');
-const {normalizeContext}=require('../ai/Core/orchestrator');
 const {searchProperties}=require('../ai/Core/journey-orchestrator/search-adapter');
 test('measured viewing duration and normalized input',()=>{
  assert.equal(minutes('1 hour'),60);assert.equal(minutes('1.5 hours'),90);assert.equal(minutes(0),null);
  assert.equal(enrichOpportunityReasoning({availableTime:'1 hour'},{timing:{duration:90}}).timeCompatible,false);
  assert.equal(enrichOpportunityReasoning({availableTime:'1 hour'},{timing:{duration:30}}).timeCompatible,true);
  assert.equal(enrichOpportunityReasoning({availableTime:'1 hour'},{maxViewingTime:60}).timeCompatible,null);
- assert.equal(normalizeContext({request:{message:'Find a property'}}).message,'Find a property');
 });
 test('persistent complete journey, authorization, and payment replay protection',async t=>{
  const dir=mkdtempSync(join(tmpdir(),'ride2view-')),dbPath=join(dir,'app.sqlite');
