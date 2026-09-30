@@ -55,6 +55,30 @@ function openStore(path) {
       actor_id TEXT,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS commerce_orders(
+      id TEXT PRIMARY KEY,
+      customer_id TEXT NOT NULL,
+      merchant_id TEXT NOT NULL,
+      basket TEXT NOT NULL,
+      total REAL NOT NULL,
+      currency TEXT NOT NULL,
+      status TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS commerce_order_events(
+      id TEXT PRIMARY KEY,
+      order_id TEXT NOT NULL REFERENCES commerce_orders(id),
+      event_type TEXT NOT NULL,
+      evidence_ref TEXT,
+      actor_id TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS commerce_customer ON commerce_orders(customer_id);
+    CREATE INDEX IF NOT EXISTS commerce_merchant_status ON commerce_orders(merchant_id,status);
+    CREATE INDEX IF NOT EXISTS commerce_events_order ON commerce_order_events(order_id);
     CREATE INDEX IF NOT EXISTS logistics_customer ON logistics_shipments(customer_id);
     CREATE INDEX IF NOT EXISTS logistics_events_shipment ON logistics_events(shipment_id);
     CREATE INDEX IF NOT EXISTS safety_correlation ON safety_decisions(correlation_id);
