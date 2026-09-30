@@ -70,25 +70,24 @@ function rvRequestedBedrooms(context = {}) {
 }
 
 
-function rvRequestedTime(context = {}) {
-  return rvNumber(
-    context.maxViewingTime ??
-    context.availableTime ??
-    context.intent?.maxViewingTime ??
-    context.constraints?.maxViewingTime
-  );
+function minutes(value) {
+  if (typeof value === "number") return Number.isFinite(value) && value > 0 ? value : null;
+  if (typeof value !== "string" || !value.trim()) return null;
+  const match = value.trim().match(/^(\d+(?:\.\d+)?)\s*(hours?|hrs?|minutes?|mins?)?$/i);
+  if (!match) return null;
+  const amount = Number(match[1]) * (/^h/i.test(match[2] || "") ? 60 : 1);
+  return amount > 0 ? amount : null;
 }
 
+function rvRequestedTime(context = {}) {
+  return minutes(context.maxViewingTime ?? context.intent?.maxViewingTime ??
+    context.constraints?.maxViewingTime ?? context.availableTime);
+}
 
 function rvDuration(opportunity = {}) {
-  return rvNumber(
-    opportunity.timing?.duration ??
-    opportunity.duration ??
-    opportunity.availableTime ??
-    opportunity.maxViewingTime
-  );
+  // A customer's requested time limit is not a measured opportunity duration.
+  return minutes(opportunity.timing?.duration ?? opportunity.duration ?? opportunity.viewingDurationMinutes);
 }
-
 
 /**
  * Apply the new reasoning signals to an already
@@ -386,7 +385,9 @@ function reasonAboutOpportunities(
      ======================================================= */
 
   opportunities.forEach(
-    (opportunity) => {
+    (rawOpportunity) => {
+
+      const opportunity = enrichOpportunityReasoning(context, rawOpportunity);
 
       let priority = 0;
 
@@ -466,7 +467,7 @@ function reasonAboutOpportunities(
             "time-context"
           );
 
-        } else {
+        } else if (opportunity.timeCompatible === false) {
 
           priority -= 20;
 
@@ -495,7 +496,7 @@ function reasonAboutOpportunities(
             "budget-context"
           );
 
-        } else {
+        } else if (opportunity.budgetCompatible === false) {
 
           /*
            * Do not destroy the opportunity.
@@ -696,6 +697,9 @@ function reasonAboutOpportunities(
 
 module.exports = {
 
-  reasonAboutOpportunities
+  reasonAboutOpportunities,
+  enrichOpportunityReasoning,
+  minutes
 
 };
+

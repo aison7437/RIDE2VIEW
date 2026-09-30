@@ -1430,7 +1430,7 @@ function formatProperty(
 
 
     timeCompatible:
-      true,
+      null,
 
 
     preferenceMatch:
@@ -1542,7 +1542,7 @@ function formatMobility(
 
 
     timeCompatible:
-      true,
+      null,
 
 
     preferenceMatch:
@@ -1632,7 +1632,7 @@ async function discoverOpportunities(
      ========================================================== */
 
   let properties =
-    PROPERTY_DATASET.filter(
+    (Array.isArray(context.propertyOpportunities) ? context.propertyOpportunities : PROPERTY_DATASET).filter(
       property =>
         matchesLocation(
           property,
@@ -1705,7 +1705,7 @@ async function discoverOpportunities(
   ) {
 
     mobility =
-      MOBILITY_DATASET.filter(
+      (Array.isArray(context.mobilityOpportunities) ? context.mobilityOpportunities : MOBILITY_DATASET).filter(
         item => {
 
           if (
@@ -1951,3 +1951,4 @@ module.exports = {
   discoverOpportunities
 
 };
+

@@ -112,7 +112,8 @@ function normalizeContext(input = {}) {
   if (typeof input === "string") {
 
     return {
-      searchText: input
+      searchText: input,
+      message: input
     };
 
   }
@@ -129,6 +130,9 @@ function normalizeContext(input = {}) {
 
   const searchText =
     input.searchText ??
+    input.message ??
+    input.request?.message ??
+    input.userRequest?.message ??
     input.query ??
     input.userRequest ??
     input.request ??
@@ -142,7 +146,10 @@ function normalizeContext(input = {}) {
     ...input,
 
     searchText:
-      String(searchText)
+      typeof searchText === "string" ? searchText : "",
+
+    message:
+      typeof searchText === "string" ? searchText : ""
 
   };
 
@@ -699,4 +706,10 @@ async function orchestrate(
       failedAgents:
         failedAgents.length,
 
-      duration
+      durationMs
+    }
+  };
+  return orchestrationResult;
+}
+
+module.exports = { orchestrate, normalizeContext, determineAgents };

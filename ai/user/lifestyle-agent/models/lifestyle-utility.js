@@ -28,9 +28,9 @@ function calculateLifestyleUtility(
    */
 
   const goalFit =
-    opportunity.relevance === "high"
+    (opportunity.relevanceLegacy ?? opportunity.relevance) === "high"
       ? 100
-      : opportunity.relevance === "medium"
+      : (opportunity.relevanceLegacy ?? opportunity.relevance) === "medium"
         ? 60
         : 20;
 
@@ -393,3 +393,4 @@ function buildUtilityExplanation(
 module.exports = {
   calculateLifestyleUtility
 };
+
