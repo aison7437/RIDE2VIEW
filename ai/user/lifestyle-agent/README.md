@@ -135,6 +135,10 @@ The Lifestyle Agent will be organized into:
 
 Current stage:
 
-Architecture and foundation.
+Lifestyle / Context Intelligence v2 is available to the Journey Orchestrator through the standard agent contract. The legacy recommendation workflow remains available for backward compatibility while domain execution belongs to specialist agents and deterministic authorities.
+
+## Authority Boundary
+
+Lifestyle understands intent, explicit/observed preferences, temporary context, constraints and which specialist capabilities may be useful. It is `RECOMMENDATION_ONLY`. It does not book properties, dispatch rides, reserve time, charge money, accept commerce orders, deliver logistics jobs or persist inferred preferences automatically. The Journey Orchestrator composes specialist capabilities; domain authorities execute real-world state changes.
 
 The agent should be implemented incrementally and integrated with the Ride2View AI Orchestrator as the platform develops.
