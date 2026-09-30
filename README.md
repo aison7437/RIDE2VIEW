@@ -29,6 +29,8 @@ There are no sample listings seeded into the live database. Tests use temporary 
 
 ## Architecture
 
+Repository ownership and structural conventions are documented in [`docs/repository-architecture.md`](docs/repository-architecture.md). New code is organized by product capability and execution responsibility rather than geographic directory trees.
+
 - `server/`: HTTP API, input validation, role-based access, SQLite schema, payment ledger, audit and notifications.
 - `js/app.js`: connected customer and operations workspace; safe text rendering and a single voice-search controller.
 - `js/preview.js`, `css/style.css`: existing sample design split from the HTML. Transaction controls redirect to the connected workspace.
