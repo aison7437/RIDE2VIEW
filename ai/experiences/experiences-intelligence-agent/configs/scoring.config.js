@@ -1,0 +1,1 @@
+module.exports=Object.freeze({weights:Object.freeze({preferenceFit:.25,timeFit:.20,budgetFit:.15,locationFit:.15,trust:.10,availability:.10,mobilityFit:.05}),categories:Object.freeze(['EVENT','NIGHTLIFE','ACTIVITY','ATTRACTION','DINING_EXPERIENCE','WELLNESS','SPORT','CULTURE']),version:'1.0'});
