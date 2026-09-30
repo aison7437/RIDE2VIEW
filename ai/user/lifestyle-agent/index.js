@@ -25,6 +25,7 @@
 const {
   generateLifestyleRecommendations
 } = require("./workflows/recommendation");
+const lifestyleIntelligenceV2 = require("./core/lifestyle-intelligence-v2");
 
 
 /* =========================================================
@@ -48,6 +49,8 @@ module.exports = {
 
   runLifestyleAgent,
 
-  generateLifestyleRecommendations
+  generateLifestyleRecommendations,
+  execute: lifestyleIntelligenceV2.execute,
+  healthCheck: lifestyleIntelligenceV2.healthCheck
 
 };
