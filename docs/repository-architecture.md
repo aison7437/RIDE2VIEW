@@ -22,11 +22,9 @@ Ride2View is organized by **product capability and execution responsibility**, n
 7. External capabilities must remain explicitly unavailable/not configured until a real provider adapter exists.
 8. Every structural refactor must pass the complete Ride2View CI suite and CodeQL before merging to `main`.
 
-## Current orchestration transition
+## Orchestration control plane
 
-`ai/Core/journey-orchestrator/` is the target orchestration control plane.
-
-`ai/Core/orchestrator/` is a legacy compatibility path still used by the existing search flow. It must not be removed merely because the newer orchestrator exists. Removal is allowed only after all callers are migrated, equivalent end-to-end behavior is tested, and repository search confirms no remaining runtime dependency.
+`ai/Core/journey-orchestrator/` is the Ride2View orchestration control plane. The former `ai/Core/orchestrator/` compatibility implementation was retired after `/api/search` migrated to the read-only property-discovery journey and its remaining test dependency was removed.
 
 ## Future market configuration
 
