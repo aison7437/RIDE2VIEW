@@ -1,0 +1,3 @@
+const config=require('../configs/freshness.config');
+function freshnessStatus(property,now=Date.now()){const raw=property.last_verified_at||property.availability_checked_at||property.updated_at||property.source_updated_at||property.created_at;if(!raw)return {status:'UNKNOWN',score:50};const t=Date.parse(raw);if(!Number.isFinite(t))return {status:'UNKNOWN',score:50};const hours=Math.max(0,(now-t)/3600000);if(hours<=config.freshHours)return {status:'FRESH',score:100,hours};if(hours<=config.agingHours)return {status:'AGING',score:75,hours};if(hours>=config.staleHours)return {status:'STALE',score:30,hours};return {status:'AGING',score:60,hours};}
+module.exports={freshnessStatus};
