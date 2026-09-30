@@ -581,7 +581,7 @@ function assertScenario(result, scenario) {
     const rankedProperties =
       propertyRecommendations.filter(
         (item) =>
-          typeof item.utilityScore === "number"
+          typeof item.score === "number"
       );
 
     for (
@@ -597,11 +597,11 @@ function assertScenario(result, scenario) {
         rankedProperties[i];
 
       if (
-        current.utilityScore >
-        previous.utilityScore
+        current.score >
+        previous.score
       ) {
         failures.push(
-          "Recommendations are not ordered by descending utility score."
+          "Recommendations are not ordered by descending opportunity score."
         );
         break;
       }

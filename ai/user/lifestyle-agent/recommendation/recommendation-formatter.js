@@ -47,6 +47,8 @@ function formatRecommendations(
 
       location: opportunity.location,
       price: opportunity.price,
+      property: opportunity.property,
+      score: opportunity.score,
 
       availability: opportunity.availability,
 
