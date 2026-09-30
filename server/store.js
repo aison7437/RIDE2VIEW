@@ -76,6 +76,41 @@ function openStore(path) {
       actor_id TEXT,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS reservations(
+      id TEXT PRIMARY KEY,
+      customer_id TEXT NOT NULL,
+      resource_id TEXT NOT NULL,
+      resource_type TEXT NOT NULL,
+      start_at TEXT NOT NULL,
+      end_at TEXT NOT NULL,
+      status TEXT NOT NULL,
+      hold_expires_at TEXT,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      dependencies TEXT NOT NULL,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS reservation_events(
+      id TEXT PRIMARY KEY,
+      reservation_id TEXT NOT NULL REFERENCES reservations(id),
+      event_type TEXT NOT NULL,
+      evidence_ref TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS reservation_revisions(
+      id TEXT PRIMARY KEY,
+      reservation_id TEXT NOT NULL REFERENCES reservations(id),
+      previous_start_at TEXT NOT NULL,
+      previous_end_at TEXT NOT NULL,
+      new_start_at TEXT NOT NULL,
+      new_end_at TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS reservation_resource_time ON reservations(resource_id,start_at,end_at,status);
+    CREATE INDEX IF NOT EXISTS reservation_customer ON reservations(customer_id);
+    CREATE INDEX IF NOT EXISTS reservation_events_reservation ON reservation_events(reservation_id);
     CREATE INDEX IF NOT EXISTS commerce_customer ON commerce_orders(customer_id);
     CREATE INDEX IF NOT EXISTS commerce_merchant_status ON commerce_orders(merchant_id,status);
     CREATE INDEX IF NOT EXISTS commerce_events_order ON commerce_order_events(order_id);
