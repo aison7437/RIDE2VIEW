@@ -5,6 +5,7 @@ const { createRegistry } = require('./agents/registry');
 const { executeWithPolicy } = require('./core/execution-engine');
 const { InMemoryJourneyStore } = require('./state/journey-store');
 const { buildPropertyViewingWorkflow } = require('./workflows/property-viewing.workflow');
+const { buildPropertyDiscoveryWorkflow } = require('./workflows/property-discovery.workflow');
 const { buildJourneyDebugView } = require('./observability/journey-debugger');
 
 class JourneyOrchestrator {
@@ -15,7 +16,7 @@ class JourneyOrchestrator {
   }
 
   async plan(input = {}) {
-    const workflow = buildPropertyViewingWorkflow(input);
+    const workflow = input.workflow==='property-discovery' ? buildPropertyDiscoveryWorkflow(input) : buildPropertyViewingWorkflow(input);
     const journey = createJourney({
       id: input.journeyId || `JRN-${randomUUID()}`,
       intent: input.intent || { type: 'property_viewing', raw: input.message || input.searchText || '' },
