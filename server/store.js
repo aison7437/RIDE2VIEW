@@ -12,7 +12,20 @@ function openStore(path) {
     CREATE TABLE IF NOT EXISTS payments(id TEXT PRIMARY KEY,booking_id TEXT UNIQUE NOT NULL REFERENCES bookings(id),amount INTEGER NOT NULL,status TEXT NOT NULL,reference TEXT UNIQUE,verified_by TEXT REFERENCES users(id),verified_at TEXT);
     CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id TEXT REFERENCES users(id),action TEXT NOT NULL,entity_id TEXT NOT NULL,details TEXT NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS notifications(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),message TEXT NOT NULL,created_at TEXT NOT NULL);
-    CREATE INDEX IF NOT EXISTS booking_customer ON bookings(customer_id);`);
+    CREATE TABLE IF NOT EXISTS dispatch_assignments(
+      id TEXT PRIMARY KEY,
+      booking_id TEXT NOT NULL REFERENCES bookings(id),
+      driver_id TEXT NOT NULL REFERENCES users(id),
+      status TEXT NOT NULL,
+      lease_expires_at TEXT,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS booking_customer ON bookings(customer_id);
+    CREATE INDEX IF NOT EXISTS dispatch_booking ON dispatch_assignments(booking_id);
+    CREATE INDEX IF NOT EXISTS dispatch_driver_status ON dispatch_assignments(driver_id,status);`);
   return db;
 }
 module.exports = { openStore };
