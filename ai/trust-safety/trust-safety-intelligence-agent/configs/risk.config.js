@@ -1,0 +1,1 @@
+module.exports=Object.freeze({severity:Object.freeze({LOW:10,MEDIUM:30,HIGH:60,CRITICAL:100}),levels:Object.freeze([{min:70,level:'CRITICAL'},{min:40,level:'HIGH'},{min:15,level:'ELEVATED'},{min:0,level:'LOW'}])});
