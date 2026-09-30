@@ -31,10 +31,10 @@ const {
    RUN LIFESTYLE AGENT
    ========================================================= */
 
-async function runLifestyleAgent(input = {}) {
+async function runLifestyleAgent(input = {}, context = {}) {
 
   return generateLifestyleRecommendations(
-    input
+    { ...context, ...input }
   );
 
 }
