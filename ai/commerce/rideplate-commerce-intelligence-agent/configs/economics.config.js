@@ -1,0 +1,1 @@
+module.exports=Object.freeze({weights:Object.freeze({totalCost:0.35,basketCompleteness:0.20,merchantReliability:0.15,preparationTime:0.10,distance:0.10,fulfillmentAvailability:0.10}),currency:'KES',version:'1.0'});
