@@ -144,7 +144,7 @@ function createApp(options={}) {
             const offered=dispatchAuthority.offer({bookingId:b.id,driverId:driver.id,idempotencyKey:String(body.idempotencyKey||('booking:'+b.id+':driver:'+driver.id)),actor:user});
             return send(200,{status:'offered',assignmentId:offered.id,safetyDecisionId:safety.id});
           } catch(e) {
-            const statuses={BOOKING_NOT_FOUND:404,DRIVER_INELIGIBLE:400,PAYMENT_OR_BOOKING_NOT_CONFIRMED:409,ASSIGNMENT_CONFLICT:409,IDEMPOTENCY_KEY_REQUIRED:400};
+            const statuses={BOOKING_NOT_FOUND:404,DRIVER_INELIGIBLE:400,PAYMENT_OR_BOOKING_NOT_CONFIRMED:409,RESERVATION_NOT_CONFIRMED:409,ASSIGNMENT_CONFLICT:409,IDEMPOTENCY_KEY_REQUIRED:400};
             fail(statuses[e.code]||409,e.code||'Dispatch offer failed');
           }
         }
