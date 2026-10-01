@@ -131,7 +131,7 @@ function createApp(options={}) {
       if(dispatchActionMatch && method==='POST'){
         requireRole(user,'driver');if(!user.verified)fail(403,'Driver approval is required');
         try{const assignment=dispatchActionMatch[2]==='accept'?dispatchAuthority.accept({assignmentId:dispatchActionMatch[1],driverId:user.id,actor:user}):dispatchAuthority.reject({assignmentId:dispatchActionMatch[1],driverId:user.id,actor:user});return send(200,{assignmentId:assignment.id,status:assignment.status,duplicate:Boolean(assignment.duplicate)});}
-        catch(e){const statuses={ASSIGNMENT_NOT_FOUND:404,NOT_ASSIGNMENT_DRIVER:403,INVALID_TRANSITION:409};fail(statuses[e.code]||409,e.code||'Dispatch response failed');}
+        catch(e){const statuses={ASSIGNMENT_NOT_FOUND:404,NOT_ASSIGNMENT_DRIVER:403,INVALID_TRANSITION:409,ASSIGNMENT_NO_LONGER_ELIGIBLE:409};fail(statuses[e.code]||409,e.code||'Dispatch response failed');}
       }
       const actionMatch=path.match(/^\/api\/bookings\/([^/]+)\/(assign|complete|cancel)$/);
       if(actionMatch && method==='POST') {
