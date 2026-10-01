@@ -22,6 +22,9 @@ function openStore(path) {
       attempts INTEGER NOT NULL DEFAULT 0,
       last_error TEXT,
       provider_request_id TEXT,
+      next_attempt_at TEXT,
+      lease_owner TEXT,
+      lease_expires_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -203,6 +206,7 @@ function openStore(path) {
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS provider_settlement_reference ON provider_settlements(provider,reference);\n    CREATE INDEX IF NOT EXISTS provider_settlement_reconciliation ON provider_settlements(reconciliation_status);\n    CREATE INDEX IF NOT EXISTS payment_intent_target ON payment_intents(payment_kind,payment_id);\n    CREATE INDEX IF NOT EXISTS payment_intent_status ON payment_intents(status);\n    CREATE INDEX IF NOT EXISTS payment_initiation_outbox_status ON payment_initiation_outbox(status,created_at);
+    CREATE INDEX IF NOT EXISTS payment_initiation_outbox_due ON payment_initiation_outbox(status,next_attempt_at,lease_expires_at);
     CREATE INDEX IF NOT EXISTS provider_callback_inbox_status ON provider_callback_inbox(status,received_at);
     CREATE INDEX IF NOT EXISTS provider_callback_inbox_correlation ON provider_callback_inbox(correlation_id);
     CREATE INDEX IF NOT EXISTS provider_payment_correlation ON provider_payment_events(correlation_id);\n    CREATE INDEX IF NOT EXISTS provider_payment_target ON provider_payment_events(payment_kind,payment_id);\n    CREATE INDEX IF NOT EXISTS ledger_reference ON financial_ledger_events(reference);\n    CREATE INDEX IF NOT EXISTS ledger_entity ON financial_ledger_events(kind,entity_id);\n    CREATE INDEX IF NOT EXISTS reconciliation_status ON reconciliation_records(status);\n    CREATE INDEX IF NOT EXISTS payment_reference_entity ON payment_references(kind,entity_id);\n    CREATE INDEX IF NOT EXISTS cancellation_status ON cancellation_operations(status);
