@@ -1,1 +1,1 @@
-module.exports={...require('./core/payment-authority'),...require('./ledger/ledger-authority'),...require('./providers/provider-boundary'),...require('./providers/mpesa-adapter')};
+module.exports={...require('./core/payment-authority'),...require('./ledger/ledger-authority'),...require('./intents/payment-intent-authority'),...require('./providers/provider-boundary'),...require('./providers/mpesa-adapter')};
