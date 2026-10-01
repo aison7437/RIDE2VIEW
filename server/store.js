@@ -10,7 +10,7 @@ function openStore(path) {
     CREATE TABLE IF NOT EXISTS listings(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL REFERENCES users(id),payload TEXT NOT NULL,approved INTEGER NOT NULL DEFAULT 0,available INTEGER NOT NULL DEFAULT 1);
     CREATE TABLE IF NOT EXISTS bookings(id TEXT PRIMARY KEY,customer_id TEXT NOT NULL REFERENCES users(id),listing_id TEXT NOT NULL REFERENCES listings(id),tier TEXT NOT NULL,amount INTEGER NOT NULL,status TEXT NOT NULL,scheduled_at TEXT NOT NULL,driver_id TEXT REFERENCES users(id),created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS payments(id TEXT PRIMARY KEY,booking_id TEXT UNIQUE NOT NULL REFERENCES bookings(id),amount INTEGER NOT NULL,status TEXT NOT NULL,reference TEXT UNIQUE,verified_by TEXT REFERENCES users(id),verified_at TEXT);
-    CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id TEXT REFERENCES users(id),action TEXT NOT NULL,entity_id TEXT NOT NULL,details TEXT NOT NULL,created_at TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS payment_references(\n      reference TEXT PRIMARY KEY,\n      kind TEXT NOT NULL,\n      entity_id TEXT NOT NULL,\n      amount INTEGER NOT NULL CHECK(amount>=0),\n      currency TEXT NOT NULL,\n      created_at TEXT NOT NULL\n    );\n    CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id TEXT REFERENCES users(id),action TEXT NOT NULL,entity_id TEXT NOT NULL,details TEXT NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS notifications(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),message TEXT NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS dispatch_assignments(
       id TEXT PRIMARY KEY,
@@ -153,7 +153,7 @@ function openStore(path) {
       evidence_ref TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
-    CREATE INDEX IF NOT EXISTS cancellation_status ON cancellation_operations(status);
+    CREATE INDEX IF NOT EXISTS payment_reference_entity ON payment_references(kind,entity_id);\n    CREATE INDEX IF NOT EXISTS cancellation_status ON cancellation_operations(status);
     CREATE INDEX IF NOT EXISTS support_customer ON support_cases(customer_id);
     CREATE INDEX IF NOT EXISTS support_journey ON support_cases(journey_id);
     CREATE INDEX IF NOT EXISTS support_correlation ON support_cases(correlation_id);
