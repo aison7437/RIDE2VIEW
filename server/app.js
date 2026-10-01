@@ -5,6 +5,9 @@ const { join } = require('node:path');
 const { openStore } = require('./store');
 const { validateListing } = require('./validation');
 const { searchProperties } = require('../ai/Core/journey-orchestrator/search-adapter');
+const { createPaymentAuthority } = require('./payments');
+const { createDispatchAuthority } = require('./mobility/dispatch');
+const { createSafetyAuthority } = require('./safety');
 const TIERS = Object.freeze({general:650, women:750, students:450, vip:2000});
 const passwordHash = password => { const salt=randomBytes(16).toString('hex'); return salt+':'+scryptSync(password,salt,64).toString('hex'); };
 function passwordMatches(password, stored) { const [salt,hash]=stored.split(':'); const a=scryptSync(password,salt,64); const b=Buffer.from(hash,'hex'); return a.length===b.length && timingSafeEqual(a,b); }
@@ -15,6 +18,7 @@ function createApp(options={}) {
   const root=join(__dirname,'..');
   const bootEmail=options.adminEmail || process.env.ADMIN_EMAIL;
   const bootPassword=options.adminPassword || process.env.ADMIN_PASSWORD;
+  let paymentAuthority,dispatchAuthority,safetyAuthority;
   if (bootEmail && bootPassword && !db.prepare('SELECT id FROM users WHERE email=?').get(bootEmail.toLowerCase())) {
     if (bootPassword.length<12) throw new Error('Administrator password must contain at least 12 characters');
     db.prepare('INSERT INTO users VALUES(?,?,?,?,?,1)').run(randomUUID(),bootEmail.toLowerCase(),'Administrator',passwordHash(bootPassword),'admin');
@@ -22,6 +26,9 @@ function createApp(options={}) {
   function transaction(fn) { db.exec('BEGIN IMMEDIATE'); try { const result=fn(); db.exec('COMMIT'); return result; } catch(e) {db.exec('ROLLBACK'); throw e;} }
   function audit(user,action,id,details={}) {db.prepare('INSERT INTO audit(actor_id,action,entity_id,details,created_at) VALUES(?,?,?,?,?)').run(user?.id || null,action,id,JSON.stringify(details),new Date().toISOString());}
   function notify(id,message) {db.prepare('INSERT INTO notifications VALUES(?,?,?,?)').run(randomUUID(),id,message,new Date().toISOString());}
+  paymentAuthority=createPaymentAuthority({db,audit,notify});
+  dispatchAuthority=createDispatchAuthority({db,audit,notify});
+  safetyAuthority=createSafetyAuthority({db,audit});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
   function requireRole(user,...roles) { if(!user) fail(401,'Sign in to continue'); if(!roles.includes(user.role)) fail(403,'This action is not permitted for this account'); }
   function getUser(req) {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(!token)return null;return db.prepare('SELECT u.id,u.name,u.email,u.role,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>?').get(digest(token),Date.now()) || null;}
@@ -107,24 +114,46 @@ function createApp(options={}) {
       }
       const verifyMatch=path.match(/^\/api\/payments\/([^/]+)\/verify$/);
       if(verifyMatch && method==='POST') {
-        requireRole(user,'admin');const payment=db.prepare('SELECT * FROM payments WHERE id=?').get(verifyMatch[1]);if(!payment)fail(404,'Payment not found');
-        const reference=String(body.reference||'').trim();if(!/^[A-Za-z0-9_-]{6,80}$/.test(reference))fail(400,'A valid transaction reference is required');if(body.amount!==payment.amount)fail(400,'Verified amount must exactly match the booking charge');
-        if(payment.status==='paid'){if(payment.reference===reference)return send(200,{success:true,duplicate:true});fail(409,'Payment was already verified with another reference');}
-        const b=bookingFor(payment.booking_id,user);if(b.status!=='requested')fail(409,'Booking cannot receive payment in its current state');
-        if(db.prepare('SELECT id FROM payments WHERE reference=?').get(reference))fail(409,'Transaction reference has already been used');
-        transaction(()=>{db.prepare('UPDATE payments SET status=\'paid\',reference=?,verified_by=?,verified_at=? WHERE id=?').run(reference,user.id,new Date().toISOString(),payment.id);db.prepare('UPDATE bookings SET status=\'confirmed\' WHERE id=?').run(b.id);audit(user,'payment.manually_verified',payment.id,{reference,amount:payment.amount});notify(b.customer_id,'Payment verified. Viewing confirmed; driver assignment pending.');});return send(200,{success:true,status:'confirmed',verification:'manual'});
+        requireRole(user,'admin');
+        try {
+          const result=paymentAuthority.verifyManual({paymentId:verifyMatch[1],reference:String(body.reference||'').trim(),amount:body.amount,actor:user});
+          return send(200,{success:true,status:'confirmed',verification:'manual',duplicate:Boolean(result.duplicate)});
+        } catch(e) {
+          const statuses={PAYMENT_NOT_FOUND:404,PAYMENT_VERIFICATION_FORBIDDEN:403,INVALID_REFERENCE:400,AMOUNT_MISMATCH:400,PAYMENT_ALREADY_VERIFIED:409,REFERENCE_REPLAY:409,BOOKING_NOT_PAYABLE:409};
+          fail(statuses[e.code]||409,e.code||'Payment verification failed');
+        }
       }
       const actionMatch=path.match(/^\/api\/bookings\/([^/]+)\/(assign|complete|cancel)$/);
       if(actionMatch && method==='POST') {
         requireRole(user,'admin','customer','driver');const b=bookingFor(actionMatch[1],user);const action=actionMatch[2];
         if(action==='assign') {
-          requireRole(user,'admin');if(b.status!=='confirmed')fail(409,'Payment must be verified before assignment');
-          const driver=db.prepare('SELECT * FROM users WHERE id=? AND role=\'driver\' AND verified=1').get(body.driverId);if(!driver)fail(400,'Choose an approved driver');
-          transaction(()=>{db.prepare('UPDATE bookings SET driver_id=?,status=\'assigned\' WHERE id=?').run(driver.id,b.id);audit(user,'driver.assigned',b.id,{driverId:driver.id});notify(driver.id,'A viewing trip has been assigned to you.');notify(b.customer_id,'Driver assigned to your viewing.');});return send(200,{status:'assigned'});
+          requireRole(user,'admin');
+          const driver=db.prepare("SELECT id,verified FROM users WHERE id=? AND role='driver'").get(body.driverId);
+          if(!driver||driver.verified!==1)fail(400,'Choose an approved driver');
+          const safety=safetyAuthority.evaluate({operation:'dispatch',subject:{id:driver.id,verified:true},signals:[],actor:user,correlationId:b.id});
+          if(!['ALLOW','ALLOW_WITH_MONITORING'].includes(safety.decision))fail(409,'Dispatch blocked by safety policy');
+          try {
+            const offered=dispatchAuthority.offer({bookingId:b.id,driverId:driver.id,idempotencyKey:String(body.idempotencyKey||('booking:'+b.id+':driver:'+driver.id)),actor:user});
+            return send(200,{status:'offered',assignmentId:offered.id,safetyDecisionId:safety.id});
+          } catch(e) {
+            const statuses={BOOKING_NOT_FOUND:404,DRIVER_INELIGIBLE:400,PAYMENT_OR_BOOKING_NOT_CONFIRMED:409,ASSIGNMENT_CONFLICT:409,IDEMPOTENCY_KEY_REQUIRED:400};
+            fail(statuses[e.code]||409,e.code||'Dispatch offer failed');
+          }
         }
         if(action==='complete') {
-          requireRole(user,'admin','driver');if(b.status!=='assigned')fail(409,'Only assigned viewings can be completed');
-          transaction(()=>{db.prepare('UPDATE bookings SET status=\'completed\' WHERE id=?').run(b.id);audit(user,'viewing.completed',b.id);notify(b.customer_id,'Your viewing is completed.');});return send(200,{status:'completed'});
+          requireRole(user,'admin','driver');
+          const assignment=db.prepare("SELECT * FROM dispatch_assignments WHERE booking_id=? AND status IN ('ASSIGNED','DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED') ORDER BY created_at DESC LIMIT 1").get(b.id);
+          if(!assignment)fail(409,'Only authority-assigned viewings can be completed');
+          if(user.role==='driver'&&assignment.driver_id!==user.id)fail(403,'Booking belongs to another driver');
+          try {
+            let current=assignment;
+            for(const state of ['DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED']){
+              if(current.status===state)continue;
+              current=dispatchAuthority.transition({assignmentId:assignment.id,to:state,actor:user});
+            }
+            audit(user,'viewing.completed',b.id,{assignmentId:assignment.id});notify(b.customer_id,'Your viewing is completed.');
+            return send(200,{status:'completed',assignmentId:assignment.id});
+          } catch(e){fail(409,e.code||'Viewing completion failed');}
         }
         if(user.role==='driver')fail(403,'Drivers cannot cancel customer bookings');if(['completed','cancelled'].includes(b.status))fail(409,'Booking cannot be cancelled');
         transaction(()=>{db.prepare('UPDATE bookings SET status=\'cancelled\' WHERE id=?').run(b.id);db.prepare('UPDATE payments SET status=CASE WHEN status=\'paid\' THEN \'refund_pending\' ELSE \'cancelled\' END WHERE booking_id=?').run(b.id);audit(user,'booking.cancelled',b.id);notify(b.customer_id,'Booking cancelled. Any paid amount is marked for refund review.');});return send(200,{status:'cancelled'});
