@@ -5,7 +5,7 @@ const { join } = require('node:path');
 const { openStore } = require('./store');
 const { validateListing } = require('./validation');
 const { searchProperties } = require('../ai/Core/journey-orchestrator/search-adapter');
-const { createPaymentAuthority, createPaymentIntentAuthority, createProviderBoundary, createPaymentSideEffectOutbox, createSideEffectRuntime, createPaymentInitiationRuntime } = require('./payments');
+const { createPaymentAuthority, createPaymentIntentAuthority, createProviderBoundary, createPaymentSideEffectOutbox, createSideEffectRuntime, createPaymentInitiationRuntime, createProviderCallbackRuntime } = require('./payments');
 const { createDispatchAuthority } = require('./mobility/dispatch');
 const { createSafetyAuthority } = require('./safety');
 const { createReservationAuthority } = require('./scheduling/reservations');
@@ -20,7 +20,7 @@ function createApp(options={}) {
   const root=join(__dirname,'..');
   const bootEmail=options.adminEmail || process.env.ADMIN_EMAIL;
   const bootPassword=options.adminPassword || process.env.ADMIN_PASSWORD;
-  let paymentAuthority,paymentIntentAuthority,providerBoundary,dispatchAuthority,safetyAuthority,reservationAuthority,sideEffectRuntime,paymentInitiationRuntime;
+  let paymentAuthority,paymentIntentAuthority,providerBoundary,dispatchAuthority,safetyAuthority,reservationAuthority,sideEffectRuntime,paymentInitiationRuntime,providerCallbackRuntime;
   if (bootEmail && bootPassword && !db.prepare('SELECT id FROM users WHERE email=?').get(bootEmail.toLowerCase())) {
     if (bootPassword.length<12) throw new Error('Administrator password must contain at least 12 characters');
     db.prepare('INSERT INTO users VALUES(?,?,?,?,?,1)').run(randomUUID(),bootEmail.toLowerCase(),'Administrator',passwordHash(bootPassword),'admin');
@@ -37,6 +37,8 @@ function createApp(options={}) {
   const externalPaymentsConnected=Object.values(paymentProviders).some(provider=>provider&&typeof provider.initiatePayment==='function');
   paymentIntentAuthority=createPaymentIntentAuthority({db,providers:paymentProviders,audit});
   providerBoundary=createProviderBoundary({db,paymentAuthority,providers:paymentProviders,audit});
+  providerCallbackRuntime=createProviderCallbackRuntime({boundary:providerBoundary,intervalMs:options.providerCallbackIntervalMs||5000,batchSize:options.providerCallbackBatchSize||20});
+  if(externalPaymentsConnected&&options.startProviderCallbackRuntime!==false)providerCallbackRuntime.start();
   paymentInitiationRuntime=createPaymentInitiationRuntime({authority:paymentIntentAuthority,intervalMs:options.paymentInitiationIntervalMs||5000,batchSize:options.paymentInitiationBatchSize||20});
   if(externalPaymentsConnected&&options.startPaymentInitiationRuntime!==false)paymentInitiationRuntime.start();
   sideEffectRuntime=createSideEffectRuntime({outbox:sideEffects,intervalMs:options.sideEffectIntervalMs||5000,batchSize:options.sideEffectBatchSize||20});
@@ -191,6 +193,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,sideEffects,sideEffectRuntime,close:async()=>{paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};
