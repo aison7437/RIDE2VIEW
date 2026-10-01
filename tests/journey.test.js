@@ -3,6 +3,7 @@ const {mkdtempSync,rmSync}=require('node:fs'),{tmpdir}=require('node:os'),{join}
 const {createApp}=require('../server/app');
 const {enrichOpportunityReasoning,minutes}=require('../ai/user/lifestyle-agent/reasoning/reasoning-engine');
 const {searchProperties}=require('../ai/Core/journey-orchestrator/search-adapter');
+const {createDispatchAuthority}=require('../server/mobility/dispatch');
 test('measured viewing duration and normalized input',()=>{
  assert.equal(minutes('1 hour'),60);assert.equal(minutes('1.5 hours'),90);assert.equal(minutes(0),null);
  assert.equal(enrichOpportunityReasoning({availableTime:'1 hour'},{timing:{duration:90}}).timeCompatible,false);
@@ -42,7 +43,7 @@ test('persistent complete journey, authorization, and payment replay protection'
  assert.equal((await call('/bookings','GET',undefined,customer.cookie)).data.bookings[0].status,'completed');assert.equal((await call('/bookings','GET',undefined,other.cookie)).data.bookings.length,0);
  const second=(await call('/bookings','POST',request,customer.cookie,201)).data;await call('/payments/'+second.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},admin,409);await call('/payments/'+second.paymentId+'/verify','POST',{reference:'RECEIPT002',amount:650},admin);await call('/bookings/'+second.id+'/cancel','POST',{},customer.cookie);
  assert.equal((await call('/bookings','GET',undefined,customer.cookie)).data.bookings.find(b=>b.id===second.id).payment_status,'refund_pending');
- const audit=(await call('/admin/audit','GET',undefined,admin)).data.events;assert(audit.some(e=>e.action==='payment.manually_verified'));assert(audit.some(e=>e.action==='viewing.completed'));
+ const audit=(await call('/admin/audit','GET',undefined,admin)).data.events;assert(audit.some(e=>e.action==='payment.manually_verified'));assert(audit.some(e=>e.action==='dispatch.trip_completed'));
  await app.close();app=createApp({dbPath});await new Promise(r=>app.server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+app.server.address().port;
  assert.equal((await call('/bookings','GET',undefined,customer.cookie)).data.bookings.find(b=>b.id===booking.id).status,'completed');
  await call('/auth/logout','POST',{},customer.cookie);await call('/auth/me','GET',undefined,customer.cookie,401);
