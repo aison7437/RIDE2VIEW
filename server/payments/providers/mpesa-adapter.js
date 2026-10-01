@@ -1,8 +1,9 @@
 const {createHmac}=require('node:crypto');
-function createMpesaAdapter({webhookSecret,initiate}={}){
+function createMpesaAdapter({webhookSecret,initiate,lookup}={}){
  function verifySignature({rawBody,signature,safeEqual}){if(!webhookSecret||!signature)return false;const expected=createHmac('sha256',webhookSecret).update(rawBody).digest('hex');return safeEqual(expected,signature);}
  function parseEvent({rawBody}){const x=JSON.parse(rawBody);return {providerEventId:x.eventId,correlationId:x.correlationId,paymentKind:x.paymentKind,paymentId:x.paymentId,type:x.type,reference:x.reference,amount:x.amount,currency:x.currency||'KES'};}
- function initiatePayment(request){if(typeof initiate!=='function')throw Object.assign(new Error('MPESA_INITIATION_NOT_CONFIGURED'),{code:'MPESA_INITIATION_NOT_CONFIGURED'});return initiate(request);}
- return {verifySignature,parseEvent,initiatePayment};
+ function initiatePayment(request){if(typeof initiate!=='function')throw Object.assign(new Error('MPESA_INITIATION_NOT_CONFIGURED'),{code:'MPESA_INITIATION_NOT_CONFIGURED'});if(!request?.correlationId)throw Object.assign(new Error('PROVIDER_IDEMPOTENCY_KEY_REQUIRED'),{code:'PROVIDER_IDEMPOTENCY_KEY_REQUIRED'});return initiate({...request,idempotencyKey:request.correlationId});}
+ function lookupPayment({correlationId}){if(typeof lookup!=='function')return null;if(!correlationId)throw Object.assign(new Error('PROVIDER_IDEMPOTENCY_KEY_REQUIRED'),{code:'PROVIDER_IDEMPOTENCY_KEY_REQUIRED'});return lookup({correlationId,idempotencyKey:correlationId});}
+ return {verifySignature,parseEvent,initiatePayment,lookupPayment};
 }
 module.exports={createMpesaAdapter};
