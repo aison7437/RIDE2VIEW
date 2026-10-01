@@ -39,7 +39,7 @@
       }
       if(user.role==='admin' && b.status==='confirmed'){
         const select=node('select');select.setAttribute('aria-label','Approved driver');for(const d of users.filter(u=>u.role==='driver'&&u.verified)){const option=node('option',d.name);option.value=d.id;select.append(option);}
-        actions.append(select,button('Assign driver',async()=>{if(!select.value)throw new Error('Approve a driver account first');await api('/bookings/'+b.id+'/assign','POST',{driverId:select.value});status('Driver assigned.');await refresh();}));
+        actions.append(select,button('Offer viewing to driver',async()=>{if(!select.value)throw new Error('Approve a driver account first');await api('/bookings/'+b.id+'/assign','POST',{driverId:select.value,idempotencyKey:'ui-offer-'+b.id+'-'+select.value});status('Viewing offered to driver. Assignment is pending driver acceptance.');await refresh();}));
       }
       if(['admin','driver'].includes(user.role)&&b.status==='assigned')actions.append(button('Complete viewing',async()=>{await api('/bookings/'+b.id+'/complete','POST',{});status('Viewing completed.');await refresh();}));
       if(['admin','customer'].includes(user.role)&&!['completed','cancelled'].includes(b.status))actions.append(button('Cancel viewing',async()=>{await api('/bookings/'+b.id+'/cancel','POST',{});status('Viewing cancelled. Paid amounts require refund review.');await refresh();}));
