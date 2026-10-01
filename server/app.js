@@ -9,6 +9,7 @@ const { createPaymentAuthority } = require('./payments');
 const { createDispatchAuthority } = require('./mobility/dispatch');
 const { createSafetyAuthority } = require('./safety');
 const { createReservationAuthority } = require('./scheduling/reservations');
+const { createCancellationCoordinator } = require('./recovery/cancellation-coordinator');
 const TIERS = Object.freeze({general:650, women:750, students:450, vip:2000});
 const passwordHash = password => { const salt=randomBytes(16).toString('hex'); return salt+':'+scryptSync(password,salt,64).toString('hex'); };
 function passwordMatches(password, stored) { const [salt,hash]=stored.split(':'); const a=scryptSync(password,salt,64); const b=Buffer.from(hash,'hex'); return a.length===b.length && timingSafeEqual(a,b); }
@@ -31,6 +32,7 @@ function createApp(options={}) {
   dispatchAuthority=createDispatchAuthority({db,audit,notify});
   safetyAuthority=createSafetyAuthority({db,audit});
   reservationAuthority=createReservationAuthority({db,audit});
+  const cancellationCoordinator=createCancellationCoordinator({db,dispatchAuthority,reservationAuthority,paymentAuthority,audit,notify});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
   function requireRole(user,...roles) { if(!user) fail(401,'Sign in to continue'); if(!roles.includes(user.role)) fail(403,'This action is not permitted for this account'); }
   function getUser(req) {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(!token)return null;return db.prepare('SELECT u.id,u.name,u.email,u.role,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>?').get(digest(token),Date.now()) || null;}
@@ -163,8 +165,8 @@ function createApp(options={}) {
             return send(200,{status:'completed',assignmentId:assignment.id});
           } catch(e){fail(409,e.code||'Viewing completion failed');}
         }
-        if(user.role==='driver')fail(403,'Drivers cannot cancel customer bookings');if(['completed','cancelled'].includes(b.status))fail(409,'Booking cannot be cancelled');
-        const payment=db.prepare('SELECT * FROM payments WHERE booking_id=?').get(b.id);const link=db.prepare('SELECT reservation_id FROM booking_reservations WHERE booking_id=?').get(b.id);try{dispatchAuthority.cancelForBooking({bookingId:b.id,actor:user});if(link){const reservation=reservationAuthority.get(link.reservation_id);if(reservation&&!['CANCELLED','HOLD_EXPIRED','COMPLETED','NO_SHOW'].includes(reservation.status))reservationAuthority.transition({reservationId:reservation.id,to:'CANCELLED',actor:user});}if(payment?.status==='paid')paymentAuthority.markRefundPending({bookingId:b.id,actor:user});else if(payment?.status==='pending')paymentAuthority.cancelPending({bookingId:b.id,actor:user});db.prepare("UPDATE bookings SET status='cancelled' WHERE id=?").run(b.id);audit(user,'booking.cancelled',b.id,{reservationId:link?.reservation_id||null});notify(b.customer_id,payment?.status==='paid'?'Booking cancelled. Paid amount is marked for refund review.':'Booking cancelled.');return send(200,{status:'cancelled',paymentStatus:payment?.status==='paid'?'refund_pending':'cancelled'});}catch(e){fail(409,e.code||'Booking cancellation failed');}
+        if(user.role==='driver')fail(403,'Drivers cannot cancel customer bookings');if(b.status==='completed')fail(409,'Booking cannot be cancelled');
+        try{const result=cancellationCoordinator.cancel({bookingId:b.id,actor:user});return send(200,result);}catch(e){fail(409,e.code||'Booking cancellation failed');}
       }
       if(path==='/api/admin/users' && method==='GET') {requireRole(user,'admin');return send(200,{users:db.prepare('SELECT id,email,name,role,verified FROM users ORDER BY name').all()});}
       const approveMatch=path.match(/^\/api\/admin\/users\/([^/]+)\/approve$/);
