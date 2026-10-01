@@ -25,6 +25,8 @@ function openStore(path) {
       next_attempt_at TEXT,
       lease_owner TEXT,
       lease_expires_at TEXT,
+      provider_acknowledgement TEXT,
+      provider_acknowledged_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
