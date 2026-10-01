@@ -1,5 +1,5 @@
 const {createHash}=require('node:crypto');
-const CURRENT_SCHEMA_VERSION=3;
+const CURRENT_SCHEMA_VERSION=4;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -21,6 +21,7 @@ function migrateLegacyPriceConfirmations(db){
  CREATE UNIQUE INDEX IF NOT EXISTS commerce_price_confirmation_active ON commerce_price_confirmations(order_id) WHERE status='ACTIVE';`);
 }
 function hardenPaymentOutbox(db){if(!tableExists(db,'payment_initiation_outbox'))return;const c=columns(db,'payment_initiation_outbox');if(!c.has('next_attempt_at'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN next_attempt_at TEXT');if(!c.has('lease_owner'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN lease_owner TEXT');if(!c.has('lease_expires_at'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN lease_expires_at TEXT');db.exec("UPDATE payment_initiation_outbox SET next_attempt_at=COALESCE(next_attempt_at,created_at) WHERE status IN ('PENDING','FAILED')");db.exec('CREATE INDEX IF NOT EXISTS payment_initiation_outbox_due ON payment_initiation_outbox(status,next_attempt_at,lease_expires_at)');}
+function addProviderInitiationEvidence(db){if(!tableExists(db,'payment_initiation_outbox'))return;const c=columns(db,'payment_initiation_outbox');if(!c.has('provider_acknowledgement'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN provider_acknowledgement TEXT');if(!c.has('provider_acknowledged_at'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN provider_acknowledged_at TEXT');}
 function addMigrationIntegrity(db){
  const c=columns(db,'schema_migrations');
  if(!c.has('checksum'))db.exec('ALTER TABLE schema_migrations ADD COLUMN checksum TEXT');
@@ -28,7 +29,8 @@ function addMigrationIntegrity(db){
 const migrations=[
  {version:1,name:'versioned-commerce-price-confirmations',definition:'v1:rebuild commerce_price_confirmations with status,supersedes,customer acknowledgement and active uniqueness',up:migrateLegacyPriceConfirmations},
  {version:2,name:'migration-integrity-checksums',definition:'v2:add checksum to schema_migrations and backfill registry checksums',up:addMigrationIntegrity},
- {version:3,name:'payment-initiation-outbox-runtime',definition:'v3:add next_attempt_at,lease_owner,lease_expires_at and due index to payment initiation outbox',up:hardenPaymentOutbox}
+ {version:3,name:'payment-initiation-outbox-runtime',definition:'v3:add next_attempt_at,lease_owner,lease_expires_at and due index to payment initiation outbox',up:hardenPaymentOutbox},
+ {version:4,name:'provider-initiation-evidence',definition:'v4:add durable provider acknowledgement evidence fields to payment initiation outbox',up:addProviderInitiationEvidence}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}
