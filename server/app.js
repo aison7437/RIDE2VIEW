@@ -5,7 +5,7 @@ const { join } = require('node:path');
 const { openStore } = require('./store');
 const { validateListing } = require('./validation');
 const { searchProperties } = require('../ai/Core/journey-orchestrator/search-adapter');
-const { createPaymentAuthority } = require('./payments');
+const { createPaymentAuthority, createPaymentSideEffectOutbox, createSideEffectRuntime } = require('./payments');
 const { createDispatchAuthority } = require('./mobility/dispatch');
 const { createSafetyAuthority } = require('./safety');
 const { createReservationAuthority } = require('./scheduling/reservations');
@@ -20,7 +20,7 @@ function createApp(options={}) {
   const root=join(__dirname,'..');
   const bootEmail=options.adminEmail || process.env.ADMIN_EMAIL;
   const bootPassword=options.adminPassword || process.env.ADMIN_PASSWORD;
-  let paymentAuthority,dispatchAuthority,safetyAuthority,reservationAuthority;
+  let paymentAuthority,dispatchAuthority,safetyAuthority,reservationAuthority,sideEffectRuntime;
   if (bootEmail && bootPassword && !db.prepare('SELECT id FROM users WHERE email=?').get(bootEmail.toLowerCase())) {
     if (bootPassword.length<12) throw new Error('Administrator password must contain at least 12 characters');
     db.prepare('INSERT INTO users VALUES(?,?,?,?,?,1)').run(randomUUID(),bootEmail.toLowerCase(),'Administrator',passwordHash(bootPassword),'admin');
@@ -28,7 +28,13 @@ function createApp(options={}) {
   function transaction(fn) { db.exec('BEGIN IMMEDIATE'); try { const result=fn(); db.exec('COMMIT'); return result; } catch(e) {db.exec('ROLLBACK'); throw e;} }
   function audit(user,action,id,details={}) {db.prepare('INSERT INTO audit(actor_id,action,entity_id,details,created_at) VALUES(?,?,?,?,?)').run(user?.id || null,action,id,JSON.stringify(details),new Date().toISOString());}
   function notify(id,message) {db.prepare('INSERT INTO notifications VALUES(?,?,?,?)').run(randomUUID(),id,message,new Date().toISOString());}
-  paymentAuthority=createPaymentAuthority({db,audit,notify});
+  const sideEffects=createPaymentSideEffectOutbox({db,handlers:{
+    BOOKING_PAYMENT_VERIFIED:payload=>notify(payload.customerId,'Payment verified. Viewing confirmed; driver assignment pending.'),
+    COMMERCE_PAYMENT_VERIFIED:()=>{}
+  }});
+  paymentAuthority=createPaymentAuthority({db,audit,notify,sideEffects});
+  sideEffectRuntime=createSideEffectRuntime({outbox:sideEffects,intervalMs:options.sideEffectIntervalMs||5000,batchSize:options.sideEffectBatchSize||20});
+  if(options.startSideEffectRuntime!==false)sideEffectRuntime.start();
   dispatchAuthority=createDispatchAuthority({db,audit,notify});
   safetyAuthority=createSafetyAuthority({db,audit});
   reservationAuthority=createReservationAuthority({db,audit});
@@ -179,6 +185,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,close:async()=>{if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,sideEffects,sideEffectRuntime,close:async()=>{sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};
