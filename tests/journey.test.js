@@ -34,7 +34,7 @@ test('persistent complete journey, authorization, and payment replay protection'
  await call('/bookings/'+booking.id+'/assign','POST',{driverId:driver.id},admin,409);
  await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},customer.cookie,403);
  await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:1},admin,400);
- await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},admin);
+ const verified=(await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},admin)).data;assert.equal(verified.reservationStatus,'CONFIRMED');
  assert.equal((await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},admin)).data.duplicate,true);
  await call('/bookings/'+booking.id+'/assign','POST',{driverId:wrongDriver.id},admin,400);
  const offer=(await call('/bookings/'+booking.id+'/assign','POST',{driverId:driver.id,idempotencyKey:'dispatch-'+booking.id},admin)).data;assert.equal(offer.status,'offered');
