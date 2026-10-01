@@ -113,6 +113,15 @@ function openStore(path) {
       idempotency_key TEXT NOT NULL UNIQUE,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS cancellation_operations(
+      id TEXT PRIMARY KEY,
+      booking_id TEXT UNIQUE NOT NULL REFERENCES bookings(id),
+      status TEXT NOT NULL,
+      current_step TEXT NOT NULL,
+      last_error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS support_cases(
       id TEXT PRIMARY KEY,
       customer_id TEXT,
@@ -144,6 +153,7 @@ function openStore(path) {
       evidence_ref TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE INDEX IF NOT EXISTS cancellation_status ON cancellation_operations(status);
     CREATE INDEX IF NOT EXISTS support_customer ON support_cases(customer_id);
     CREATE INDEX IF NOT EXISTS support_journey ON support_cases(journey_id);
     CREATE INDEX IF NOT EXISTS support_correlation ON support_cases(correlation_id);
