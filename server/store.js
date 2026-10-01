@@ -68,7 +68,7 @@ function openStore(path) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS commerce_order_events(
+    CREATE TABLE IF NOT EXISTS commerce_payments(\n      id TEXT PRIMARY KEY,\n      order_id TEXT UNIQUE NOT NULL REFERENCES commerce_orders(id),\n      amount INTEGER NOT NULL,\n      currency TEXT NOT NULL,\n      status TEXT NOT NULL,\n      reference TEXT UNIQUE,\n      verified_by TEXT REFERENCES users(id),\n      verified_at TEXT\n    );\n    CREATE TABLE IF NOT EXISTS commerce_order_shipments(\n      order_id TEXT PRIMARY KEY REFERENCES commerce_orders(id),\n      shipment_id TEXT UNIQUE NOT NULL REFERENCES logistics_shipments(id),\n      created_at TEXT NOT NULL\n    );\n    CREATE TABLE IF NOT EXISTS commerce_order_events(
       id TEXT PRIMARY KEY,
       order_id TEXT NOT NULL REFERENCES commerce_orders(id),
       event_type TEXT NOT NULL,
@@ -162,7 +162,7 @@ function openStore(path) {
     CREATE INDEX IF NOT EXISTS reservation_resource_time ON reservations(resource_id,start_at,end_at,status);
     CREATE INDEX IF NOT EXISTS reservation_customer ON reservations(customer_id);
     CREATE INDEX IF NOT EXISTS reservation_events_reservation ON reservation_events(reservation_id);
-    CREATE INDEX IF NOT EXISTS commerce_customer ON commerce_orders(customer_id);
+    CREATE INDEX IF NOT EXISTS commerce_payment_order ON commerce_payments(order_id);\n    CREATE INDEX IF NOT EXISTS commerce_shipment_order ON commerce_order_shipments(order_id);\n    CREATE INDEX IF NOT EXISTS commerce_customer ON commerce_orders(customer_id);
     CREATE INDEX IF NOT EXISTS commerce_merchant_status ON commerce_orders(merchant_id,status);
     CREATE INDEX IF NOT EXISTS commerce_events_order ON commerce_order_events(order_id);
     CREATE INDEX IF NOT EXISTS logistics_customer ON logistics_shipments(customer_id);
