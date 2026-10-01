@@ -165,7 +165,7 @@ function createApp(options={}) {
             return send(200,{status:'completed',assignmentId:assignment.id});
           } catch(e){fail(409,e.code||'Viewing completion failed');}
         }
-        if(user.role==='driver')fail(403,'Drivers cannot cancel customer bookings');if(['completed','cancelled'].includes(b.status))fail(409,'Booking cannot be cancelled');
+        if(user.role==='driver')fail(403,'Drivers cannot cancel customer bookings');if(b.status==='completed')fail(409,'Booking cannot be cancelled');
         try{const result=cancellationCoordinator.cancel({bookingId:b.id,actor:user});return send(200,result);}catch(e){fail(409,e.code||'Booking cancellation failed');}
       }
       if(path==='/api/admin/users' && method==='GET') {requireRole(user,'admin');return send(200,{users:db.prepare('SELECT id,email,name,role,verified FROM users ORDER BY name').all()});}
