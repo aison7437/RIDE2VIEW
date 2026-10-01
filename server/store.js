@@ -22,6 +22,26 @@ function openStore(path) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS provider_callback_inbox(
+      id TEXT PRIMARY KEY,
+      provider TEXT NOT NULL,
+      provider_event_id TEXT NOT NULL,
+      correlation_id TEXT NOT NULL,
+      payment_kind TEXT NOT NULL,
+      payment_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      reference TEXT,
+      amount INTEGER CHECK(amount>=0),
+      currency TEXT,
+      payload_hash TEXT NOT NULL,
+      normalized_event TEXT NOT NULL,
+      status TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      received_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(provider,provider_event_id)
+    );
     CREATE TABLE IF NOT EXISTS provider_payment_events(\n      id TEXT PRIMARY KEY,\n      provider TEXT NOT NULL,\n      provider_event_id TEXT NOT NULL,\n      correlation_id TEXT NOT NULL,\n      payment_kind TEXT NOT NULL,\n      payment_id TEXT NOT NULL,\n      event_type TEXT NOT NULL,\n      reference TEXT,\n      amount INTEGER CHECK(amount>=0),\n      currency TEXT,\n      payload_hash TEXT NOT NULL,\n      status TEXT NOT NULL,\n      created_at TEXT NOT NULL,\n      UNIQUE(provider,provider_event_id)\n    );\n    CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY AUTOINCREMENT,actor_id TEXT REFERENCES users(id),action TEXT NOT NULL,entity_id TEXT NOT NULL,details TEXT NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS notifications(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),message TEXT NOT NULL,created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS dispatch_assignments(
@@ -176,6 +196,8 @@ function openStore(path) {
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS provider_settlement_reference ON provider_settlements(provider,reference);\n    CREATE INDEX IF NOT EXISTS provider_settlement_reconciliation ON provider_settlements(reconciliation_status);\n    CREATE INDEX IF NOT EXISTS payment_intent_target ON payment_intents(payment_kind,payment_id);\n    CREATE INDEX IF NOT EXISTS payment_intent_status ON payment_intents(status);\n    CREATE INDEX IF NOT EXISTS payment_initiation_outbox_status ON payment_initiation_outbox(status,created_at);
+    CREATE INDEX IF NOT EXISTS provider_callback_inbox_status ON provider_callback_inbox(status,received_at);
+    CREATE INDEX IF NOT EXISTS provider_callback_inbox_correlation ON provider_callback_inbox(correlation_id);
     CREATE INDEX IF NOT EXISTS provider_payment_correlation ON provider_payment_events(correlation_id);\n    CREATE INDEX IF NOT EXISTS provider_payment_target ON provider_payment_events(payment_kind,payment_id);\n    CREATE INDEX IF NOT EXISTS ledger_reference ON financial_ledger_events(reference);\n    CREATE INDEX IF NOT EXISTS ledger_entity ON financial_ledger_events(kind,entity_id);\n    CREATE INDEX IF NOT EXISTS reconciliation_status ON reconciliation_records(status);\n    CREATE INDEX IF NOT EXISTS payment_reference_entity ON payment_references(kind,entity_id);\n    CREATE INDEX IF NOT EXISTS cancellation_status ON cancellation_operations(status);
     CREATE INDEX IF NOT EXISTS support_customer ON support_cases(customer_id);
     CREATE INDEX IF NOT EXISTS support_journey ON support_cases(journey_id);
