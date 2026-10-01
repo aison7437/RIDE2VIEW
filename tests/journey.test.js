@@ -35,7 +35,9 @@ test('persistent complete journey, authorization, and payment replay protection'
  await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:1},admin,400);
  await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},admin);
  assert.equal((await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},admin)).data.duplicate,true);
- await call('/bookings/'+booking.id+'/assign','POST',{driverId:wrongDriver.id},admin,400);await call('/bookings/'+booking.id+'/assign','POST',{driverId:driver.id},admin);
+ await call('/bookings/'+booking.id+'/assign','POST',{driverId:wrongDriver.id},admin,400);
+ const offer=(await call('/bookings/'+booking.id+'/assign','POST',{driverId:driver.id,idempotencyKey:'dispatch-'+booking.id},admin)).data;assert.equal(offer.status,'offered');
+ const dispatchAuthority=require('../server/mobility/dispatch').createDispatchAuthority({db:app.db});dispatchAuthority.accept({assignmentId:offer.assignmentId,driverId:driver.id,actor:{id:driver.id,role:'driver'}});
  await call('/bookings/'+booking.id+'/complete','POST',{},other.cookie,403);await call('/bookings/'+booking.id+'/complete','POST',{},wrongDriver.cookie,403);await call('/bookings/'+booking.id+'/complete','POST',{},driver.cookie);
  assert.equal((await call('/bookings','GET',undefined,customer.cookie)).data.bookings[0].status,'completed');assert.equal((await call('/bookings','GET',undefined,other.cookie)).data.bookings.length,0);
  const second=(await call('/bookings','POST',request,customer.cookie,201)).data;await call('/payments/'+second.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},admin,409);await call('/payments/'+second.paymentId+'/verify','POST',{reference:'RECEIPT002',amount:650},admin);await call('/bookings/'+second.id+'/cancel','POST',{},customer.cookie);
