@@ -8,6 +8,7 @@ const { searchProperties } = require('../ai/Core/journey-orchestrator/search-ada
 const { createPaymentAuthority } = require('./payments');
 const { createDispatchAuthority } = require('./mobility/dispatch');
 const { createSafetyAuthority } = require('./safety');
+const { createReservationAuthority } = require('./scheduling/reservations');
 const TIERS = Object.freeze({general:650, women:750, students:450, vip:2000});
 const passwordHash = password => { const salt=randomBytes(16).toString('hex'); return salt+':'+scryptSync(password,salt,64).toString('hex'); };
 function passwordMatches(password, stored) { const [salt,hash]=stored.split(':'); const a=scryptSync(password,salt,64); const b=Buffer.from(hash,'hex'); return a.length===b.length && timingSafeEqual(a,b); }
@@ -18,7 +19,7 @@ function createApp(options={}) {
   const root=join(__dirname,'..');
   const bootEmail=options.adminEmail || process.env.ADMIN_EMAIL;
   const bootPassword=options.adminPassword || process.env.ADMIN_PASSWORD;
-  let paymentAuthority,dispatchAuthority,safetyAuthority;
+  let paymentAuthority,dispatchAuthority,safetyAuthority,reservationAuthority;
   if (bootEmail && bootPassword && !db.prepare('SELECT id FROM users WHERE email=?').get(bootEmail.toLowerCase())) {
     if (bootPassword.length<12) throw new Error('Administrator password must contain at least 12 characters');
     db.prepare('INSERT INTO users VALUES(?,?,?,?,?,1)').run(randomUUID(),bootEmail.toLowerCase(),'Administrator',passwordHash(bootPassword),'admin');
@@ -29,6 +30,7 @@ function createApp(options={}) {
   paymentAuthority=createPaymentAuthority({db,audit,notify});
   dispatchAuthority=createDispatchAuthority({db,audit,notify});
   safetyAuthority=createSafetyAuthority({db,audit});
+  reservationAuthority=createReservationAuthority({db,audit});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
   function requireRole(user,...roles) { if(!user) fail(401,'Sign in to continue'); if(!roles.includes(user.role)) fail(403,'This action is not permitted for this account'); }
   function getUser(req) {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(!token)return null;return db.prepare('SELECT u.id,u.name,u.email,u.role,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>?').get(digest(token),Date.now()) || null;}
@@ -106,7 +108,7 @@ function createApp(options={}) {
       if(path==='/api/bookings' && method==='POST') {
         requireRole(user,'customer');const listing=db.prepare('SELECT * FROM listings WHERE id=? AND approved=1 AND available=1').get(body.listingId);if(!listing)fail(409,'Listing is unavailable or not approved');
         const tier=body.tier||'general';if(!Object.hasOwn(TIERS,tier))fail(400,'Invalid ride tier');const date=new Date(body.scheduledAt);if(!Number.isFinite(date.getTime())||date.getTime()<=Date.now())fail(400,'Choose a future viewing time');
-        const id=randomUUID();const paymentId=randomUUID();transaction(()=>{db.prepare('INSERT INTO bookings VALUES(?,?,?,?,?,?,?,NULL,?)').run(id,user.id,listing.id,tier,TIERS[tier],'requested',date.toISOString(),new Date().toISOString());db.prepare('INSERT INTO payments VALUES(?,?,?,\'pending\',NULL,NULL,NULL)').run(paymentId,id,TIERS[tier]);audit(user,'booking.requested',id);notify(user.id,'Viewing requested. Payment verification is pending.');});return send(201,{id,status:'requested',amount:TIERS[tier],paymentId,paymentStatus:'pending'});
+        const id=randomUUID();const paymentId=randomUUID();const duration=Number(JSON.parse(listing.payload)?.timing?.duration)||60;const start=date.toISOString(),end=new Date(date.getTime()+duration*60000).toISOString();let reservation;try{reservation=reservationAuthority.createHold({customerId:user.id,resourceId:listing.id,resourceType:'property',start,end,idempotencyKey:'booking:'+id,dependencies:['PAYMENT_CONFIRMED'],actor:user});}catch(e){if(e.code==='RESERVATION_CONFLICT')fail(409,'The property already has a viewing during this time');throw e;}try{transaction(()=>{db.prepare('INSERT INTO bookings VALUES(?,?,?,?,?,?,?,NULL,?)').run(id,user.id,listing.id,tier,TIERS[tier],'requested',start,new Date().toISOString());db.prepare('INSERT INTO payments VALUES(?,?,?,\'pending\',NULL,NULL,NULL)').run(paymentId,id,TIERS[tier]);db.prepare('INSERT INTO booking_reservations(booking_id,reservation_id,created_at) VALUES(?,?,?)').run(id,reservation.id,new Date().toISOString());audit(user,'booking.requested',id,{reservationId:reservation.id});notify(user.id,'Viewing requested. Payment verification is pending.');});}catch(e){try{reservationAuthority.transition({reservationId:reservation.id,to:'CANCELLED',actor:user});}catch{}throw e;}return send(201,{id,status:'requested',amount:TIERS[tier],paymentId,paymentStatus:'pending',reservationId:reservation.id,reservationStatus:reservation.status});
       }
       if(path==='/api/bookings' && method==='GET') {
         requireRole(user,'customer','admin','driver');const condition=user.role==='admin'?'1=1':user.role==='driver'?'b.driver_id=?':'b.customer_id=?';const query=`SELECT b.*,p.id AS payment_id,p.status AS payment_status,p.reference AS payment_reference,l.payload AS listing FROM bookings b JOIN payments p ON p.booking_id=b.id JOIN listings l ON l.id=b.listing_id WHERE ${condition} ORDER BY b.created_at DESC`;
@@ -116,8 +118,8 @@ function createApp(options={}) {
       if(verifyMatch && method==='POST') {
         requireRole(user,'admin');
         try {
-          const result=paymentAuthority.verifyManual({paymentId:verifyMatch[1],reference:String(body.reference||'').trim(),amount:body.amount,actor:user});
-          return send(200,{success:true,status:'confirmed',verification:'manual',duplicate:Boolean(result.duplicate)});
+          const result=paymentAuthority.verifyManual({paymentId:verifyMatch[1],reference:String(body.reference||'').trim(),amount:body.amount,actor:user});const link=db.prepare('SELECT reservation_id FROM booking_reservations WHERE booking_id=?').get(result.booking_id);if(!link)fail(409,'RESERVATION_LINK_NOT_FOUND');const reservation=reservationAuthority.confirmForBooking({reservationId:link.reservation_id,bookingId:result.booking_id,actor:user});
+          return send(200,{success:true,status:'confirmed',verification:'manual',duplicate:Boolean(result.duplicate),reservationId:reservation.id,reservationStatus:reservation.status});
         } catch(e) {
           const statuses={PAYMENT_NOT_FOUND:404,PAYMENT_VERIFICATION_FORBIDDEN:403,INVALID_REFERENCE:400,AMOUNT_MISMATCH:400,PAYMENT_ALREADY_VERIFIED:409,REFERENCE_REPLAY:409,BOOKING_NOT_PAYABLE:409};
           fail(statuses[e.code]||409,e.code||'Payment verification failed');

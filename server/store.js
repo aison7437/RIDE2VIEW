@@ -91,6 +91,11 @@ function openStore(path) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS booking_reservations(
+      booking_id TEXT PRIMARY KEY REFERENCES bookings(id),
+      reservation_id TEXT UNIQUE NOT NULL REFERENCES reservations(id),
+      created_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS reservation_events(
       id TEXT PRIMARY KEY,
       reservation_id TEXT NOT NULL REFERENCES reservations(id),
@@ -143,6 +148,7 @@ function openStore(path) {
     CREATE INDEX IF NOT EXISTS support_journey ON support_cases(journey_id);
     CREATE INDEX IF NOT EXISTS support_correlation ON support_cases(correlation_id);
     CREATE INDEX IF NOT EXISTS support_case_events_case ON support_case_events(case_id);
+    CREATE INDEX IF NOT EXISTS booking_reservations_reservation ON booking_reservations(reservation_id);
     CREATE INDEX IF NOT EXISTS reservation_resource_time ON reservations(resource_id,start_at,end_at,status);
     CREATE INDEX IF NOT EXISTS reservation_customer ON reservations(customer_id);
     CREATE INDEX IF NOT EXISTS reservation_events_reservation ON reservation_events(reservation_id);
