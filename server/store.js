@@ -22,6 +22,8 @@ function openStore(path) {
       attempts INTEGER NOT NULL DEFAULT 0,
       last_error TEXT,
       provider_request_id TEXT,
+      provider_acknowledgement TEXT,
+      provider_acknowledged_at TEXT,
       next_attempt_at TEXT,
       lease_owner TEXT,
       lease_expires_at TEXT,
