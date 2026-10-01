@@ -30,6 +30,11 @@ function openStore(path) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS payment_side_effect_outbox(
+      id TEXT PRIMARY KEY,event_key TEXT NOT NULL UNIQUE,effect_type TEXT NOT NULL,payload TEXT NOT NULL,status TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,last_error TEXT,next_attempt_at TEXT,lease_owner TEXT,lease_expires_at TEXT,
+      created_at TEXT NOT NULL,updated_at TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS provider_callback_inbox(
       id TEXT PRIMARY KEY,
       provider TEXT NOT NULL,
@@ -211,6 +216,7 @@ function openStore(path) {
     );
     CREATE INDEX IF NOT EXISTS provider_settlement_reference ON provider_settlements(provider,reference);\n    CREATE INDEX IF NOT EXISTS provider_settlement_reconciliation ON provider_settlements(reconciliation_status);\n    CREATE INDEX IF NOT EXISTS payment_intent_target ON payment_intents(payment_kind,payment_id);\n    CREATE INDEX IF NOT EXISTS payment_intent_status ON payment_intents(status);\n    CREATE INDEX IF NOT EXISTS payment_initiation_outbox_status ON payment_initiation_outbox(status,created_at);
     CREATE INDEX IF NOT EXISTS payment_initiation_outbox_due ON payment_initiation_outbox(status,next_attempt_at,lease_expires_at);
+    CREATE INDEX IF NOT EXISTS payment_side_effect_outbox_due ON payment_side_effect_outbox(status,next_attempt_at,lease_expires_at);
     CREATE INDEX IF NOT EXISTS provider_callback_inbox_status ON provider_callback_inbox(status,received_at);
     CREATE INDEX IF NOT EXISTS provider_callback_inbox_lease ON provider_callback_inbox(status,lease_expires_at);
     CREATE INDEX IF NOT EXISTS provider_callback_inbox_correlation ON provider_callback_inbox(correlation_id);
