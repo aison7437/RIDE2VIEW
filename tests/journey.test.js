@@ -30,7 +30,7 @@ test('persistent complete journey, authorization, and payment replay protection'
  assert.equal(search.success,true);assert.equal(search.recommendations[0].id,listing.id);assert.equal(search.recommendations[0].property.bedrooms,2);
  await call('/bookings','POST',{listingId:listing.id,scheduledAt:'2000-01-01'},customer.cookie,400);
  const request={listingId:listing.id,tier:'general',scheduledAt:new Date(Date.now()+86400000).toISOString()};
- const booking=(await call('/bookings','POST',{...request,amount:1},customer.cookie,201)).data;assert.equal(booking.amount,650);assert.equal(booking.paymentStatus,'pending');
+ const booking=(await call('/bookings','POST',{...request,amount:1},customer.cookie,201)).data;assert.equal(booking.amount,650);assert.equal(booking.paymentStatus,'pending');assert.equal(booking.reservationStatus,'HOLD_CREATED');assert.equal(typeof booking.reservationId,'string');
  await call('/bookings/'+booking.id+'/assign','POST',{driverId:driver.id},admin,409);
  await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},customer.cookie,403);
  await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:1},admin,400);
