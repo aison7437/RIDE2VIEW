@@ -151,7 +151,7 @@ function createApp(options={}) {
               if(current.status===state)continue;
               current=dispatchAuthority.transition({assignmentId:assignment.id,to:state,actor:user});
             }
-            notify(b.customer_id,'Your viewing is completed.');
+            audit(user,'viewing.completed',b.id,{assignmentId:assignment.id});notify(b.customer_id,'Your viewing is completed.');
             return send(200,{status:'completed',assignmentId:assignment.id});
           } catch(e){fail(409,e.code||'Viewing completion failed');}
         }
