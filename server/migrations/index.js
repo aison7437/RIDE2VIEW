@@ -1,5 +1,5 @@
 const {createHash}=require('node:crypto');
-const CURRENT_SCHEMA_VERSION=10;
+const CURRENT_SCHEMA_VERSION=11;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -26,6 +26,7 @@ function hardenProviderCallbackInbox(db){if(!tableExists(db,'provider_callback_i
 function governProviderCallbackRetries(db){if(!tableExists(db,'provider_callback_inbox'))return;const c=columns(db,'provider_callback_inbox');if(!c.has('next_attempt_at'))db.exec('ALTER TABLE provider_callback_inbox ADD COLUMN next_attempt_at TEXT');db.exec("UPDATE provider_callback_inbox SET next_attempt_at=COALESCE(next_attempt_at,received_at) WHERE status IN ('RECEIVED','FAILED')");db.exec('CREATE INDEX IF NOT EXISTS provider_callback_inbox_due ON provider_callback_inbox(status,next_attempt_at,lease_expires_at)');}
 function addProviderCallbackLeaseVersion(db){if(!tableExists(db,'provider_callback_inbox'))return;const c=columns(db,'provider_callback_inbox');if(!c.has('lease_version'))db.exec('ALTER TABLE provider_callback_inbox ADD COLUMN lease_version INTEGER NOT NULL DEFAULT 0');}
 function addPaymentInitiationLeaseVersion(db){if(!tableExists(db,'payment_initiation_outbox'))return;const c=columns(db,'payment_initiation_outbox');if(!c.has('lease_version'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN lease_version INTEGER NOT NULL DEFAULT 0');}
+function addPaymentInitiationAmbiguity(db){if(!tableExists(db,'payment_initiation_outbox'))return;const c=columns(db,'payment_initiation_outbox');if(!c.has('acceptance_ambiguous'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN acceptance_ambiguous INTEGER NOT NULL DEFAULT 0');}
 function addPaymentSideEffectOutbox(db){db.exec(`CREATE TABLE IF NOT EXISTS payment_side_effect_outbox(
  id TEXT PRIMARY KEY,event_key TEXT NOT NULL UNIQUE,effect_type TEXT NOT NULL,payload TEXT NOT NULL,status TEXT NOT NULL,
  attempts INTEGER NOT NULL DEFAULT 0,last_error TEXT,next_attempt_at TEXT,lease_owner TEXT,lease_expires_at TEXT,
@@ -59,7 +60,8 @@ const migrations=[
  {version:7,name:'provider-callback-retry-governance',definition:'v7:add next_attempt_at and due index for bounded provider callback retries',up:governProviderCallbackRetries},
  {version:8,name:'provider-callback-lease-generation',definition:'v8:add monotonic lease_version fencing token to provider callback inbox',up:addProviderCallbackLeaseVersion},
  {version:9,name:'support-recovery-schema',definition:'v9:version support cases, evidence events and recovery actions required by payment callback recovery',up:addSupportRecoverySchema},
- {version:10,name:'payment-initiation-lease-generation',definition:'v10:add monotonic lease_version fencing token to payment initiation outbox',up:addPaymentInitiationLeaseVersion}
+ {version:10,name:'payment-initiation-lease-generation',definition:'v10:add monotonic lease_version fencing token to payment initiation outbox',up:addPaymentInitiationLeaseVersion},
+ {version:11,name:'payment-initiation-acceptance-ambiguity',definition:'v11:add explicit provider acceptance ambiguity state to payment initiation outbox',up:addPaymentInitiationAmbiguity}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}
