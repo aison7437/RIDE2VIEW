@@ -1,5 +1,5 @@
 const {createHash}=require('node:crypto');
-const CURRENT_SCHEMA_VERSION=12;
+const CURRENT_SCHEMA_VERSION=13;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -47,6 +47,7 @@ function addSupportRecoverySchema(db){db.exec(`CREATE TABLE IF NOT EXISTS suppor
 CREATE INDEX IF NOT EXISTS support_journey ON support_cases(journey_id);
 CREATE INDEX IF NOT EXISTS support_correlation ON support_cases(correlation_id);
 CREATE INDEX IF NOT EXISTS support_case_events_case ON support_case_events(case_id);`);}
+function addProviderRejectionEvidence(db){if(!tableExists(db,'payment_initiation_outbox'))return;const c=columns(db,'payment_initiation_outbox');if(!c.has('provider_rejection_code'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN provider_rejection_code TEXT');if(!c.has('provider_rejection_reason'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN provider_rejection_reason TEXT');if(!c.has('provider_rejected_at'))db.exec('ALTER TABLE payment_initiation_outbox ADD COLUMN provider_rejected_at TEXT');}
 function addMigrationIntegrity(db){
  const c=columns(db,'schema_migrations');
  if(!c.has('checksum'))db.exec('ALTER TABLE schema_migrations ADD COLUMN checksum TEXT');
@@ -63,7 +64,8 @@ const migrations=[
  {version:9,name:'support-recovery-schema',definition:'v9:version support cases, evidence events and recovery actions required by payment callback recovery',up:addSupportRecoverySchema},
  {version:10,name:'payment-initiation-lease-generation',definition:'v10:add monotonic lease_version fencing token to payment initiation outbox',up:addPaymentInitiationLeaseVersion},
  {version:11,name:'payment-initiation-acceptance-ambiguity',definition:'v11:add explicit provider acceptance ambiguity state to payment initiation outbox',up:addPaymentInitiationAmbiguity},
- {version:12,name:'payment-initiation-lifetime-attempts',definition:'v12:add cumulative total_attempts to preserve initiation retry history across manual recovery',up:addPaymentInitiationTotalAttempts}
+ {version:12,name:'payment-initiation-lifetime-attempts',definition:'v12:add cumulative total_attempts to preserve initiation retry history across manual recovery',up:addPaymentInitiationTotalAttempts},
+ {version:13,name:'provider-initiation-rejection-evidence',definition:'v13:add bounded provider rejection code reason and timestamp to payment initiation outbox',up:addProviderRejectionEvidence}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}
