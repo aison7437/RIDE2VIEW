@@ -24,3 +24,16 @@ test('property discovery workflow stops before transactional nodes',async()=>{
  assert.deepEqual(j.nodes.map(n=>n.node_id),['intent','property-search']);
  assert.equal(j.nodes.some(n=>['booking','payment','driver','complete'].includes(n.node_id)),false);
 });
+
+test('search adapter exposes Lifestyle Agent context while preserving read-only discovery',async()=>{
+ const {searchProperties}=require('../ai/Core/journey-orchestrator/search-adapter');
+ const properties=[{id:'P1',title:'Kilimani 2 bedroom',price:45000,location:{city:'Nairobi'},property:{bedrooms:2},available:true}];
+ const result=await searchProperties({message:'Find a 2 bedroom property in Kilimani',budget:50000,location:{city:'Nairobi',country:'Kenya'},properties,propertyOpportunities:properties});
+ assert.equal(result.success,true);
+ assert.equal(result.lifestyleContext.authority,'RECOMMENDATION_ONLY');
+ assert.equal(result.lifestyleContext.constraints.budget,50000);
+ assert.equal(result.lifestyleContext.constraints.location.city,'Nairobi');
+ assert(result.lifestyleContext.recommended_capabilities.some(x=>x.agent==='property-agent'));
+ assert.equal(result.recommendations.length,1);
+ assert.match(result.journeyId,/^JRN-/);
+});
