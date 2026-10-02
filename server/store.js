@@ -54,6 +54,7 @@ function openStore(path) {
       next_attempt_at TEXT,
       lease_owner TEXT,
       lease_expires_at TEXT,
+      lease_version INTEGER NOT NULL DEFAULT 0,
       received_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       UNIQUE(provider,provider_event_id)
