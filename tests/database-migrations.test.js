@@ -1,4 +1,17 @@
 const test=require('node:test');const assert=require('node:assert/strict');const {DatabaseSync}=require('node:sqlite');const {mkdtempSync,rmSync}=require('node:fs');const {join}=require('node:path');const {tmpdir}=require('node:os');const {openStore}=require('../server/store');const {CURRENT_SCHEMA_VERSION,runMigrations,migrations,checksum}=require('../server/migrations');
+test('v14 quarantines legacy publication flags without losing listings, payments or bookings',()=>{
+ const db=new DatabaseSync(':memory:');db.exec(`PRAGMA foreign_keys=ON;
+ CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT);
+ CREATE TABLE users(id TEXT PRIMARY KEY);
+ CREATE TABLE listings(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL REFERENCES users(id),payload TEXT NOT NULL,approved INTEGER NOT NULL,available INTEGER NOT NULL);
+ CREATE TABLE bookings(id TEXT PRIMARY KEY,listing_id TEXT NOT NULL REFERENCES listings(id));
+ CREATE TABLE payments(id TEXT PRIMARY KEY,booking_id TEXT NOT NULL REFERENCES bookings(id),status TEXT NOT NULL);
+ INSERT INTO users VALUES('legacy-agent');INSERT INTO listings VALUES('legacy-property','legacy-agent','{"title":"Legacy property"}',1,1);
+ INSERT INTO bookings VALUES('legacy-booking','legacy-property');INSERT INTO payments VALUES('legacy-payment','legacy-booking','paid');`);
+ for(const m of migrations.filter(x=>x.version<14))db.prepare('INSERT INTO schema_migrations VALUES(?,?,?,?)').run(m.version,m.name,new Date().toISOString(),checksum(m));
+ runMigrations(db);assert.equal(db.prepare('SELECT approved FROM listings').get().approved,0);assert.equal(db.prepare('SELECT payload FROM listings').get().payload,'{"title":"Legacy property"}');assert.equal(db.prepare('SELECT status FROM payments').get().status,'paid');assert.equal(db.prepare('SELECT id FROM bookings').get().id,'legacy-booking');assert.equal(db.prepare('PRAGMA foreign_key_check').all().length,0);
+ db.prepare('UPDATE listings SET approved=1').run();runMigrations(db);assert.equal(db.prepare('SELECT approved FROM listings').get().approved,1);db.close();
+});
 test('openStore records current schema version on a fresh database',()=>{const db=openStore(':memory:');const rows=db.prepare('SELECT version,name FROM schema_migrations').all();assert.equal(rows.length,CURRENT_SCHEMA_VERSION);assert.equal(rows.at(-1).version,CURRENT_SCHEMA_VERSION);assert.ok(db.prepare('SELECT checksum FROM schema_migrations WHERE version=1').get().checksum);db.close();});
 test('legacy commerce price confirmation schema upgrades without losing order or price evidence',()=>{const dir=mkdtempSync(join(tmpdir(),'r2v-migrate-')),file=join(dir,'legacy.sqlite');const legacy=new DatabaseSync(file);legacy.exec(`PRAGMA foreign_keys=ON;
 CREATE TABLE commerce_orders(id TEXT PRIMARY KEY,customer_id TEXT NOT NULL,merchant_id TEXT NOT NULL,basket TEXT NOT NULL,total INTEGER NOT NULL,currency TEXT NOT NULL,status TEXT NOT NULL,idempotency_key TEXT NOT NULL UNIQUE,version INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
