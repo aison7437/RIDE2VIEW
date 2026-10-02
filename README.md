@@ -24,14 +24,16 @@ Schedule that command with the production platform's scheduler and store backups
 
 ## Operating the viewing journey
 
-1. Register an agent and driver account; the administrator approves them under Operations.
-2. An approved agent submits a property. The administrator checks it and approves the listing. Listing approval is a manual operational decision, not a legal ownership guarantee.
-3. A customer searches approved available listings, chooses a property, and requests a future viewing.
-4. The viewing charge is calculated on the server: General KES 650, Women KES 750, Students KES 450, VIP KES 2,000. These are configurable pilot charges in `server/app.js`, separate from rent. Women-only and student eligibility checks and live transport supply require additional operational policy; the tier label does not certify a driver's gender or a passenger's eligibility.
-5. Payment remains pending. After receiving funds through an externally arranged payment method, an administrator checks the actual transaction record and enters its reference and exact amount. This is **manual verification**, not an M-Pesa/STK integration. Unique references prevent replay across bookings; audit records identify the verifier.
-6. Only a confirmed paid viewing can receive an approved driver. The assigned driver or administrator completes it.
-7. Cancellation of a paid booking records `refund_pending`; it does not transfer money. Operations must process refunds externally.
+1. Register an agent account and complete its legal name, contact and agency registration profile. Upload private identity and agency evidence. Operations reviews each submission separately, with a reason and expiry. Driver approval remains under Operations.
+2. A verified agent creates a rent/sale property draft, uploads marketing-authority and ownership evidence, and submits each for review. After both are approved, submit publication review. Ownership evidence review is an operational assessment, not a legal ownership guarantee or completed due diligence.
+3. The agent adds future availability slots and photo, video or 360 tour HTTPS links. Customer profiles store city, budget, bedrooms and rent/buy goal; customers can save properties. A viewing request snapshots the matching city/budget/goal qualification.
+4. A customer requests an available slot. The owning agent accepts, declines or reschedules it. Acceptance atomically creates the booking, pending payment and reservation; conflicting agent appointments are rejected. The payment hold lasts 30 minutes or until the viewing starts, whichever comes first.
+5. The viewing charge is calculated on the server: General KES 650, Women KES 750, Students KES 450, VIP KES 2,000. These remain pilot charges, separate from property rent/purchase price. Women-Only enforcement, student eligibility, package pricing and live transport supply are later programs.
+6. Operations verifies the actual received payment record. Managed viewing payment verification and reservation confirmation commit together. Only confirmed paid viewings can receive a driver offer; the driver accepts and completes the trip through the existing dispatch authority. External provider adapters still require production credentials/configuration.
+7. Cancellation uses the existing recovery coordinator. Paid bookings become `refund_pending`; this does not transfer money. Completed viewings can receive an immutable outcome and a customer review. Agents track follow-up, negotiation and won/lost leads.
+8. Operations records an agreed commission against a won lead. Earned, pending, disputed and manually verified paid records remain separate from customer viewing charges. Paid records claim a unique shared transaction reference and record a debit/reconciliation entry; this does not initiate a payout.
 
+The full API, review model, migration behavior and remaining phases are documented in [`docs/agent-property-supply-v1.md`](docs/agent-property-supply-v1.md).
 There are no sample listings seeded into the live database. Tests use temporary fixture data only. Notifications are delivered inside the app; email, SMS, WhatsApp, maps, live tracking, automatic M-Pesa collection, eligibility verification, and external analytics are not connected.
 
 ## Architecture
@@ -46,7 +48,7 @@ Repository ownership and structural conventions are documented in [`docs/reposit
 
 Search injects approved database listings into the discovery provider. Time compatibility uses measured duration in minutes; a request limit is not treated as measured travel time. Missing timing remains unknown. This duration covers the supplied viewing estimate, not live traffic or travel predictions.
 
-Authentication uses salted scrypt password hashes and HttpOnly SameSite cookies. Account roles are enforced by the server; agent/driver approval is required. Browser writes reject cross-site origins. Public search and sample preview do not imply authentication.
+Authentication uses salted scrypt password hashes and HttpOnly SameSite cookies. Account roles are enforced by the server; agent documentary verification and driver approval are required. Browser writes reject cross-site origins. Public search and sample preview do not imply authentication.
 
 ## Checks
 
@@ -58,14 +60,15 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-CI checks all JavaScript, the two existing 10-scenario suites, authorization and payment replay controls, persistence across restart, and the full customer → administrator → driver browser journey. CodeQL remains in its separate workflow.
+CI checks all JavaScript, the two existing 10-scenario suites, authorization and payment replay controls, persistence across restart, and the full customer → agent → reviewer → driver browser journey, including evidence upload, publication renewal, outcomes and mobile layouts. CodeQL remains in its separate workflow.
 
 ## API
 
 - Public: `GET /api/health`, `GET /api/config`, `GET /api/listings`, `POST /api/search`.
 - Accounts: `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`.
 - Agent/admin: `POST /api/listings`, `PATCH /api/listings/:id`, `GET /api/listings?mine=true`.
-- Bookings: `POST /api/bookings`, `GET /api/bookings`, `POST /api/bookings/:id/cancel`.
+- Viewing requests: `GET/POST /api/viewing-requests`; agent acceptance creates a booking.
+- Existing bookings: `GET /api/bookings`, `POST /api/bookings/:id/cancel`.
 - Admin: `GET /api/admin/users`, `POST /api/admin/users/:id/approve`, `POST /api/payments/:id/verify`, `POST /api/bookings/:id/assign`, `GET /api/admin/audit`.
 - Assigned driver/admin: `POST /api/bookings/:id/complete`.
 - Signed-in accounts: `GET /api/notifications`.

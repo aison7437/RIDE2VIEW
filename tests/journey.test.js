@@ -3,7 +3,7 @@ const {mkdtempSync,rmSync}=require('node:fs'),{tmpdir}=require('node:os'),{join}
 const {createApp}=require('../server/app');
 const {enrichOpportunityReasoning,minutes}=require('../ai/user/lifestyle-agent/reasoning/reasoning-engine');
 const {searchProperties}=require('../ai/Core/journey-orchestrator/search-adapter');
-const {createDispatchAuthority}=require('../server/mobility/dispatch');
+const {approveAgent,publishProperty,customerProfile,createSlot}=require('./helpers/supply.cjs');
 test('measured viewing duration and normalized input',()=>{
  assert.equal(minutes('1 hour'),60);assert.equal(minutes('1.5 hours'),90);assert.equal(minutes(0),null);
  assert.equal(enrichOpportunityReasoning({availableTime:'1 hour'},{timing:{duration:90}}).timeCompatible,false);
@@ -22,15 +22,20 @@ test('persistent complete journey, authorization, and payment replay protection'
  await call('/auth/register','POST',{email:'evil@example.test',name:'Evil User',role:'admin',password:'Test-Password-123456'},null,400);
  const listingData={title:'Kilimani 2 bedroom',description:'Available Nairobi home',price:45000,location:{city:'Nairobi'},property:{bedrooms:2},timing:{duration:45}};
  await call('/listings','POST',listingData,agent.cookie,403);
- await call('/admin/users/'+agent.id+'/approve','POST',{},admin);await call('/admin/users/'+driver.id+'/approve','POST',{},admin);
+ await call('/admin/users/'+agent.id+'/approve','POST',{},admin,409);await approveAgent(call,agent,admin);await customerProfile(call,customer.cookie);await customerProfile(call,other.cookie);await call('/admin/users/'+driver.id+'/approve','POST',{},admin);
  const listing=(await call('/listings','POST',listingData,agent.cookie,201)).data;
  assert.equal((await call('/search','POST',{message:'Find a property in Nairobi',budget:50000})).data.recommendations.length,0);
- await call('/listings/'+listing.id,'PATCH',{approved:true},customer.cookie,403);await call('/listings/'+listing.id,'PATCH',{approved:true},admin);
+ await call('/listings/'+listing.id,'PATCH',{approved:true},customer.cookie,403);await call('/listings/'+listing.id,'PATCH',{approved:true},admin,409);await publishProperty(call,listing.id,agent.cookie,admin);
  const search=(await call('/search','POST',{message:'Find a 2 bedroom property in Nairobi',budget:50000,availableTime:'1 hour'})).data;
  assert.equal(search.success,true);assert.equal(search.recommendations[0].id,listing.id);assert.equal(search.recommendations[0].property.bedrooms,2);
- await call('/bookings','POST',{listingId:listing.id,scheduledAt:'2000-01-01'},customer.cookie,400);
- const request={listingId:listing.id,tier:'general',scheduledAt:new Date(Date.now()+86400000).toISOString()};
- const booking=(await call('/bookings','POST',{...request,amount:1},customer.cookie,201)).data;assert.equal(booking.amount,650);assert.equal(booking.paymentStatus,'pending');assert.equal(booking.reservationStatus,'HOLD_CREATED');assert.equal(typeof booking.reservationId,'string');
+ await call('/bookings','POST',{listingId:listing.id,scheduledAt:'2000-01-01'},customer.cookie,409);
+ const slot=await createSlot(call,listing.id,agent.cookie);
+ const request={listingId:listing.id,slotId:slot.id,tier:'general',idempotencyKey:'first-viewing'};
+ const pending=(await call('/viewing-requests','POST',{...request,amount:1},customer.cookie,201)).data;
+ assert.equal(pending.booking_id,null);
+ const acceptedRequest=(await call('/viewing-requests/'+pending.id+'/accept','POST',{},agent.cookie)).data;
+ const booking={id:acceptedRequest.booking_id,paymentId:acceptedRequest.paymentId,reservationId:acceptedRequest.reservationId};
+ assert.equal(acceptedRequest.amount,650);
  await call('/bookings/'+booking.id+'/assign','POST',{driverId:driver.id},admin,409);
  await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},customer.cookie,403);
  await call('/payments/'+booking.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:1},admin,400);
@@ -41,15 +46,15 @@ test('persistent complete journey, authorization, and payment replay protection'
  await call('/dispatch/'+offer.assignmentId+'/accept','POST',{},customer.cookie,403);await call('/dispatch/'+offer.assignmentId+'/accept','POST',{},wrongDriver.cookie,403);const accepted=(await call('/dispatch/'+offer.assignmentId+'/accept','POST',{},driver.cookie)).data;assert.equal(accepted.status,'ASSIGNED');assert.equal((await call('/dispatch/'+offer.assignmentId+'/accept','POST',{},driver.cookie)).data.duplicate,true);
  await call('/bookings/'+booking.id+'/complete','POST',{},other.cookie,403);await call('/bookings/'+booking.id+'/complete','POST',{},wrongDriver.cookie,403);await call('/bookings/'+booking.id+'/complete','POST',{},driver.cookie);
  assert.equal((await call('/bookings','GET',undefined,customer.cookie)).data.bookings[0].status,'completed');assert.equal((await call('/bookings','GET',undefined,other.cookie)).data.bookings.length,0);
- await call('/bookings','POST',request,other.cookie,409);const secondRequest={...request,scheduledAt:new Date(Date.now()+2*86400000).toISOString()};const second=(await call('/bookings','POST',secondRequest,customer.cookie,201)).data;await call('/payments/'+second.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},admin,409);await call('/payments/'+second.paymentId+'/verify','POST',{reference:'RECEIPT002',amount:650},admin);await call('/bookings/'+second.id+'/cancel','POST',{},customer.cookie);assert.equal(app.db.prepare('SELECT status FROM reservations WHERE id=(SELECT reservation_id FROM booking_reservations WHERE booking_id=?)').get(second.id).status,'CANCELLED');
+ await call('/viewing-requests','POST',request,other.cookie,409);const secondSlot=await createSlot(call,listing.id,agent.cookie,2);const secondRequest={...request,slotId:secondSlot.id,idempotencyKey:'second-viewing'};const secondPending=(await call('/viewing-requests','POST',secondRequest,customer.cookie,201)).data;const secondAccepted=(await call('/viewing-requests/'+secondPending.id+'/accept','POST',{},agent.cookie)).data;const second={id:secondAccepted.booking_id,paymentId:secondAccepted.paymentId};await call('/payments/'+second.paymentId+'/verify','POST',{reference:'RECEIPT001',amount:650},admin,409);await call('/payments/'+second.paymentId+'/verify','POST',{reference:'RECEIPT002',amount:650},admin);await call('/bookings/'+second.id+'/cancel','POST',{},customer.cookie);assert.equal(app.db.prepare('SELECT status FROM reservations WHERE id=(SELECT reservation_id FROM booking_reservations WHERE booking_id=?)').get(second.id).status,'CANCELLED');
  assert.equal((await call('/bookings','GET',undefined,customer.cookie)).data.bookings.find(b=>b.id===second.id).payment_status,'refund_pending');
- const unpaidRequest={...request,scheduledAt:new Date(Date.now()+3*86400000).toISOString()};const unpaid=(await call('/bookings','POST',unpaidRequest,customer.cookie,201)).data;const unpaidCancel=(await call('/bookings/'+unpaid.id+'/cancel','POST',{},customer.cookie)).data;assert.equal(unpaidCancel.paymentStatus,'cancelled');assert.equal(app.db.prepare('SELECT status FROM cancellation_operations WHERE booking_id=?').get(unpaid.id).status,'COMPLETED');const unpaidRetry=(await call('/bookings/'+unpaid.id+'/cancel','POST',{},customer.cookie)).data;assert.equal(unpaidRetry.duplicate,true);assert.equal(unpaidRetry.operationId,unpaidCancel.operationId);assert.equal(app.db.prepare('SELECT status FROM payments WHERE id=?').get(unpaid.paymentId).status,'cancelled');assert.equal(app.db.prepare('SELECT status FROM reservations WHERE id=?').get(unpaid.reservationId).status,'CANCELLED');await call('/bookings','POST',unpaidRequest,other.cookie,201);
+ const unpaidSlot=await createSlot(call,listing.id,agent.cookie,3);const unpaidRequest={...request,slotId:unpaidSlot.id,idempotencyKey:'unpaid-viewing'};const unpaidPending=(await call('/viewing-requests','POST',unpaidRequest,customer.cookie,201)).data;const unpaidAccepted=(await call('/viewing-requests/'+unpaidPending.id+'/accept','POST',{},agent.cookie)).data;const unpaid={id:unpaidAccepted.booking_id,paymentId:unpaidAccepted.paymentId,reservationId:unpaidAccepted.reservationId};const unpaidCancel=(await call('/bookings/'+unpaid.id+'/cancel','POST',{},customer.cookie)).data;assert.equal(unpaidCancel.paymentStatus,'cancelled');assert.equal(app.db.prepare('SELECT status FROM cancellation_operations WHERE booking_id=?').get(unpaid.id).status,'COMPLETED');const unpaidRetry=(await call('/bookings/'+unpaid.id+'/cancel','POST',{},customer.cookie)).data;assert.equal(unpaidRetry.duplicate,true);assert.equal(unpaidRetry.operationId,unpaidCancel.operationId);assert.equal(app.db.prepare('SELECT status FROM payments WHERE id=?').get(unpaid.paymentId).status,'cancelled');assert.equal(app.db.prepare('SELECT status FROM reservations WHERE id=?').get(unpaid.reservationId).status,'CANCELLED');await call('/viewing-requests','POST',unpaidRequest,other.cookie,201);
  const audit=(await call('/admin/audit','GET',undefined,admin)).data.events;assert(audit.some(e=>e.action==='payment.manually_verified'));assert(audit.some(e=>e.action==='dispatch.trip_completed'));
  await app.close();app=createApp({dbPath});await new Promise(r=>app.server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+app.server.address().port;
  assert.equal((await call('/bookings','GET',undefined,customer.cookie)).data.bookings.find(b=>b.id===booking.id).status,'completed');
  await call('/auth/logout','POST',{},customer.cookie);await call('/auth/me','GET',undefined,customer.cookie,401);
  const cross=await fetch(base+'/api/bookings',{method:'POST',headers:{Origin:'https://attacker.invalid','Content-Type':'application/json',Cookie:other.cookie},body:JSON.stringify(request)});assert.equal(cross.status,403);
- await call('/listings/'+listing.id,'PATCH',{available:false},agent.cookie);await call('/bookings','POST',request,other.cookie,409);
+ await call('/listings/'+listing.id,'PATCH',{available:false},agent.cookie);await call('/viewing-requests','POST',{...request,idempotencyKey:'unavailable'},other.cookie,409);
 });
 
 test('search adapter preserves public search recommendations contract',async()=>{

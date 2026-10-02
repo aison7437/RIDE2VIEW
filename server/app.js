@@ -4,7 +4,8 @@ const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { openStore } = require('./store');
 const { CURRENT_SCHEMA_VERSION } = require('./migrations');
-const { validateListing } = require('./validation');
+const { createSupplyAuthority } = require('./property/supply-authority');
+const { createSupplyRoutes } = require('./property/routes');
 const { searchProperties } = require('../ai/Core/journey-orchestrator/search-adapter');
 const { createPaymentAuthority, createPaymentIntentAuthority, createProviderBoundary, createPaymentSideEffectOutbox, createSideEffectRuntime, createPaymentInitiationRuntime, createProviderCallbackRuntime } = require('./payments');
 const { createDispatchAuthority } = require('./mobility/dispatch');
@@ -52,11 +53,13 @@ function createApp(options={}) {
   safetyAuthority=createSafetyAuthority({db,audit});
   reservationAuthority=createReservationAuthority({db,audit});
   const cancellationCoordinator=createCancellationCoordinator({db,dispatchAuthority,reservationAuthority,paymentAuthority,audit,notify});
+  const supply=createSupplyAuthority({db,audit,notify,tiers:TIERS});
+  const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
   function requireRole(user,...roles) { if(!user) fail(401,'Sign in to continue'); if(!roles.includes(user.role)) fail(403,'This action is not permitted for this account'); }
   function getUser(req) {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(!token)return null;return db.prepare('SELECT u.id,u.name,u.email,u.role,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>?').get(digest(token),Date.now()) || null;}
   function bookingFor(id,user) {const b=db.prepare('SELECT b.*,l.payload AS listing FROM bookings b JOIN listings l ON l.id=b.listing_id WHERE b.id=?').get(id);if(!b)fail(404,'Booking not found');if(user.role!=='admin' && b.customer_id!==user.id && b.driver_id!==user.id)fail(403,'Booking belongs to another account');return b;}
-  async function readBody(req) {let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>65536)fail(413,'Request is too large');chunks.push(c);}try{return JSON.parse(Buffer.concat(chunks).toString() || '{}');}catch{fail(400,'Invalid JSON body');}}
+  async function readBody(req) {let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>(req.url==='/api/supply/documents'?3000000:65536))fail(413,'Request is too large');chunks.push(c);}try{return JSON.parse(Buffer.concat(chunks).toString() || '{}');}catch{fail(400,'Invalid JSON body');}}
   const attempts=new Map();
   function rateLimit(req) {const key=req.socket.remoteAddress;const now=Date.now();let bucket=attempts.get(key);if(!bucket || bucket.until<now){bucket={count:0,until:now+60000};attempts.set(key,bucket);}if(++bucket.count>30)fail(429,'Too many sign-in attempts; try again in a minute');if(attempts.size>10000)for(const [k,v] of attempts)if(v.until<now)attempts.delete(k);}
   const server=http.createServer(async(req,res)=>{
@@ -83,7 +86,7 @@ function createApp(options={}) {
       }
       if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected,paymentRecoveryConnected});
       if(!path.startsWith('/api/')) {
-        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
+        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
         if(method!=='GET' && method!=='HEAD')fail(405,'Method not allowed');
         if(!allowed[path])fail(404,'Page not found');
         const mime=path.endsWith('.js')?'application/javascript':path.endsWith('.css')?'text/css':'text/html';
@@ -91,6 +94,8 @@ function createApp(options={}) {
       }
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
+      if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      if(supplyRoutes({path,method,user,body,send,res}))return;
       if(path==='/api/auth/register' && method==='POST') {
         rateLimit(req);const email=String(body.email||'').trim().toLowerCase();const name=String(body.name||'').trim();const role=body.role||'customer';
         if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)fail(400,'A valid email is required');
@@ -112,34 +117,22 @@ function createApp(options={}) {
       if(path==='/api/auth/me' && method==='GET') {if(!user)fail(401,'Sign in to continue');return send(200,user);}
       if(path==='/api/auth/logout' && method==='POST') {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(token)db.prepare('DELETE FROM sessions WHERE token=?').run(digest(token));res.setHeader('Set-Cookie','r2v_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(200,{success:true});}
       if(path==='/api/listings' && method==='GET') {
-        const mine=url.searchParams.get('mine')==='true';if(mine)requireRole(user,'agent','admin');
-        const rows=mine?(user.role==='admin'?db.prepare('SELECT * FROM listings').all():db.prepare('SELECT * FROM listings WHERE owner_id=?').all(user.id)):db.prepare('SELECT * FROM listings WHERE approved=1 AND available=1').all();
-        return send(200,{listings:rows.map(r=>({...JSON.parse(r.payload),id:r.id,approved:Boolean(r.approved),available:Boolean(r.available)}))});
+        const mine=url.searchParams.get('mine')==='true';
+        if(mine)return send(200,{listings:supply.dashboard(user).properties});
+        return send(200,{listings:supply.listPublic()});
       }
-      if(path==='/api/listings' && method==='POST') {
-        requireRole(user,'agent','admin');if(!user.verified)fail(403,'Agent approval is required');let listing;try{listing=validateListing(body);}catch(e){fail(400,e.message);}
-        listing.id=randomUUID();db.prepare('INSERT INTO listings VALUES(?,?,?,?,1)').run(listing.id,user.id,JSON.stringify(listing),0);audit(user,'listing.created',listing.id);return send(201,{...listing,approved:false});
-      }
+      if(path==='/api/listings' && method==='POST')return send(201,supply.createListing(user,body));
       const listingMatch=path.match(/^\/api\/listings\/([^/]+)$/);
-      if(listingMatch && method==='PATCH') {
-        requireRole(user,'agent','admin');const row=db.prepare('SELECT * FROM listings WHERE id=?').get(listingMatch[1]);if(!row)fail(404,'Listing not found');if(user.role!=='admin' && row.owner_id!==user.id)fail(403,'Listing belongs to another agent');
-        if(body.available!==undefined && typeof body.available!=='boolean')fail(400,'Availability must be a boolean');
-        if(body.approved!==undefined && (user.role!=='admin'||typeof body.approved!=='boolean'))fail(403,'Only administrators approve listings');
-        let payload=JSON.parse(row.payload);if(body.title!==undefined || body.price!==undefined || body.property || body.location || body.timing){try{payload={...validateListing({...payload,...body}),id:row.id};}catch(e){fail(400,e.message);}}
-        const edited=JSON.stringify(payload)!==row.payload;const approved=user.role==='admin'?(body.approved===undefined?row.approved:Number(body.approved)):(edited?0:row.approved);
-        transaction(()=>{db.prepare('UPDATE listings SET payload=?,approved=?,available=? WHERE id=?').run(JSON.stringify(payload),approved,body.available===undefined?row.available:Number(body.available),row.id);audit(user,'listing.updated',row.id,{approved});});return send(200,{...payload,approved:Boolean(approved)});
-      }
+      if(listingMatch && method==='PATCH')return send(200,supply.editListing(user,listingMatch[1],body));
       if(path==='/api/search' && method==='POST') {
         const message=String(body.message||'').trim();if(!message || message.length>2000)fail(400,'Search message is required (maximum 2000 characters)');
         if(body.budget!=null && (!Number.isFinite(Number(body.budget)) || Number(body.budget)<=0))fail(400,'Budget must be positive');
-        const listings=db.prepare('SELECT * FROM listings WHERE approved=1 AND available=1').all().map(r=>({...JSON.parse(r.payload),id:r.id}));
+        const listings=supply.listPublic();
         const result=await searchProperties({message,searchText:message,userGoal:'property',location:{city:String(body.city||'Nairobi'),country:'Kenya'},budget:body.budget==null?undefined:Number(body.budget),availableTime:body.availableTime,properties:listings,propertyOpportunities:listings});
         return send(200,result);
       }
       if(path==='/api/bookings' && method==='POST') {
-        requireRole(user,'customer');const listing=db.prepare('SELECT * FROM listings WHERE id=? AND approved=1 AND available=1').get(body.listingId);if(!listing)fail(409,'Listing is unavailable or not approved');
-        const tier=body.tier||'general';if(!Object.hasOwn(TIERS,tier))fail(400,'Invalid ride tier');const date=new Date(body.scheduledAt);if(!Number.isFinite(date.getTime())||date.getTime()<=Date.now())fail(400,'Choose a future viewing time');
-        const id=randomUUID();const paymentId=randomUUID();const duration=Number(JSON.parse(listing.payload)?.timing?.duration)||60;const start=date.toISOString(),end=new Date(date.getTime()+duration*60000).toISOString();let reservation;try{reservation=reservationAuthority.createHold({customerId:user.id,resourceId:listing.id,resourceType:'property',start,end,idempotencyKey:'booking:'+id,dependencies:['PAYMENT_CONFIRMED'],actor:user});}catch(e){if(e.code==='RESERVATION_CONFLICT')fail(409,'The property already has a viewing during this time');throw e;}try{transaction(()=>{db.prepare('INSERT INTO bookings VALUES(?,?,?,?,?,?,?,NULL,?)').run(id,user.id,listing.id,tier,TIERS[tier],'requested',start,new Date().toISOString());db.prepare('INSERT INTO payments VALUES(?,?,?,\'pending\',NULL,NULL,NULL)').run(paymentId,id,TIERS[tier]);db.prepare('INSERT INTO booking_reservations(booking_id,reservation_id,created_at) VALUES(?,?,?)').run(id,reservation.id,new Date().toISOString());audit(user,'booking.requested',id,{reservationId:reservation.id});notify(user.id,'Viewing requested. Payment verification is pending.');});}catch(e){try{reservationAuthority.transition({reservationId:reservation.id,to:'CANCELLED',actor:user});}catch{}throw e;}return send(201,{id,status:'requested',amount:TIERS[tier],paymentId,paymentStatus:'pending',reservationId:reservation.id,reservationStatus:reservation.status});
+        requireRole(user,'customer');fail(409,'Choose a published availability slot and create a viewing request; agent acceptance creates the payable booking');
       }
       if(path==='/api/bookings' && method==='GET') {
         requireRole(user,'customer','admin','driver');const condition=user.role==='admin'?'1=1':user.role==='driver'?"EXISTS(SELECT 1 FROM dispatch_assignments da WHERE da.booking_id=b.id AND da.driver_id=? AND da.status IN ('OFFERED','ACCEPTED','ASSIGNED','DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED'))":'b.customer_id=?';const driverAssignmentFilter=user?.role==='driver'?' AND da.driver_id=?':'';const query=`SELECT b.*,p.id AS payment_id,p.status AS payment_status,p.reference AS payment_reference,l.payload AS listing,(SELECT da.id FROM dispatch_assignments da WHERE da.booking_id=b.id${driverAssignmentFilter} AND da.status IN ('OFFERED','ACCEPTED','ASSIGNED','DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED') ORDER BY da.created_at DESC LIMIT 1) AS assignment_id,(SELECT da.status FROM dispatch_assignments da WHERE da.booking_id=b.id${driverAssignmentFilter} ORDER BY da.created_at DESC LIMIT 1) AS assignment_status FROM bookings b JOIN payments p ON p.booking_id=b.id JOIN listings l ON l.id=b.listing_id WHERE ${condition} ORDER BY b.created_at DESC`;
@@ -199,7 +192,7 @@ function createApp(options={}) {
       }
       if(path==='/api/admin/users' && method==='GET') {requireRole(user,'admin');return send(200,{users:db.prepare('SELECT id,email,name,role,verified FROM users ORDER BY name').all()});}
       const approveMatch=path.match(/^\/api\/admin\/users\/([^/]+)\/approve$/);
-      if(approveMatch && method==='POST') {requireRole(user,'admin');const target=db.prepare('SELECT id,role FROM users WHERE id=?').get(approveMatch[1]);if(!target||!['driver','agent'].includes(target.role))fail(400,'Only driver and agent accounts require approval');transaction(()=>{db.prepare('UPDATE users SET verified=1 WHERE id=?').run(target.id);audit(user,'account.approved',target.id);notify(target.id,'Your account has been approved.');});return send(200,{success:true});}
+      if(approveMatch && method==='POST') {requireRole(user,'admin');const target=db.prepare('SELECT id,role FROM users WHERE id=?').get(approveMatch[1]);if(!target||!['driver','agent'].includes(target.role))fail(400,'Only driver and agent accounts require approval');if(target.role==='agent')fail(409,'Use agent identity and agency documentary reviews');transaction(()=>{db.prepare('UPDATE users SET verified=1 WHERE id=?').run(target.id);audit(user,'account.approved',target.id);notify(target.id,'Your account has been approved.');});return send(200,{success:true});}
       const callbackRetryMatch=path.match(/^\/api\/admin\/payment-operations\/callbacks\/([^/]+)\/retry$/);
       if(callbackRetryMatch && method==='POST') {requireRole(user,'admin');const callbackId=callbackRetryMatch[1],caseId=String(body.caseId||'').trim(),evidenceRef=String(body.evidenceRef||'').trim(),now=new Date().toISOString();if(!caseId||!evidenceRef)fail(400,'caseId and evidenceRef are required');if(caseId.length>128)fail(400,'caseId is too long');if(evidenceRef.length>512)fail(400,'evidenceRef is too long');let row;transaction(()=>{row=db.prepare('SELECT * FROM provider_callback_inbox WHERE id=?').get(callbackId);if(!row)fail(404,'Provider callback not found');if(row.status!=='DEAD_LETTER')fail(409,'Only dead-letter callbacks are eligible for manual retry');const supportCase=db.prepare('SELECT * FROM support_cases WHERE id=?').get(caseId);if(!supportCase)fail(404,'Support case not found');if(!['OPEN','IN_PROGRESS'].includes(supportCase.status))fail(409,'Support case is not active');if(!supportCase.correlation_id&&!supportCase.affected_entity)fail(409,'Support case is not bound to this callback');if(supportCase.correlation_id&&supportCase.correlation_id!==row.correlation_id)fail(409,'Support case correlation does not match callback');if(supportCase.affected_entity&&supportCase.affected_entity!==callbackId&&supportCase.affected_entity!==row.payment_id)fail(409,'Support case does not cover this callback');const changed=db.prepare("UPDATE provider_callback_inbox SET status='FAILED',last_error=NULL,next_attempt_at=?,lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=? AND status='DEAD_LETTER'").run(now,now,callbackId);if(changed.changes!==1)fail(409,'Provider callback state changed');db.prepare('INSERT INTO support_recovery_actions(id,case_id,domain,action,authority_entity_id,evidence_ref,created_at) VALUES(?,?,?,?,?,?,?)').run(randomUUID(),caseId,'payments','PROVIDER_CALLBACK_RETRY',callbackId,evidenceRef,now);db.prepare('INSERT INTO support_case_events(id,case_id,event_type,evidence_ref,actor_id,created_at) VALUES(?,?,?,?,?,?)').run(randomUUID(),caseId,'PAYMENT_CALLBACK_RETRY_REQUESTED',evidenceRef,user.id,now);audit(user,'provider.callback_retry_requested',callbackId,{caseId,evidenceRef,provider:row.provider,providerEventId:row.provider_event_id,correlationId:row.correlation_id,previousStatus:row.status,previousAttempts:row.attempts});});return send(200,{success:true,id:callbackId,status:'FAILED',caseId,nextAttemptAt:now});}
       const initiationRetryMatch=path.match(/^\/api\/admin\/payment-operations\/initiations\/([^/]+)\/retry$/);
@@ -213,6 +206,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};
