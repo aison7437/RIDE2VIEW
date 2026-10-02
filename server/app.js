@@ -34,13 +34,16 @@ function createApp(options={}) {
   }});
   paymentAuthority=createPaymentAuthority({db,audit,notify,sideEffects});
   const paymentProviders=Object.freeze({...options.paymentProviders});
-  const externalPaymentsConnected=Object.values(paymentProviders).some(provider=>provider&&typeof provider.initiatePayment==='function');
+  const providerList=Object.values(paymentProviders).filter(Boolean);
+  const initiationPaymentsConnected=providerList.some(provider=>provider.capabilities?provider.capabilities.initiation===true:typeof provider.initiatePayment==='function');
+  const callbackPaymentsConnected=providerList.some(provider=>provider.capabilities?provider.capabilities.callbackVerification===true:typeof provider.verifySignature==='function'&&typeof provider.parseEvent==='function');
+  const externalPaymentsConnected=initiationPaymentsConnected||callbackPaymentsConnected;
   paymentIntentAuthority=createPaymentIntentAuthority({db,providers:paymentProviders,audit});
   providerBoundary=createProviderBoundary({db,paymentAuthority,providers:paymentProviders,audit});
   providerCallbackRuntime=createProviderCallbackRuntime({boundary:providerBoundary,intervalMs:options.providerCallbackIntervalMs||5000,batchSize:options.providerCallbackBatchSize||20});
-  if(externalPaymentsConnected&&options.startProviderCallbackRuntime!==false)providerCallbackRuntime.start();
+  if(callbackPaymentsConnected&&options.startProviderCallbackRuntime!==false)providerCallbackRuntime.start();
   paymentInitiationRuntime=createPaymentInitiationRuntime({authority:paymentIntentAuthority,intervalMs:options.paymentInitiationIntervalMs||5000,batchSize:options.paymentInitiationBatchSize||20});
-  if(externalPaymentsConnected&&options.startPaymentInitiationRuntime!==false)paymentInitiationRuntime.start();
+  if(initiationPaymentsConnected&&options.startPaymentInitiationRuntime!==false)paymentInitiationRuntime.start();
   sideEffectRuntime=createSideEffectRuntime({outbox:sideEffects,intervalMs:options.sideEffectIntervalMs||5000,batchSize:options.sideEffectBatchSize||20});
   if(options.startSideEffectRuntime!==false)sideEffectRuntime.start();
   dispatchAuthority=createDispatchAuthority({db,audit,notify});
@@ -66,7 +69,7 @@ function createApp(options={}) {
         if(!String(req.headers['content-type']||'').startsWith('application/json'))fail(415,'Use application/json');
       }
       if(path==='/api/health' && method==='GET') return send(200,{status:'ok',database:db.prepare('SELECT 1 AS ready').get().ready===1});
-      if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:externalPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected});
+      if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected});
       if(!path.startsWith('/api/')) {
         const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
         if(method!=='GET' && method!=='HEAD')fail(405,'Method not allowed');
