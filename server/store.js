@@ -30,6 +30,9 @@ function openStore(path) {
       acceptance_ambiguous INTEGER NOT NULL DEFAULT 0,
       provider_acknowledgement TEXT,
       provider_acknowledged_at TEXT,
+      provider_rejection_code TEXT,
+      provider_rejection_reason TEXT,
+      provider_rejected_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
