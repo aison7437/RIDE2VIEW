@@ -3,6 +3,7 @@ const { randomUUID, randomBytes, scryptSync, timingSafeEqual, createHash } = req
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { openStore } = require('./store');
+const { CURRENT_SCHEMA_VERSION } = require('./migrations');
 const { validateListing } = require('./validation');
 const { searchProperties } = require('../ai/Core/journey-orchestrator/search-adapter');
 const { createPaymentAuthority, createPaymentIntentAuthority, createProviderBoundary, createPaymentSideEffectOutbox, createSideEffectRuntime, createPaymentInitiationRuntime, createProviderCallbackRuntime } = require('./payments');
@@ -69,7 +70,17 @@ function createApp(options={}) {
         if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin);}catch{fail(403,'Invalid origin');}if(origin.host!==req.headers.host)fail(403,'Cross-site request denied');}
         if(!String(req.headers['content-type']||'').startsWith('application/json'))fail(415,'Use application/json');
       }
-      if(path==='/api/health' && method==='GET') return send(200,{status:'ok',database:db.prepare('SELECT 1 AS ready').get().ready===1});
+      if(path==='/api/health/live' && method==='GET') return send(200,{status:'ok'});
+      if((path==='/api/health'||path==='/api/health/ready') && method==='GET') {
+        try {
+          const database=db.prepare('SELECT 1 AS ready').get().ready===1;
+          const schemaVersion=Number(db.prepare('SELECT COALESCE(MAX(version),0) AS version FROM schema_migrations').get().version);
+          const ready=database&&schemaVersion===CURRENT_SCHEMA_VERSION;
+          return send(ready?200:503,{status:ready?'ready':'not_ready',database,schemaVersion,expectedSchemaVersion:CURRENT_SCHEMA_VERSION});
+        } catch(error) {
+          return send(503,{status:'not_ready',database:false,schemaVersion:null,expectedSchemaVersion:CURRENT_SCHEMA_VERSION});
+        }
+      }
       if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected,paymentRecoveryConnected});
       if(!path.startsWith('/api/')) {
         const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
