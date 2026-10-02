@@ -20,6 +20,7 @@ function openStore(path) {
       payload TEXT NOT NULL,
       status TEXT NOT NULL,
       attempts INTEGER NOT NULL DEFAULT 0,
+      total_attempts INTEGER NOT NULL DEFAULT 0,
       last_error TEXT,
       provider_request_id TEXT,
       next_attempt_at TEXT,
