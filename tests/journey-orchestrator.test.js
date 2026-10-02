@@ -27,7 +27,7 @@ test('property discovery workflow stops before transactional nodes',async()=>{
 
 test('search adapter exposes Lifestyle Agent context while preserving read-only discovery',async()=>{
  const {searchProperties}=require('../ai/Core/journey-orchestrator/search-adapter');
- const properties=[{id:'P1',title:'Kilimani 2 bedroom',price:45000,location:{city:'Nairobi'},property:{bedrooms:2},available:true}];
+ const properties=[{id:'P1',title:'Kilimani 2 bedroom',price:45000,location:{city:'Nairobi',area:'Kilimani'},property:{bedrooms:2},available:true}];
  const result=await searchProperties({message:'Find a 2 bedroom property in Kilimani',budget:50000,location:{city:'Nairobi',country:'Kenya'},properties,propertyOpportunities:properties});
  assert.equal(result.success,true);
  assert.equal(result.lifestyleContext.authority,'RECOMMENDATION_ONLY');
