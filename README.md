@@ -13,7 +13,14 @@ ADMIN_EMAIL=operations@example.com ADMIN_PASSWORD='use-a-unique-long-password' n
 
 Open http://localhost:3000. Administrator credentials are environment configuration, never default credentials. Set them for the initial account, then remove the bootstrap password from the running environment. A `.env.example` documents settings; Node does not automatically load `.env` here (use `node --env-file=.env server/index.js` if desired).
 
-The database defaults to `data/ride2view.sqlite`. Set `DB_PATH` to a durable writable volume. Do not run this application on static-only hosting: it requires a Node server. Production hosting, HTTPS, credentials, and external service setup remain external deployment tasks. Enable `COOKIE_SECURE=true` behind HTTPS. Back up the SQLite database with its SQLite backup facility or stop the process before copying the database; do not copy only the main database file while WAL writes are active.
+The database defaults to `data/ride2view.sqlite`. Set `DB_PATH` to a durable writable volume. Do not run this application on static-only hosting: it requires a Node server. Production hosting, HTTPS, credentials, and external service setup remain external deployment tasks. Enable `COOKIE_SECURE=true` behind HTTPS. Back up the SQLite database with its SQLite backup facility; do not copy only the main database file while WAL writes are active. Ride2View includes an online-safe backup command that uses Node's SQLite backup API and verifies the resulting database with `PRAGMA integrity_check`:
+
+```bash
+npm run db:backup -- /secure/backups/ride2view-$(date +%F).sqlite
+npm run db:check -- /secure/backups/ride2view-$(date +%F).sqlite
+```
+
+Schedule that command with the production platform's scheduler and store backups outside the application volume. Retention, encryption, off-site storage, and restore drills are infrastructure policy and must be configured on the chosen hosting platform.
 
 ## Operating the viewing journey
 
