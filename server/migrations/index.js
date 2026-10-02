@@ -1,5 +1,5 @@
 const {createHash}=require('node:crypto');
-const CURRENT_SCHEMA_VERSION=8;
+const CURRENT_SCHEMA_VERSION=9;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -30,6 +30,20 @@ function addPaymentSideEffectOutbox(db){db.exec(`CREATE TABLE IF NOT EXISTS paym
  attempts INTEGER NOT NULL DEFAULT 0,last_error TEXT,next_attempt_at TEXT,lease_owner TEXT,lease_expires_at TEXT,
  created_at TEXT NOT NULL,updated_at TEXT NOT NULL
 );CREATE INDEX IF NOT EXISTS payment_side_effect_outbox_due ON payment_side_effect_outbox(status,next_attempt_at,lease_expires_at);`);}
+function addSupportRecoverySchema(db){db.exec(`CREATE TABLE IF NOT EXISTS support_cases(
+ id TEXT PRIMARY KEY,customer_id TEXT,journey_id TEXT,incident_type TEXT NOT NULL,severity TEXT NOT NULL,
+ affected_entity TEXT,correlation_id TEXT,status TEXT NOT NULL,idempotency_key TEXT NOT NULL UNIQUE,
+ version INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,updated_at TEXT NOT NULL
+);CREATE TABLE IF NOT EXISTS support_case_events(
+ id TEXT PRIMARY KEY,case_id TEXT NOT NULL REFERENCES support_cases(id),event_type TEXT NOT NULL,
+ evidence_ref TEXT,actor_id TEXT,created_at TEXT NOT NULL
+);CREATE TABLE IF NOT EXISTS support_recovery_actions(
+ id TEXT PRIMARY KEY,case_id TEXT NOT NULL REFERENCES support_cases(id),domain TEXT NOT NULL,action TEXT NOT NULL,
+ authority_entity_id TEXT NOT NULL,evidence_ref TEXT NOT NULL,created_at TEXT NOT NULL
+);CREATE INDEX IF NOT EXISTS support_customer ON support_cases(customer_id);
+CREATE INDEX IF NOT EXISTS support_journey ON support_cases(journey_id);
+CREATE INDEX IF NOT EXISTS support_correlation ON support_cases(correlation_id);
+CREATE INDEX IF NOT EXISTS support_case_events_case ON support_case_events(case_id);`);}
 function addMigrationIntegrity(db){
  const c=columns(db,'schema_migrations');
  if(!c.has('checksum'))db.exec('ALTER TABLE schema_migrations ADD COLUMN checksum TEXT');
@@ -42,7 +56,8 @@ const migrations=[
  {version:5,name:'provider-callback-worker-leases',definition:'v5:add lease_owner,lease_expires_at and lease index to provider callback inbox',up:hardenProviderCallbackInbox},
  {version:6,name:'payment-side-effect-outbox',definition:'v6:add durable leased outbox for post-commit payment side effects',up:addPaymentSideEffectOutbox},
  {version:7,name:'provider-callback-retry-governance',definition:'v7:add next_attempt_at and due index for bounded provider callback retries',up:governProviderCallbackRetries},
- {version:8,name:'provider-callback-lease-generation',definition:'v8:add monotonic lease_version fencing token to provider callback inbox',up:addProviderCallbackLeaseVersion}
+ {version:8,name:'provider-callback-lease-generation',definition:'v8:add monotonic lease_version fencing token to provider callback inbox',up:addProviderCallbackLeaseVersion},
+ {version:9,name:'support-recovery-schema',definition:'v9:version support cases, evidence events and recovery actions required by payment callback recovery',up:addSupportRecoverySchema}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}
