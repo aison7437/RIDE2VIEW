@@ -30,7 +30,7 @@ function createPaymentInitiationRuntime({authority,intervalMs=5000,batchSize=20,
     stopped=true;
     if(timer){clearIntervalFn(timer);timer=null;}
   }
-  return {start,stop,drain,get running(){return running;},get workerId(){return workerId;}};
+  return {start,stop,drain,get running(){return running;},get started(){return !stopped;},get workerId(){return workerId;}};
 }
 
 module.exports={createPaymentInitiationRuntime};
