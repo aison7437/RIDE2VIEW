@@ -1,3 +1,4 @@
+const {confirmPackageInsideTransaction}=require('../../journeys/hooks');
 const {assertTransition}=require('../state/payment-state-machine');
 function createPaymentAuthority({db,audit=()=>{},notify=()=>{},ledger=null,sideEffects=null}){
  function tx(fn){db.exec('BEGIN IMMEDIATE');try{const r=fn();db.exec('COMMIT');return r;}catch(e){db.exec('ROLLBACK');throw e;}}
@@ -6,6 +7,7 @@ function createPaymentAuthority({db,audit=()=>{},notify=()=>{},ledger=null,sideE
  function claimReference(ref,kind,id,amount,currency){const prior=db.prepare('SELECT * FROM payment_references WHERE reference=?').get(ref);if(prior)throw Object.assign(new Error('REFERENCE_REPLAY'),{code:'REFERENCE_REPLAY'});db.prepare('INSERT INTO payment_references(reference,kind,entity_id,amount,currency,created_at) VALUES(?,?,?,?,?,?)').run(ref,kind,id,amount,currency,new Date().toISOString());}
  // Managed property viewings confirm their reservation in the same payment transaction.
  function confirmSupplyReservationInsideTransaction(bookingId,actor){
+  if(confirmPackageInsideTransaction(db,bookingId,actor))return;
   const managed=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='viewing_requests'").get();if(!managed)return;
   const v=db.prepare('SELECT * FROM viewing_requests WHERE booking_id=?').get(bookingId);if(!v)return;
   const r=db.prepare('SELECT r.* FROM reservations r JOIN booking_reservations br ON br.reservation_id=r.id WHERE br.booking_id=?').get(bookingId);

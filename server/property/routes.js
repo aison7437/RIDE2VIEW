@@ -1,4 +1,4 @@
-function createSupplyRoutes({supply,cancellationCoordinator}) {
+function createSupplyRoutes({supply,cancellationCoordinator,journeys}) {
   return function route({path,method,user,body,send,res}) {
     if(path==='/api/agent/dashboard'&&method==='GET'){send(200,supply.dashboard(user));return true;}
     if(path==='/api/agent/profile'&&method==='PUT'){send(200,supply.saveProfile(user,body));return true;}
@@ -19,7 +19,7 @@ function createSupplyRoutes({supply,cancellationCoordinator}) {
     if(path==='/api/viewing-requests'&&method==='POST'){const result=supply.requestViewing(user,body);send(result.duplicate?200:201,result);return true;}
     match=path.match(/^\/api\/viewing-requests\/([^/]+)\/(accept|decline|reschedule|cancel|outcome)$/);
     if(match&&method==='POST'){
-      const [id,action]=match.slice(1);let result;
+      const [id,action]=match.slice(1);if(action!=='outcome'){supply.getRequest(id,user);journeys?.guardRequest(id);}let result;
       if(action==='accept')result=supply.acceptViewing(user,id);
       if(action==='decline')result=supply.declineViewing(user,id,body);
       if(action==='reschedule')result=supply.rescheduleViewing(user,id,body);

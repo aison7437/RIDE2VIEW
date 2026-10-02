@@ -1,6 +1,7 @@
 const {createHash}=require('node:crypto');
 const {installSupplySchema}=require('../property/schema');
-const CURRENT_SCHEMA_VERSION=14;
+const {installJourneySchema}=require('../journeys/schema');
+const CURRENT_SCHEMA_VERSION=15;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -67,7 +68,8 @@ const migrations=[
  {version:11,name:'payment-initiation-acceptance-ambiguity',definition:'v11:add explicit provider acceptance ambiguity state to payment initiation outbox',up:addPaymentInitiationAmbiguity},
  {version:12,name:'payment-initiation-lifetime-attempts',definition:'v12:add cumulative total_attempts to preserve initiation retry history across manual recovery',up:addPaymentInitiationTotalAttempts},
  {version:13,name:'provider-initiation-rejection-evidence',definition:'v13:add bounded provider rejection code reason and timestamp to payment initiation outbox',up:addProviderRejectionEvidence},
- {version:14,name:'agent-verified-property-supply',definition:'v14:private evidence, separate verification checks, property media slots, viewing requests leads outcomes customer profiles; quarantine legacy publication flags',up:installSupplySchema}
+ {version:14,name:'agent-verified-property-supply',definition:'v14:private evidence, separate verification checks, property media slots, viewing requests leads outcomes customer profiles; quarantine legacy publication flags',up:installSupplySchema},
+ {version:15,name:'customer-viewing-packages',definition:'v15:customer detail history, immutable package pricing versions, itinerary stops events credits refunds',up:installJourneySchema}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}
