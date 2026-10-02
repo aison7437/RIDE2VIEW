@@ -1,3 +1,6 @@
+const {createJourneyAuthority}=require('./journeys/authority');
+const {createJourneyRoutes}=require('./journeys/routes');
+const {packageForBooking}=require('./journeys/hooks');
 const http = require('node:http');
 const { randomUUID, randomBytes, scryptSync, timingSafeEqual, createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
@@ -54,7 +57,9 @@ function createApp(options={}) {
   reservationAuthority=createReservationAuthority({db,audit});
   const cancellationCoordinator=createCancellationCoordinator({db,dispatchAuthority,reservationAuthority,paymentAuthority,audit,notify});
   const supply=createSupplyAuthority({db,audit,notify,tiers:TIERS});
-  const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator});
+  const journeys=createJourneyAuthority({db,supply,audit,notify,dispatch:dispatchAuthority});
+  const journeyRoutes=createJourneyRoutes({journeys});
+  const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator,journeys});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
   function requireRole(user,...roles) { if(!user) fail(401,'Sign in to continue'); if(!roles.includes(user.role)) fail(403,'This action is not permitted for this account'); }
   function getUser(req) {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(!token)return null;return db.prepare('SELECT u.id,u.name,u.email,u.role,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>?').get(digest(token),Date.now()) || null;}
@@ -86,7 +91,7 @@ function createApp(options={}) {
       }
       if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected,paymentRecoveryConnected});
       if(!path.startsWith('/api/')) {
-        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
+        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/journeys.js':'js/journeys.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
         if(method!=='GET' && method!=='HEAD')fail(405,'Method not allowed');
         if(!allowed[path])fail(404,'Page not found');
         const mime=path.endsWith('.js')?'application/javascript':path.endsWith('.css')?'text/css':'text/html';
@@ -95,6 +100,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      if(journeyRoutes({path,method,user,body,send,res}))return;
       if(supplyRoutes({path,method,user,body,send,res}))return;
       if(path==='/api/auth/register' && method==='POST') {
         rateLimit(req);const email=String(body.email||'').trim().toLowerCase();const name=String(body.name||'').trim();const role=body.role||'customer';
@@ -135,8 +141,8 @@ function createApp(options={}) {
         requireRole(user,'customer');fail(409,'Choose a published availability slot and create a viewing request; agent acceptance creates the payable booking');
       }
       if(path==='/api/bookings' && method==='GET') {
-        requireRole(user,'customer','admin','driver');const condition=user.role==='admin'?'1=1':user.role==='driver'?"EXISTS(SELECT 1 FROM dispatch_assignments da WHERE da.booking_id=b.id AND da.driver_id=? AND da.status IN ('OFFERED','ACCEPTED','ASSIGNED','DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED'))":'b.customer_id=?';const driverAssignmentFilter=user?.role==='driver'?' AND da.driver_id=?':'';const query=`SELECT b.*,p.id AS payment_id,p.status AS payment_status,p.reference AS payment_reference,l.payload AS listing,(SELECT da.id FROM dispatch_assignments da WHERE da.booking_id=b.id${driverAssignmentFilter} AND da.status IN ('OFFERED','ACCEPTED','ASSIGNED','DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED') ORDER BY da.created_at DESC LIMIT 1) AS assignment_id,(SELECT da.status FROM dispatch_assignments da WHERE da.booking_id=b.id${driverAssignmentFilter} ORDER BY da.created_at DESC LIMIT 1) AS assignment_status FROM bookings b JOIN payments p ON p.booking_id=b.id JOIN listings l ON l.id=b.listing_id WHERE ${condition} ORDER BY b.created_at DESC`;
-        const rows=user.role==='driver'?db.prepare(query).all(user.id,user.id,user.id):user.role==='admin'?db.prepare(query).all():db.prepare(query).all(user.id);return send(200,{bookings:rows.map(r=>({...r,listing:JSON.parse(r.listing)}))});
+        requireRole(user,'customer','admin','driver');const condition=user.role==='admin'?'1=1':user.role==='driver'?"EXISTS(SELECT 1 FROM dispatch_assignments da WHERE da.booking_id=b.id AND da.driver_id=? AND da.status IN ('OFFERED','ACCEPTED','ASSIGNED','DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED'))":'b.customer_id=?';const driverAssignmentFilter=user?.role==='driver'?' AND da.driver_id=?':'';const query=`SELECT b.*,p.id AS payment_id,p.status AS payment_status,p.reference AS payment_reference,l.payload AS listing,(SELECT da.id FROM dispatch_assignments da WHERE da.booking_id=b.id${driverAssignmentFilter} AND da.status IN ('OFFERED','ACCEPTED','ASSIGNED','DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED') ORDER BY da.created_at DESC LIMIT 1) AS assignment_id,(SELECT da.status FROM dispatch_assignments da WHERE da.booking_id=b.id${driverAssignmentFilter} ORDER BY da.created_at DESC LIMIT 1) AS assignment_status FROM bookings b JOIN payments p ON p.booking_id=b.id JOIN listings l ON l.id=b.listing_id WHERE (${condition}) AND NOT EXISTS(SELECT 1 FROM journey_stops js JOIN viewing_journeys j ON j.id=js.journey_id WHERE js.booking_id=b.id AND j.master_booking_id<>b.id) ORDER BY b.created_at DESC`;
+        const rows=user.role==='driver'?db.prepare(query).all(user.id,user.id,user.id):user.role==='admin'?db.prepare(query).all():db.prepare(query).all(user.id);return send(200,{bookings:rows.map(r=>({...r,journey_id:packageForBooking(db,r.id)?.id||null,listing:JSON.parse(r.listing)}))});
       }
       const verifyMatch=path.match(/^\/api\/payments\/([^/]+)\/verify$/);
       if(verifyMatch && method==='POST') {
@@ -157,7 +163,7 @@ function createApp(options={}) {
       }
       const actionMatch=path.match(/^\/api\/bookings\/([^/]+)\/(assign|complete|cancel)$/);
       if(actionMatch && method==='POST') {
-        requireRole(user,'admin','customer','driver');const b=bookingFor(actionMatch[1],user);const action=actionMatch[2];
+        requireRole(user,'admin','customer','driver');const b=bookingFor(actionMatch[1],user);const action=actionMatch[2];if(action!=='assign')journeys.guardBooking(b.id);
         if(action==='assign') {
           requireRole(user,'admin');
           const driver=db.prepare("SELECT id,verified FROM users WHERE id=? AND role='driver'").get(body.driverId);
@@ -206,6 +212,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,journeys,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};

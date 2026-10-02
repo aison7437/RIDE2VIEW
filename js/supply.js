@@ -21,14 +21,15 @@
     const availability=node('details');availability.append(node('summary','Availability slots'));const sf=form(async d=>{await api('/properties/'+p.id+'/slots','POST',{startAt:new Date(d.startAt).toISOString(),endAt:new Date(d.endAt).toISOString()});status('Availability published.');},'Add viewing slot');field(sf,'Start (device local time)','startAt','datetime-local').required=true;field(sf,'End (device local time)','endAt','datetime-local').required=true;const slots=node('div');availability.append(sf,button('Load availability',()=>renderSlots(p.id,slots)),slots);card.append(availability);target.append(card);
   }}
   function renderViewings(viewings,target,agent){target.replaceChildren();if(!viewings.length)target.append(node('p','No viewing requests yet.'));for(const v of viewings){const card=node('article',null,'app-card');card.dataset.requestId=v.id;card.append(node('h3',v.listing.title),node('p',`${new Date(v.start_at).toLocaleString()} – ${new Date(v.end_at).toLocaleTimeString()}`),node('p',`Request: ${v.status} · Booking: ${v.booking_status||'Awaiting acceptance'} · Payment: ${v.payment_status||'Not requested'}`),node('p',`Viewing reference: ${v.id}`));
-    if(agent&&v.status==='REQUESTED'){
+    if(agent&&v.status==='REQUESTED'&&!v.journey_id){
       card.append(button('Accept viewing request',async()=>{await api('/viewing-requests/'+v.id+'/accept','POST',{});status('Viewing accepted. Payment reservation created.');await refresh();}));
       const f=form(d=>api('/viewing-requests/'+v.id+'/decline','POST',d),'Decline viewing request');field(f,'Decline reason','reason').required=true;card.append(f);
     }
-    if(agent&&['REQUESTED','ACCEPTED'].includes(v.status)&&!['assigned','completed','cancelled'].includes(v.booking_status)){
+    if(agent&&!v.journey_id&&['REQUESTED','ACCEPTED'].includes(v.status)&&!['assigned','completed','cancelled'].includes(v.booking_status)){
       const f=form(d=>api('/viewing-requests/'+v.id+'/reschedule','POST',d),'Reschedule viewing');const slotSelect=select(f,'New availability slot','slotId',[]);card.append(button('Load alternative slots',async()=>{const rows=(await api('/properties/'+v.listing_id+'/slots')).slots.filter(s=>!s.occupied);slotSelect.replaceChildren(...rows.map(s=>{const o=node('option',new Date(s.start_at).toLocaleString());o.value=s.id;return o;}));}),f);
     }
-    if(['REQUESTED','ACCEPTED'].includes(v.status)&&!['completed','cancelled'].includes(v.booking_status)){const f=form(d=>api('/viewing-requests/'+v.id+'/cancel','POST',d),'Cancel viewing request');field(f,'Cancellation reason','reason').required=true;card.append(f);}
+    if(!v.journey_id&&['REQUESTED','ACCEPTED'].includes(v.status)&&!['completed','cancelled'].includes(v.booking_status)){const f=form(d=>api('/viewing-requests/'+v.id+'/cancel','POST',d),'Cancel viewing request');field(f,'Cancellation reason','reason').required=true;card.append(f);}
+    if(v.journey_id)card.append(node('p','This stop belongs to a viewing package. Confirm, decline or change it in Viewing packages.'));
     if(v.booking_status==='completed'){
       if(v.outcome)card.append(node('p',`Outcome: ${v.outcome.outcome} · ${v.outcome.notes}`));else {const f=form(d=>api('/viewing-requests/'+v.id+'/outcome','POST',d),'Record viewing outcome');select(f,'Outcome','outcome',[['INTERESTED','Interested'],['NOT_INTERESTED','Not interested'],['FOLLOW_UP','Follow up']]);field(f,'Outcome notes','notes');card.append(f);}
       if(!agent){const f=form(d=>api('/viewing-requests/'+v.id+'/review','POST',{rating:Number(d.rating),comment:d.comment}),'Submit agent review');select(f,'Rating','rating',[['5','5'],['4','4'],['3','3'],['2','2'],['1','1']]);field(f,'Review','comment');card.append(f);}
