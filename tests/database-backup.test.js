@@ -12,14 +12,15 @@ test('SQLite backup captures committed data and passes integrity verification',a
  const source=join(dir,'source.sqlite'),destination=join(dir,'backup.sqlite');
  const db=openStore(source);
  try{
-  db.prepare('INSERT INTO notifications VALUES(?,?,?,?)').run('backup-proof','user-proof','durable backup proof',new Date().toISOString());
+  db.exec("CREATE TABLE backup_proof(id TEXT PRIMARY KEY,message TEXT NOT NULL)");
+  db.prepare('INSERT INTO backup_proof VALUES(?,?)').run('backup-proof','durable backup proof');
   await backupDatabase(source,destination);
   const result=checkDatabase(destination);
   assert.equal(result.ok,true);
   assert.equal(result.foreignKeyViolations,0);
   assert.equal(result.integrity,'ok');
   const copy=new (require('node:sqlite').DatabaseSync)(destination,{readOnly:true});
-  try{assert.equal(copy.prepare('SELECT message FROM notifications WHERE id=?').get('backup-proof').message,'durable backup proof');}
+  try{assert.equal(copy.prepare('SELECT message FROM backup_proof WHERE id=?').get('backup-proof').message,'durable backup proof');}
   finally{copy.close();}
  }finally{db.close();rmSync(dir,{recursive:true,force:true});}
 });
