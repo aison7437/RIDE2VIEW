@@ -41,6 +41,12 @@ For multi-property journeys, use **Viewing packages**: save contact/pickup detai
 
 **Provider operations and transport visibility (V5)** adds durable collection/refund gateway jobs, authenticated payment results for viewings/Ride2Go/property services, verified SMS/WhatsApp preferences, reminders, scoped foreground driver GPS, Google address/road-ETA adapters, printable payment receipts, reconciliation and provider-accepted fiscal records. Production integrations are disabled until explicitly configured. External gateway contract, configuration, privacy and activation requirements: [`docs/production-operations-v5.md`](docs/production-operations-v5.md).
 
+## V9 production integration activation
+
+Ride2View now has repository-side production boundaries for payments/refunds, SMS/WhatsApp messaging, Google Routes/Geocoding, fiscal submission and deployment monitoring. Run `npm run check:integrations` in the production environment before deployment. A provider capability is disabled unless its server-side configuration is complete; payment callbacks additionally require a secret of at least 32 characters. Provider and monitoring endpoints must be HTTPS and credentials are never accepted from browser requests.
+
+The normalized `R2V_GATEWAY_*` contract deliberately separates Ride2View business authorities from native provider SDKs. A production gateway may translate that contract to M-Pesa/Daraja, an approved SMS/WhatsApp provider and the applicable fiscal provider. This repository does **not** claim those external accounts are activated. Actual provider credentials, public callback ingress, provider onboarding/approval, domain TLS, secret storage, scheduled off-site backups and alert routing remain deployment operations. Google credentials are server-only and should be API/restriction scoped. Video hosting, object storage and official registry verification remain disabled until reviewed adapters and credentials are introduced.
+
 The full API, review model, migration behavior and remaining phases are documented in [`docs/agent-property-supply-v1.md`](docs/agent-property-supply-v1.md).
 There are no sample listings seeded into the live database. Tests use temporary fixture data only. Internal notifications work without providers. External payment, SMS/WhatsApp, road routing and fiscal connections require the V5 configuration and gateway described above. Email, Web Push, external identity/eligibility registries and external analytics remain unconnected.
 
