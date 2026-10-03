@@ -1,4 +1,6 @@
 const {createLedgerAuthority}=require('./payments/ledger/ledger-authority');
+const {createMarketplaceAuthority}=require('./marketplace/authority');
+const {createMarketplaceRoutes}=require('./marketplace/routes');
 const {createOperations}=require('./operations');
 const {createPropertyServices}=require('./property-services/authority');
 const {createPropertyServiceRoutes}=require('./property-services/routes');
@@ -73,6 +75,8 @@ function createApp(options={}) {
   const services=createPropertyServices({db,supply,audit,notify});
   const propertyServiceRoutes=createPropertyServiceRoutes({services});
   const operations=createOperations({db,integrations:options.integrations||{},paymentAuthority,rides,services,journeys,dispatchAuthority,audit});
+  const marketplace=createMarketplaceAuthority({db,audit});
+  const marketplaceRoutes=createMarketplaceRoutes({marketplace});
   if(options.startOperationsRuntime!==false)operations.start();
   const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator,journeys});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
@@ -116,6 +120,7 @@ function createApp(options={}) {
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
       if(await operations.routes({path,method,user,body,send,res,req}))return;
+      if(marketplaceRoutes({path,method,user,body,send,res}))return;
       if(propertyServiceRoutes({path,method,user,body,send,res}))return;
       if(mobilityRoutes({path,method,user,body,send,res}))return;
       if(journeyRoutes({path,method,user,body,send,res}))return;
@@ -230,6 +235,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,operations,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,operations,marketplace,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};
