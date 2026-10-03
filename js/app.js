@@ -18,7 +18,7 @@
   }
   async function refresh() {
     if(user){try{user=await api('/auth/me');}catch{user=null;status('Sign in to continue.');}}
-    roleUI();if(!user){await window.R2VSupply?.refresh(null);await window.R2VJourney?.refresh(null);await window.R2VMobility?.refresh(null);await window.R2VPropertyServices?.refresh(null);await window.R2VOperations?.refresh(null);return;}
+    roleUI();if(!user){await window.R2VSupply?.refresh(null);await window.R2VJourney?.refresh(null);await window.R2VMobility?.refresh(null);await window.R2VPropertyServices?.refresh(null);await window.R2VOperations?.refresh(null);await window.R2VMarketplace?.refresh(null);return;}
     if(user.role==='admin'){users=(await api('/admin/users')).users;renderUsers();}
     if(['admin','customer','driver'].includes(user.role))renderBookings((await api('/bookings')).bookings);
     await window.R2VMobility?.refresh(user);
@@ -26,6 +26,7 @@
     await window.R2VOperations?.refresh(user);
     await window.R2VJourney?.refresh(user);
     await window.R2VSupply?.refresh(user);
+    await window.R2VMarketplace?.refresh(user);
     const notifications=(await api('/notifications')).notifications;$('app-notifications').replaceChildren(...notifications.map(n=>node('p',n.message)));
     if(user.role==='admin'){$('app-audit').replaceChildren(...(await api('/admin/audit')).events.map(e=>node('p',`${e.created_at} · ${e.action} · ${e.entity_id}`)));}
   }
