@@ -37,6 +37,8 @@ For multi-property journeys, use **Viewing packages**: save contact/pickup detai
 
 **Driver onboarding and Ride2Go** adds private identity/licence/vehicle evidence, adult eligibility review, online supply, expiry/revocation checks, shared driver/vehicle conflicts, standalone quoted trips, manual payment verification, driver offer/acceptance, private pickup-code start and cash-refund settlement. Operations must configure Ride2Go prices before issuing quotes. Operating policy and API: [`docs/driver-onboarding-ride2go-v3.md`](docs/driver-onboarding-ride2go-v3.md).
 
+**Remote viewing, due diligence and transaction progression** adds timezone-aware remote requests, agent availability confirmation, reviewed service quotes and manual payments, gated private provider links, recording consent, private case evidence, independently released reports, customer-authorized negotiation and recorded rent/buy outcomes. Video hosting and registry/legal verification are not connected. Workflow, API and operating boundaries: [`docs/remote-viewing-due-diligence-v4.md`](docs/remote-viewing-due-diligence-v4.md).
+
 The full API, review model, migration behavior and remaining phases are documented in [`docs/agent-property-supply-v1.md`](docs/agent-property-supply-v1.md).
 There are no sample listings seeded into the live database. Tests use temporary fixture data only. Notifications are delivered inside the app; email, SMS, WhatsApp, maps, live tracking, automatic M-Pesa collection, external identity/eligibility registries, and external analytics are not connected.
 
