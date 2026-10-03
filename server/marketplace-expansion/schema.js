@@ -1,0 +1,13 @@
+function installMarketplaceExpansionSchema(db){db.exec(`
+CREATE TABLE commerce_merchants(id TEXT PRIMARY KEY REFERENCES users(id),business_name TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'PENDING',profile TEXT NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,CHECK(status IN ('PENDING','VERIFIED','SUSPENDED')));
+CREATE TABLE commerce_catalog_items(merchant_id TEXT NOT NULL REFERENCES commerce_merchants(id),sku TEXT NOT NULL,title TEXT NOT NULL,description TEXT NOT NULL,category TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(merchant_id,sku));
+CREATE TABLE commerce_checkouts(id TEXT PRIMARY KEY,customer_id TEXT NOT NULL REFERENCES users(id),status TEXT NOT NULL,total INTEGER NOT NULL DEFAULT 0,currency TEXT NOT NULL DEFAULT 'KES',idempotency_key TEXT NOT NULL UNIQUE,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,CHECK(status IN ('DRAFT','CONFIRMED','COMPLETED','CANCELLED')));
+CREATE TABLE commerce_checkout_orders(checkout_id TEXT NOT NULL REFERENCES commerce_checkouts(id),order_id TEXT NOT NULL UNIQUE REFERENCES commerce_orders(id),merchant_id TEXT NOT NULL REFERENCES commerce_merchants(id),PRIMARY KEY(checkout_id,order_id));
+CREATE TABLE logistics_courier_assignments(id TEXT PRIMARY KEY,shipment_id TEXT NOT NULL REFERENCES logistics_shipments(id),courier_id TEXT NOT NULL REFERENCES users(id),status TEXT NOT NULL,proof_ref TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,CHECK(status IN ('OFFERED','ACCEPTED','PICKED_UP','DELIVERED','REJECTED','CANCELLED')));
+CREATE UNIQUE INDEX logistics_active_courier ON logistics_courier_assignments(shipment_id) WHERE status IN ('OFFERED','ACCEPTED','PICKED_UP');
+CREATE TABLE logistics_delivery_proofs(shipment_id TEXT PRIMARY KEY REFERENCES logistics_shipments(id),courier_id TEXT NOT NULL REFERENCES users(id),proof_ref TEXT NOT NULL,recipient_confirmation TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE logistics_parcel_policies(shipment_class TEXT PRIMARY KEY,max_weight_kg REAL NOT NULL,requires_special_handling INTEGER NOT NULL DEFAULT 0,active INTEGER NOT NULL DEFAULT 1);
+INSERT OR IGNORE INTO logistics_parcel_policies VALUES('small',5,0,1),('box',20,0,1),('boot',80,0,1),('pickup',500,0,1),('truck',10000,1,1),('trailer',30000,1,1),('sea',1000000,1,1),('air',10000,1,1);
+CREATE INDEX commerce_catalog_active ON commerce_catalog_items(category,active);CREATE INDEX commerce_checkout_customer ON commerce_checkouts(customer_id,created_at);CREATE INDEX logistics_courier ON logistics_courier_assignments(courier_id,status);
+`);}
+module.exports={installMarketplaceExpansionSchema};
