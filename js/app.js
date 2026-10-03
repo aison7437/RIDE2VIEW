@@ -17,9 +17,11 @@
     $('app-user').textContent=user?`${user.name} · ${user.role}${user.verified?'':' · awaiting approval'}`:'';
   }
   async function refresh() {
-    roleUI();if(!user){await window.R2VSupply?.refresh(null);await window.R2VJourney?.refresh(null);return;}
+    if(user){try{user=await api('/auth/me');}catch{user=null;status('Sign in to continue.');}}
+    roleUI();if(!user){await window.R2VSupply?.refresh(null);await window.R2VJourney?.refresh(null);await window.R2VMobility?.refresh(null);return;}
     if(user.role==='admin'){users=(await api('/admin/users')).users;renderUsers();}
     if(['admin','customer','driver'].includes(user.role))renderBookings((await api('/bookings')).bookings);
+    await window.R2VMobility?.refresh(user);
     await window.R2VJourney?.refresh(user);
     await window.R2VSupply?.refresh(user);
     const notifications=(await api('/notifications')).notifications;$('app-notifications').replaceChildren(...notifications.map(n=>node('p',n.message)));
@@ -39,7 +41,7 @@
         actions.append(ref,button('Verify received payment',async()=>{await api('/payments/'+b.payment_id+'/verify','POST',{reference:ref.value,amount:b.amount});status('Payment verified against the entered record.');await refresh();}));
       }
       if(user.role==='admin' && b.status==='confirmed'){
-        const select=node('select');select.setAttribute('aria-label','Approved driver');for(const d of users.filter(u=>u.role==='driver'&&u.verified)){const option=node('option',d.name);option.value=d.id;select.append(option);}
+        const select=node('select');select.setAttribute('aria-label','Approved driver');for(const d of users.filter(u=>u.role==='driver'&&u.mobilityEligible&&u.online)){const option=node('option',d.name);option.value=d.id;select.append(option);}
         actions.append(select,button('Offer viewing to driver',async()=>{if(!select.value)throw new Error('Approve a driver account first');await api('/bookings/'+b.id+'/assign','POST',{driverId:select.value,idempotencyKey:'ui-offer-'+crypto.randomUUID()});status('Viewing offered to driver. Assignment is pending driver acceptance.');await refresh();}));
       }
       if(user.role==='driver'&&b.assignment_status==='OFFERED'&&b.assignment_id){actions.append(button('Accept viewing',async()=>{await api('/dispatch/'+b.assignment_id+'/accept','POST',{});status('Viewing accepted. You are now assigned to this journey.');await refresh();}),button('Reject viewing',async()=>{await api('/dispatch/'+b.assignment_id+'/reject','POST',{});status('Viewing offer rejected.');await refresh();}));}
@@ -49,7 +51,7 @@
       if(b.journey_id)card.append(node('p','Manage all stops, cancellation and rescheduling in Viewing packages below.'));card.append(actions);$('app-bookings').append(card);
     }
   }
-  function renderUsers(){const target=$('app-users');target.replaceChildren();for(const u of users){const row=node('div',null,'app-card');row.append(node('p',`${u.name} · ${u.email} · ${u.role} · ${u.verified?'Approved':'Pending'}`));if(!u.verified&&u.role==='driver')row.append(button('Approve account',async()=>{await api('/admin/users/'+u.id+'/approve','POST',{});status('Account approved.');await refresh();}));target.append(row);}}
+  function renderUsers(){const target=$('app-users');target.replaceChildren();for(const u of users){const row=node('div',null,'app-card');row.append(node('p',`${u.name} · ${u.email} · ${u.role} · ${u.verified?'Approved':'Pending'}`));if(u.role==='driver')row.append(node('p',`Documentary eligibility: ${u.mobilityEligible?'Current':'Requires review'} · ${u.online?'Online':'Offline'}`));target.append(row);}}
   $('app-auth-form').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{user=await api('/auth/login','POST',formData(e.target));status('Signed in.');await refresh();});});
   $('app-register').addEventListener('click',()=>perform(async()=>{const data=formData($('app-auth-form'));await api('/auth/register','POST',data);user=await api('/auth/login','POST',data);status('Account created. Agent and driver accounts need administrator approval.');await refresh();}));
   $('app-logout').addEventListener('click',()=>perform(async()=>{await api('/auth/logout','POST',{});user=null;chosen=null;$('app-booking-form-section').hidden=true;$('app-results').replaceChildren();await refresh();status('Signed out.');}));

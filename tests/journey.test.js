@@ -1,3 +1,4 @@
+const {approveDriver}=require('./helpers/mobility.cjs');
 const test=require('node:test'),assert=require('node:assert/strict');
 const {mkdtempSync,rmSync}=require('node:fs'),{tmpdir}=require('node:os'),{join}=require('node:path');
 const {createApp}=require('../server/app');
@@ -22,7 +23,7 @@ test('persistent complete journey, authorization, and payment replay protection'
  await call('/auth/register','POST',{email:'evil@example.test',name:'Evil User',role:'admin',password:'Test-Password-123456'},null,400);
  const listingData={title:'Kilimani 2 bedroom',description:'Available Nairobi home',price:45000,location:{city:'Nairobi'},property:{bedrooms:2},timing:{duration:45}};
  await call('/listings','POST',listingData,agent.cookie,403);
- await call('/admin/users/'+agent.id+'/approve','POST',{},admin,409);await approveAgent(call,agent,admin);await customerProfile(call,customer.cookie);await customerProfile(call,other.cookie);await call('/admin/users/'+driver.id+'/approve','POST',{},admin);
+ await call('/admin/users/'+agent.id+'/approve','POST',{},admin,409);await approveAgent(call,agent,admin);await customerProfile(call,customer.cookie);await customerProfile(call,other.cookie);await approveDriver(call,driver,admin);
  const listing=(await call('/listings','POST',listingData,agent.cookie,201)).data;
  assert.equal((await call('/search','POST',{message:'Find a property in Nairobi',budget:50000})).data.recommendations.length,0);
  await call('/listings/'+listing.id,'PATCH',{approved:true},customer.cookie,403);await call('/listings/'+listing.id,'PATCH',{approved:true},admin,409);await publishProperty(call,listing.id,agent.cookie,admin);

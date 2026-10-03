@@ -1,3 +1,4 @@
+const {assertCustomer}=require('../../mobility/onboarding/eligibility');
 const {confirmPackageInsideTransaction}=require('../../journeys/hooks');
 const {assertTransition}=require('../state/payment-state-machine');
 function createPaymentAuthority({db,audit=()=>{},notify=()=>{},ledger=null,sideEffects=null}){
@@ -9,7 +10,7 @@ function createPaymentAuthority({db,audit=()=>{},notify=()=>{},ledger=null,sideE
  function confirmSupplyReservationInsideTransaction(bookingId,actor){
   if(confirmPackageInsideTransaction(db,bookingId,actor))return;
   const managed=db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='viewing_requests'").get();if(!managed)return;
-  const v=db.prepare('SELECT * FROM viewing_requests WHERE booking_id=?').get(bookingId);if(!v)return;
+  const v=db.prepare('SELECT * FROM viewing_requests WHERE booking_id=?').get(bookingId);if(!v)return;assertCustomer(db,v.customer_id,v.tier,1,db.prepare('SELECT start_at FROM property_slots WHERE id=?').get(v.slot_id)?.start_at);
   const r=db.prepare('SELECT r.* FROM reservations r JOIN booking_reservations br ON br.reservation_id=r.id WHERE br.booking_id=?').get(bookingId);
   const time=new Date().toISOString();if(v.status!=='ACCEPTED'||!r||r.status!=='HOLD_CREATED'||!r.hold_expires_at||r.hold_expires_at<=time)throw Object.assign(new Error('BOOKING_NOT_PAYABLE'),{code:'BOOKING_NOT_PAYABLE'});
   db.prepare("UPDATE reservations SET status='CONFIRMED',hold_expires_at=NULL,version=version+1,updated_at=? WHERE id=?").run(time,r.id);

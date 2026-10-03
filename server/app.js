@@ -1,3 +1,7 @@
+const {createOnboardingAuthority}=require('./mobility/onboarding/authority');
+const {createRideAuthority}=require('./mobility/ride2go/authority');
+const {createMobilityRoutes}=require('./mobility/routes');
+const {active:mobilityActive}=require('./mobility/onboarding/eligibility');
 const {createJourneyAuthority}=require('./journeys/authority');
 const {createJourneyRoutes}=require('./journeys/routes');
 const {packageForBooking}=require('./journeys/hooks');
@@ -59,12 +63,15 @@ function createApp(options={}) {
   const supply=createSupplyAuthority({db,audit,notify,tiers:TIERS});
   const journeys=createJourneyAuthority({db,supply,audit,notify,dispatch:dispatchAuthority});
   const journeyRoutes=createJourneyRoutes({journeys});
+  const onboarding=createOnboardingAuthority({db,audit,notify});
+  const rides=createRideAuthority({db,audit,notify});
+  const mobilityRoutes=createMobilityRoutes({onboarding,rides});
   const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator,journeys});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
   function requireRole(user,...roles) { if(!user) fail(401,'Sign in to continue'); if(!roles.includes(user.role)) fail(403,'This action is not permitted for this account'); }
   function getUser(req) {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(!token)return null;return db.prepare('SELECT u.id,u.name,u.email,u.role,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>?').get(digest(token),Date.now()) || null;}
   function bookingFor(id,user) {const b=db.prepare('SELECT b.*,l.payload AS listing FROM bookings b JOIN listings l ON l.id=b.listing_id WHERE b.id=?').get(id);if(!b)fail(404,'Booking not found');if(user.role!=='admin' && b.customer_id!==user.id && b.driver_id!==user.id)fail(403,'Booking belongs to another account');return b;}
-  async function readBody(req) {let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>(req.url==='/api/supply/documents'?3000000:65536))fail(413,'Request is too large');chunks.push(c);}try{return JSON.parse(Buffer.concat(chunks).toString() || '{}');}catch{fail(400,'Invalid JSON body');}}
+  async function readBody(req) {let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>(['/api/supply/documents','/api/mobility/documents'].includes(req.url)?3000000:65536))fail(413,'Request is too large');chunks.push(c);}try{return JSON.parse(Buffer.concat(chunks).toString() || '{}');}catch{fail(400,'Invalid JSON body');}}
   const attempts=new Map();
   function rateLimit(req) {const key=req.socket.remoteAddress;const now=Date.now();let bucket=attempts.get(key);if(!bucket || bucket.until<now){bucket={count:0,until:now+60000};attempts.set(key,bucket);}if(++bucket.count>30)fail(429,'Too many sign-in attempts; try again in a minute');if(attempts.size>10000)for(const [k,v] of attempts)if(v.until<now)attempts.delete(k);}
   const server=http.createServer(async(req,res)=>{
@@ -91,7 +98,7 @@ function createApp(options={}) {
       }
       if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected,paymentRecoveryConnected});
       if(!path.startsWith('/api/')) {
-        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/journeys.js':'js/journeys.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
+        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/mobility.js':'js/mobility.js','/js/journeys.js':'js/journeys.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
         if(method!=='GET' && method!=='HEAD')fail(405,'Method not allowed');
         if(!allowed[path])fail(404,'Page not found');
         const mime=path.endsWith('.js')?'application/javascript':path.endsWith('.css')?'text/css':'text/html';
@@ -100,6 +107,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      if(mobilityRoutes({path,method,user,body,send,res}))return;
       if(journeyRoutes({path,method,user,body,send,res}))return;
       if(supplyRoutes({path,method,user,body,send,res}))return;
       if(path==='/api/auth/register' && method==='POST') {
@@ -174,7 +182,7 @@ function createApp(options={}) {
             const offered=dispatchAuthority.offer({bookingId:b.id,driverId:driver.id,idempotencyKey:String(body.idempotencyKey||('booking:'+b.id+':driver:'+driver.id)),actor:user});
             return send(200,{status:'offered',assignmentId:offered.id,safetyDecisionId:safety.id});
           } catch(e) {
-            const statuses={BOOKING_NOT_FOUND:404,DRIVER_INELIGIBLE:400,PAYMENT_OR_BOOKING_NOT_CONFIRMED:409,RESERVATION_NOT_CONFIRMED:409,ASSIGNMENT_CONFLICT:409,IDEMPOTENCY_KEY_REQUIRED:400};
+            const statuses={BOOKING_NOT_FOUND:404,DRIVER_INELIGIBLE:409,PAYMENT_OR_BOOKING_NOT_CONFIRMED:409,RESERVATION_NOT_CONFIRMED:409,ASSIGNMENT_CONFLICT:409,IDEMPOTENCY_KEY_REQUIRED:400};
             fail(statuses[e.code]||409,e.code||'Dispatch offer failed');
           }
         }
@@ -186,7 +194,7 @@ function createApp(options={}) {
           try {
             let current=assignment;
             for(const state of ['DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED']){
-              if(current.status===state)continue;
+              if(['ASSIGNED','DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED'].indexOf(current.status)>=['ASSIGNED','DRIVER_EN_ROUTE','ARRIVED','TRIP_STARTED','TRIP_COMPLETED'].indexOf(state))continue;
               current=dispatchAuthority.transition({assignmentId:assignment.id,to:state,actor:user});
             }
             audit(user,'viewing.completed',b.id,{assignmentId:assignment.id});notify(b.customer_id,'Your viewing is completed.');
@@ -196,9 +204,9 @@ function createApp(options={}) {
         if(user.role==='driver')fail(403,'Drivers cannot cancel customer bookings');if(b.status==='completed')fail(409,'Booking cannot be cancelled');
         try{const result=cancellationCoordinator.cancel({bookingId:b.id,actor:user});return send(200,result);}catch(e){fail(409,e.code||'Booking cancellation failed');}
       }
-      if(path==='/api/admin/users' && method==='GET') {requireRole(user,'admin');return send(200,{users:db.prepare('SELECT id,email,name,role,verified FROM users ORDER BY name').all()});}
+      if(path==='/api/admin/users' && method==='GET') {requireRole(user,'admin');return send(200,{users:db.prepare('SELECT id,email,name,role,verified FROM users ORDER BY name').all().map(u=>({...u,mobilityEligible:u.role==='driver'&&mobilityActive(db,u.id,'driver'),online:Boolean(db.prepare('SELECT online FROM driver_profiles WHERE user_id=?').get(u.id)?.online)}))});}
       const approveMatch=path.match(/^\/api\/admin\/users\/([^/]+)\/approve$/);
-      if(approveMatch && method==='POST') {requireRole(user,'admin');const target=db.prepare('SELECT id,role FROM users WHERE id=?').get(approveMatch[1]);if(!target||!['driver','agent'].includes(target.role))fail(400,'Only driver and agent accounts require approval');if(target.role==='agent')fail(409,'Use agent identity and agency documentary reviews');transaction(()=>{db.prepare('UPDATE users SET verified=1 WHERE id=?').run(target.id);audit(user,'account.approved',target.id);notify(target.id,'Your account has been approved.');});return send(200,{success:true});}
+      if(approveMatch && method==='POST') {requireRole(user,'admin');const target=db.prepare('SELECT id,role FROM users WHERE id=?').get(approveMatch[1]);if(!target||!['driver','agent'].includes(target.role))fail(400,'Only driver and agent accounts require approval');if(target.role==='agent')fail(409,'Use agent identity and agency documentary reviews');fail(409,'Use driver profile, private documents and mobility review before dispatch');}
       const callbackRetryMatch=path.match(/^\/api\/admin\/payment-operations\/callbacks\/([^/]+)\/retry$/);
       if(callbackRetryMatch && method==='POST') {requireRole(user,'admin');const callbackId=callbackRetryMatch[1],caseId=String(body.caseId||'').trim(),evidenceRef=String(body.evidenceRef||'').trim(),now=new Date().toISOString();if(!caseId||!evidenceRef)fail(400,'caseId and evidenceRef are required');if(caseId.length>128)fail(400,'caseId is too long');if(evidenceRef.length>512)fail(400,'evidenceRef is too long');let row;transaction(()=>{row=db.prepare('SELECT * FROM provider_callback_inbox WHERE id=?').get(callbackId);if(!row)fail(404,'Provider callback not found');if(row.status!=='DEAD_LETTER')fail(409,'Only dead-letter callbacks are eligible for manual retry');const supportCase=db.prepare('SELECT * FROM support_cases WHERE id=?').get(caseId);if(!supportCase)fail(404,'Support case not found');if(!['OPEN','IN_PROGRESS'].includes(supportCase.status))fail(409,'Support case is not active');if(!supportCase.correlation_id&&!supportCase.affected_entity)fail(409,'Support case is not bound to this callback');if(supportCase.correlation_id&&supportCase.correlation_id!==row.correlation_id)fail(409,'Support case correlation does not match callback');if(supportCase.affected_entity&&supportCase.affected_entity!==callbackId&&supportCase.affected_entity!==row.payment_id)fail(409,'Support case does not cover this callback');const changed=db.prepare("UPDATE provider_callback_inbox SET status='FAILED',last_error=NULL,next_attempt_at=?,lease_owner=NULL,lease_expires_at=NULL,updated_at=? WHERE id=? AND status='DEAD_LETTER'").run(now,now,callbackId);if(changed.changes!==1)fail(409,'Provider callback state changed');db.prepare('INSERT INTO support_recovery_actions(id,case_id,domain,action,authority_entity_id,evidence_ref,created_at) VALUES(?,?,?,?,?,?,?)').run(randomUUID(),caseId,'payments','PROVIDER_CALLBACK_RETRY',callbackId,evidenceRef,now);db.prepare('INSERT INTO support_case_events(id,case_id,event_type,evidence_ref,actor_id,created_at) VALUES(?,?,?,?,?,?)').run(randomUUID(),caseId,'PAYMENT_CALLBACK_RETRY_REQUESTED',evidenceRef,user.id,now);audit(user,'provider.callback_retry_requested',callbackId,{caseId,evidenceRef,provider:row.provider,providerEventId:row.provider_event_id,correlationId:row.correlation_id,previousStatus:row.status,previousAttempts:row.attempts});});return send(200,{success:true,id:callbackId,status:'FAILED',caseId,nextAttemptAt:now});}
       const initiationRetryMatch=path.match(/^\/api\/admin\/payment-operations\/initiations\/([^/]+)\/retry$/);
@@ -212,6 +220,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,journeys,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};

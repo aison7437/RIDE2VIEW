@@ -1,3 +1,4 @@
+const {assertCustomer}=require('../mobility/onboarding/eligibility');
 const {randomUUID}=require('node:crypto');
 const now=()=>new Date().toISOString();
 function fail(message){throw Object.assign(new Error(message),{code:'BOOKING_NOT_PAYABLE',status:409});}
@@ -7,7 +8,7 @@ function assertPublished(db,listingId){const row=db.prepare('SELECT l.approved,l
 function confirmPackageInsideTransaction(db,bookingId,actor){
  const j=packageForBooking(db,bookingId);if(!j)return false;
  if(j.master_booking_id!==bookingId||j.status!=='PAYABLE')fail('Pay the active package master booking');
- const time=now(),rows=stops(db,j.id);
+ const plan=JSON.parse(j.plan);assertCustomer(db,j.customer_id,plan.tier,plan.participants.length,db.prepare('SELECT start_at FROM property_slots WHERE id=?').get(plan.stops[0].slotId)?.start_at);const time=now(),rows=stops(db,j.id);
  for(const s of rows){assertPublished(db,s.listing_id);const r=db.prepare('SELECT r.* FROM reservations r JOIN booking_reservations br ON br.reservation_id=r.id WHERE br.booking_id=?').get(s.booking_id);const b=db.prepare('SELECT status FROM bookings WHERE id=?').get(s.booking_id);
  if(s.request_status!=='ACCEPTED'||b?.status!=='requested'||r?.status!=='HOLD_CREATED'||!r.hold_expires_at||r.hold_expires_at<=time)fail('All package holds must be valid before payment');
  }

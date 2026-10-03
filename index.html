@@ -1141,12 +1141,14 @@
  <section id="supply-review-panel" hidden><h2>Supply review queue</h2><p>Review identity, agency, marketing authority, ownership evidence and publication separately. Ownership evidence review does not replace a due-diligence report.</p><div id="supply-review-list"></div></section>
  <section id="app-listings-section" hidden><h2>Manage listings</h2><form id="app-listing-form"><label>Title<input name="title" required></label><label>Description<textarea name="description"></textarea></label><label>City<input name="city" value="Nairobi" required></label><label>Transaction<select name="transactionType"><option value="rent">Rent</option><option value="sale">Sale</option></select></label><label>Property price (KES)<input name="price" type="number" min="1" required></label><label>Bedrooms<input name="bedrooms" type="number" min="0" max="30" required></label><label>Measured viewing duration in minutes (optional)<input name="duration" type="number" min="1"></label><button>Create property draft</button></form><div id="app-listings"></div></section>
  <section id="app-admin" hidden><h2>Operations</h2><p>Verify received payments against the actual transaction record before assigning a driver.</p><div id="app-users"></div><h3>Recent audit events</h3><div id="app-audit"></div></section>
- <section id="journey-workspace" hidden><h2>Viewing packages</h2><div id="journey-customer" hidden><div id="journey-profile"></div><div id="journey-planner"></div></div><div id="journey-list"></div></section>
+ <section id="mobility-workspace" hidden><h2>Driver onboarding and Ride2Go</h2><div id="mobility-driver" hidden></div><div id="mobility-customer" hidden></div><div id="mobility-reviewer" hidden></div><div id="ride2go-policy"></div><div id="ride2go-request" hidden></div><div id="ride2go-trips"></div></section>
+<section id="journey-workspace" hidden><h2>Viewing packages</h2><div id="journey-customer" hidden><div id="journey-profile"></div><div id="journey-planner"></div></div><div id="journey-list"></div></section>
 <section id="app-notifications-section" hidden><h2>Notifications</h2><div id="app-notifications"></div></section>
 </section>
 <div id="voice-overlay" hidden role="dialog" aria-modal="true" aria-label="Voice search"><div class="app-voice-panel"><h2>Voice search</h2><p id="voice-status">Ready</p><p id="voice-transcript"></p><button id="app-listen">Start listening</button><button id="app-voice-close">Close</button></div></div>
 <script src="/js/app.js" defer></script>
 <script src="/js/supply.js" defer></script>
+<script src="/js/mobility.js" defer></script>
 <script src="/js/journeys.js" defer></script>
 <script src="/js/preview.js" defer></script>
 </body>

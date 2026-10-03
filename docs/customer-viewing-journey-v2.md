@@ -1,5 +1,7 @@
 # Customer Profile & Viewing Journey V2
 
+V3 adds reviewed driver/rider eligibility and enables single verified adult Women/Student packages; see [the V3 operating policy](driver-onboarding-ride2go-v3.md). Statements below about blocked tiers describe the original V2 release.
+
 This release connects one to three published properties into an operations-reviewed viewing package. It supplements the single-property flow and uses the same payment and dispatch authorities.
 
 ## Customer and operations flow
