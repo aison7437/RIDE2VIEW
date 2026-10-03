@@ -3,6 +3,11 @@ const {createMarketplaceAuthority}=require('./marketplace/authority');
 const {createMarketplaceRoutes}=require('./marketplace/routes');
 const {createGrowthAuthority}=require('./growth/authority');
 const {createGrowthRoutes}=require('./growth/routes');
+const {createMarketplaceExpansion}=require('./marketplace-expansion/authority');
+const {createExpansionRoutes}=require('./marketplace-expansion/routes');
+const {createOrderAuthority}=require('./commerce/orders');
+const {createInventoryAuthority}=require('./commerce/inventory');
+const {createFulfillmentAuthority}=require('./logistics/fulfillment');
 const {createOperations}=require('./operations');
 const {createPropertyServices}=require('./property-services/authority');
 const {createPropertyServiceRoutes}=require('./property-services/routes');
@@ -81,6 +86,11 @@ function createApp(options={}) {
   const marketplaceRoutes=createMarketplaceRoutes({marketplace});
   const growth=createGrowthAuthority({db,audit});
   const growthRoutes=createGrowthRoutes({growth});
+  const commerceOrders=createOrderAuthority({db,audit});
+  const commerceInventory=createInventoryAuthority({db,audit});
+  const fulfillment=createFulfillmentAuthority({db,audit});
+  const expansion=createMarketplaceExpansion({db,orders:commerceOrders,inventory:commerceInventory,fulfillment,marketplace,audit});
+  const expansionRoutes=createExpansionRoutes({expansion});
   if(options.startOperationsRuntime!==false)operations.start();
   const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator,journeys});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
@@ -126,6 +136,7 @@ function createApp(options={}) {
       if(await operations.routes({path,method,user,body,send,res,req}))return;
       if(marketplaceRoutes({path,method,user,body,send,res}))return;
       if(growthRoutes({path,method,user,body,send,res}))return;
+      if(expansionRoutes({path,method,user,body,send,res}))return;
       if(propertyServiceRoutes({path,method,user,body,send,res}))return;
       if(mobilityRoutes({path,method,user,body,send,res}))return;
       if(journeyRoutes({path,method,user,body,send,res}))return;
@@ -240,6 +251,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,operations,marketplace,growth,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};
