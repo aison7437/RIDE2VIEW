@@ -39,8 +39,10 @@ For multi-property journeys, use **Viewing packages**: save contact/pickup detai
 
 **Remote viewing, due diligence and transaction progression** adds timezone-aware remote requests, agent availability confirmation, reviewed service quotes and manual payments, gated private provider links, recording consent, private case evidence, independently released reports, customer-authorized negotiation and recorded rent/buy outcomes. Video hosting and registry/legal verification are not connected. Workflow, API and operating boundaries: [`docs/remote-viewing-due-diligence-v4.md`](docs/remote-viewing-due-diligence-v4.md).
 
+**Provider operations and transport visibility (V5)** adds durable collection/refund gateway jobs, authenticated payment results for viewings/Ride2Go/property services, verified SMS/WhatsApp preferences, reminders, scoped foreground driver GPS, Google address/road-ETA adapters, printable payment receipts, reconciliation and provider-accepted fiscal records. Production integrations are disabled until explicitly configured. External gateway contract, configuration, privacy and activation requirements: [`docs/production-operations-v5.md`](docs/production-operations-v5.md).
+
 The full API, review model, migration behavior and remaining phases are documented in [`docs/agent-property-supply-v1.md`](docs/agent-property-supply-v1.md).
-There are no sample listings seeded into the live database. Tests use temporary fixture data only. Notifications are delivered inside the app; email, SMS, WhatsApp, maps, live tracking, automatic M-Pesa collection, external identity/eligibility registries, and external analytics are not connected.
+There are no sample listings seeded into the live database. Tests use temporary fixture data only. Internal notifications work without providers. External payment, SMS/WhatsApp, road routing and fiscal connections require the V5 configuration and gateway described above. Email, Web Push, external identity/eligibility registries and external analytics remain unconnected.
 
 ## Architecture
 
