@@ -3,7 +3,8 @@ const {installSupplySchema}=require('../property/schema');
 const {installJourneySchema}=require('../journeys/schema');
 const {installMobilitySchema}=require('../mobility/onboarding/schema');
 const {installPropertyServicesSchema}=require('../property-services/schema');
-const CURRENT_SCHEMA_VERSION=17;
+const {installOperationsSchema}=require('../operations/schema');
+const CURRENT_SCHEMA_VERSION=18;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -73,7 +74,8 @@ const migrations=[
  {version:14,name:'agent-verified-property-supply',definition:'v14:private evidence, separate verification checks, property media slots, viewing requests leads outcomes customer profiles; quarantine legacy publication flags',up:installSupplySchema},
  {version:15,name:'customer-viewing-packages',definition:'v15:customer detail history, immutable package pricing versions, itinerary stops events credits refunds',up:installJourneySchema},
  {version:16,name:'verified-mobility-and-ride2go',definition:'v16:private driver and rider evidence reviews, driver profile and online supply, standalone ride trips pricing payments shared dispatch refunds; quarantine legacy driver flags',up:installMobilitySchema},
- {version:17,name:'remote-viewing-due-diligence',definition:'v17:private property service cases evidence events manual payments provider configuration and customer-authorized negotiation',up:installPropertyServicesSchema}
+ {version:17,name:'remote-viewing-due-diligence',definition:'v17:private property service cases evidence events manual payments provider configuration and customer-authorized negotiation',up:installPropertyServicesSchema},
+ {version:18,name:'provider-operations-and-live-transport',definition:'v18:durable gateway jobs collections signed evidence verified communications receipts fiscal snapshots and scoped live tracking',up:installOperationsSchema}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}
