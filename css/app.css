@@ -3,3 +3,5 @@
 #app-workspace input[type=checkbox]{width:22px;height:22px;align-self:flex-start}#journey-planner form>.app-card{flex-basis:100%}#journey-profile,#journey-planner{margin-bottom:24px}
 
 #app-workspace .service-findings{flex-basis:100%;min-width:0}#app-workspace .service-findings fieldset{min-width:0;border:1px solid #9eb6a7;border-radius:8px;margin:12px 0;padding:12px}#app-workspace .service-findings label{margin-bottom:10px}
+
+.workspace-nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0;padding:10px;background:#edf5ef;border-radius:10px;position:sticky;top:0;z-index:3}.workspace-nav a{padding:7px 10px;border-radius:7px;background:white;text-decoration:none;font-weight:600}.workspace-nav a:focus{outline:3px solid #8fbda0;outline-offset:2px}#marketplace-workspace details{margin:12px 0}@media(max-width:600px){.workspace-nav{position:static}.workspace-nav a{flex:1 1 45%;text-align:center}}
