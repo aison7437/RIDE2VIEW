@@ -9,16 +9,17 @@ const catalog=Object.freeze([
  {id:'commerce-advice',label:'Compare available catalog items',roles:['customer'],field:'category'},
  {id:'shipment-advice',label:'Shipment capacity review',roles:['customer'],field:'shipmentId'},
  {id:'opportunities',label:'Property opportunities matching your profile',roles:['customer']},
+ {id:'memory-learning',label:'Shared memory and learning',roles:['customer','agent','driver','admin']},
  {id:'ai-critic',label:'Review an assessment with AI Critic',roles:['customer','agent','driver','admin'],field:'targetWorkflowId'},
  {id:'data-quality',label:'Data quality review',roles:['admin']},
  {id:'experiences',label:'Experiences (provider not connected)',roles:['customer']}
 ]);
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
-function createPlanner({db,supply,expansion,analytics,quality}) {
+function createPlanner({db,supply,expansion,analytics,quality,memory}) {
  function authorize(actor,request) {
   if(!actor)fail(401,'Sign in to continue');
   const definition=catalog.find(x=>x.id===request.workflow);
-  if(!definition||!definition.roles.includes(actor.role))fail(403,'Workflow not available for this account');
+  if(!definition||!definition.roles.includes(actor.role)||request.workflow==='memory-learning'&&request.memoryRole!==actor.role)fail(403,'Workflow not available for this account');
   if(request.workflow==='booking-review'){
    const b=db.prepare('SELECT customer_id FROM bookings WHERE id=?').get(request.bookingId);
    if(!b||actor.role!=='admin'&&b.customer_id!==actor.id)fail(404,'Booking not found');
@@ -31,6 +32,7 @@ function createPlanner({db,supply,expansion,analytics,quality}) {
   const definition=catalog.find(x=>x.id===body.workflow);
   if(!definition)fail(400,'Unknown workflow');
   const request={workflow:definition.id};
+  if(definition.id==='memory-learning')request.memoryRole=actor?.role;
   const allowed=new Set(['workflow','idempotencyKey',...(definition.field?[definition.field]:[]),...(definition.id==='operations-intelligence'?['from','to']:[])]);
   if(Object.keys(body).some(k=>!allowed.has(k)))fail(400,'Unexpected workflow input; evidence is loaded from your records');
   if(definition.field){const v=body[definition.field];if(v!==undefined&&typeof v!=='string')fail(400,'Invalid workflow reference');if(!definition.optional&&!v?.trim())fail(400,`${definition.field} is required`);if(v?.length>128)fail(400,'Workflow reference is too long');if(v?.trim())request[definition.field]=v.trim();}
@@ -42,11 +44,15 @@ function createPlanner({db,supply,expansion,analytics,quality}) {
   const now=new Date().toISOString(),nodes=[];
   const add=(agent,input,dependencies=[])=>{nodes.push({node_id:agent,type:'advice',responsible_agent:agent,input,dependencies,timeout:5000});};
   const preferences=()=>JSON.parse(db.prepare('SELECT preferences FROM customer_profiles WHERE user_id=?').get(actor.id)?.preferences||'{}');
-  const published=()=>supply.listPublic().slice(0,100);
+  const memoryState=['property-advice','opportunities','memory-learning'].includes(request.workflow)?memory.snapshot(actor):null;
+  const excluded=new Set(memoryState?.exclusions.map(e=>e.listingId)||[]);
+  const published=()=>supply.listPublic().filter(p=>!excluded.has(p.id)).slice(0,100);
+  if(request.workflow==='memory-learning')add('memory-learning-agent',{memoryState});
   if(request.workflow==='ai-critic')add('ai-critic-agent',{snapshot:quality.criticSnapshot(actor,request.targetWorkflowId)});
   if(request.workflow==='data-quality')add('data-quality-agent',{snapshot:quality.snapshot(actor)});
   if(request.workflow==='operations-intelligence'){const snapshot=analytics.snapshot(actor,request);add('business-analytics-agent',{snapshot});add('friction-hunter-agent',{snapshot});}
   if(request.workflow==='property-advice') {
+   if(request.listingId&&excluded.has(request.listingId))fail(409,'This property is excluded in memory; remove its exclusion or pause memory first');
    const prefs=preferences();let properties=request.listingId?supply.listPublic().filter(p=>p.id===request.listingId):published();
    if(request.listingId){properties=properties.filter(p=>p.id===request.listingId);if(!properties.length)fail(404,'Published property not found');}
    const input={properties,propertyOpportunities:properties,location:{city:prefs.city},budget:prefs.budget,bedrooms:prefs.bedrooms,userGoal:'property'};
@@ -100,6 +106,7 @@ function createPlanner({db,supply,expansion,analytics,quality}) {
    add('opportunity-agent',{budget:p.budget,candidates});
   }
   if(request.workflow==='experiences')add('experiences-agent',{experiences:[]});
+  if(memoryState)for(const n of nodes)n.input.memoryState=memoryState;
   return nodes;
  }
  return {catalog,authorize,normalize,plan};

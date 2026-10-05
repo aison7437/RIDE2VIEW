@@ -1,3 +1,4 @@
+const {createMemory}=require('./memory/authority');
 const {createQuality}=require('./quality/authority');
 const {createAnalytics}=require('./analytics/authority');
 const {createAgentWorkflows}=require('./agents/runtime');
@@ -96,7 +97,8 @@ function createApp(options={}) {
   const expansionRoutes=createExpansionRoutes({expansion});
   const analytics=createAnalytics({db});
   const quality=createQuality({db,supply});
-  const agentWorkflows=createAgentWorkflows({db,supply,expansion,analytics,quality,audit});
+  const memory=createMemory({db,assessment:(actor,id)=>agentWorkflows.get(actor,id)});
+  const agentWorkflows=createAgentWorkflows({db,supply,expansion,analytics,quality,memory,audit});
   if(options.startOperationsRuntime!==false)operations.start();
   const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator,journeys});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
@@ -139,6 +141,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      if(memory.routes({path,method,user,body,send}))return;
       if(quality.routes({path,method,user,body,send}))return;
       if(analytics.routes({path,method,user,body,send}))return;
       if(await agentWorkflows.routes({path,method,user,body,send}))return;
@@ -261,6 +264,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};

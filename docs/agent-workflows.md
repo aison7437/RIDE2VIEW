@@ -1,6 +1,6 @@
 # Persistent agent assessments
 
-This release adds a signed-in assistant workspace, SQLite checkpoints and three specialists: Agent Assistant, Lead Qualification and Driver Coach. The registry now contains 18 specialist implementations alongside the Journey Orchestrator.
+This release adds a signed-in assistant workspace, SQLite checkpoints and three specialists: Agent Assistant, Lead Qualification and Driver Coach. The registry now contains 19 specialist implementations alongside the Journey Orchestrator.
 
 These are deterministic, evidence-based recommendation modules. No LLM or external inference service is required. Their scores are heuristic rankings, not calibrated probabilities. This release does not complete the full historical multi-agent vision.
 
@@ -8,6 +8,7 @@ These are deterministic, evidence-based recommendation modules. No LLM or extern
 
 | Workspace assessment | Specialists | Server-side evidence and limits |
 | --- | --- | --- |
+| Shared memory and learning | Memory & Learning | Opt-in account-scoped feedback and explicit property exclusions; source-linked, expiring and user-controlled. See `shared-memory-learning.md`. |
 | AI Critic | AI Critic | Owner-only saved assessment consistency and selected current-state checks. Source access is revalidated. See `ai-critic-data-quality.md`. |
 | Data Quality | Data Quality | Admin-only 16-rule cross-service scan with paginated source inspection; no automatic repair. |
 | Business analytics and friction review | Business Analytics, Friction Hunter | Admin-only saved report: date-filtered creation cohorts, ledger postings, evidence and operational review rules. See `business-analytics-friction.md`. |
@@ -40,7 +41,7 @@ Workflow status `PARTIAL` means at least one specialist failed or lacked evidenc
 
 Only the workflow's owner can retrieve, review or resume it; admins cannot browse another user's assessment. Workflow creation also checks the user's current role and ownership of referenced bookings/shipments. Inputs are not returned to the browser. No document bytes, pickup codes, contact details or payment references are needed by these workflows. Frontend output uses text nodes, clears on logout and fences asynchronous renders across account changes.
 
-Assessment history is persisted, not a shared learning model. Existing explicit customer preferences supply personalization. There is no automatic inference of sensitive preferences, model training or cross-account memory. Database retention remains deployment policy; no new automatic deletion process is introduced.
+Assessment history is persisted. Opt-in memory now shares explicit feedback and property exclusions among the same account’s assistants; see `shared-memory-learning.md` for expiry and deletion scope. Existing customer profile preferences remain authoritative. There is no automatic inference of sensitive preferences, model training or cross-account memory.
 
 ## API
 
@@ -56,7 +57,9 @@ The UI uses human-readable record selectors. Authenticated APIs apply the existi
 
 ## Remaining agent program
 
-Market Intelligence, Growth Hacker, Marketing Creative, SEO, Sales Intelligence, Partnership, Investor Relations, dedicated Security Intelligence, shared Memory & Learning, Experimentation, Autonomous Improvement, Digital CEO and EV Dealership Assistant remain separate work. The new Lead Qualification specialist handles stated preference fit, not a full conversational sales concierge. Driver Coach does not implement EV telemetry or predictive coaching.
+Market Intelligence, Growth Hacker, Marketing Creative, SEO, Sales Intelligence, Partnership, Investor Relations, dedicated Security Intelligence, Experimentation, Autonomous Improvement, Digital CEO and EV Dealership Assistant remain separate work. The new Lead Qualification specialist handles stated preference fit, not a full conversational sales concierge. Driver Coach does not implement EV telemetry or predictive coaching.
+
+Explicit Memory & Learning is implemented; semantic memory and outcome-trained learning remain future work.
 
 ## Verification
 
