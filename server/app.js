@@ -1,3 +1,4 @@
+const {createIntelligence}=require('./intelligence/authority');
 const {createMemory}=require('./memory/authority');
 const {createQuality}=require('./quality/authority');
 const {createAnalytics}=require('./analytics/authority');
@@ -97,8 +98,9 @@ function createApp(options={}) {
   const expansionRoutes=createExpansionRoutes({expansion});
   const analytics=createAnalytics({db});
   const quality=createQuality({db,supply});
+  const intelligence=createIntelligence({db,supply});
   const memory=createMemory({db,assessment:(actor,id)=>agentWorkflows.get(actor,id)});
-  const agentWorkflows=createAgentWorkflows({db,supply,expansion,analytics,quality,memory,audit});
+  const agentWorkflows=createAgentWorkflows({db,supply,expansion,analytics,quality,memory,intelligence,audit});
   if(options.startOperationsRuntime!==false)operations.start();
   const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator,journeys});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
@@ -141,6 +143,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      if(intelligence.routes({path,method,user,body,send}))return;
       if(memory.routes({path,method,user,body,send}))return;
       if(quality.routes({path,method,user,body,send}))return;
       if(analytics.routes({path,method,user,body,send}))return;
@@ -260,10 +263,10 @@ function createApp(options={}) {
       if(path==='/api/notifications' && method==='GET') {requireRole(user,'admin','customer','driver','agent');return send(200,{notifications:db.prepare('SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 100').all(user.id)});}
       fail(404,'Endpoint not found');
     } catch(error) {
-      const status=error.status || 500;if(status===500)console.error('Request failed:',error.message);
+      const status=error.status || 500;intelligence.recordFailure(status,String(req.url||'').split('?')[0]);if(status===500)console.error('Request failed:',error.message);
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,intelligence,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};

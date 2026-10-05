@@ -4,8 +4,8 @@ const {createJourney}=require('../../ai/Core/journey-orchestrator/models/journey
 const {createPlanner}=require('./planner');
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
 const now=()=>new Date().toISOString();
-function createAgentWorkflows({db,supply,expansion,analytics,quality,memory,audit=()=>{}}) {
- const planner=createPlanner({db,supply,expansion,analytics,quality,memory}),running=new Set();let stopping=false;
+function createAgentWorkflows({db,supply,expansion,analytics,quality,memory,intelligence,audit=()=>{}}) {
+ const planner=createPlanner({db,supply,expansion,analytics,quality,memory,intelligence}),running=new Set();let stopping=false;
  function tx(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}}
  function owner(actor,id){if(!actor)fail(401,'Sign in to continue');const row=db.prepare('SELECT * FROM agent_workflows WHERE id=? AND owner_id=?').get(id,actor.id);if(!row)fail(404,'Agent workflow not found');planner.authorize(actor,JSON.parse(row.request));return row;}
  function event(actor,id,type,details={}){db.prepare('INSERT INTO agent_workflow_events VALUES(?,?,?,?,?,?)').run(randomUUID(),id,actor.id,type,JSON.stringify(details),now());audit(actor,'agent_workflow.'+type.toLowerCase(),id,details);}
