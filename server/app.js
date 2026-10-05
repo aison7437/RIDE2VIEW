@@ -1,3 +1,4 @@
+const {createAnalytics}=require('./analytics/authority');
 const {createAgentWorkflows}=require('./agents/runtime');
 const {createLedgerAuthority}=require('./payments/ledger/ledger-authority');
 const {createMarketplaceAuthority}=require('./marketplace/authority');
@@ -92,7 +93,8 @@ function createApp(options={}) {
   const fulfillment=createFulfillmentAuthority({db,audit});
   const expansion=createMarketplaceExpansion({db,orders:commerceOrders,inventory:commerceInventory,fulfillment,marketplace,audit});
   const expansionRoutes=createExpansionRoutes({expansion});
-  const agentWorkflows=createAgentWorkflows({db,supply,expansion,audit});
+  const analytics=createAnalytics({db});
+  const agentWorkflows=createAgentWorkflows({db,supply,expansion,analytics,audit});
   if(options.startOperationsRuntime!==false)operations.start();
   const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator,journeys});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
@@ -126,7 +128,7 @@ function createApp(options={}) {
       }
       if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected,paymentRecoveryConnected});
       if(!path.startsWith('/api/')) {
-        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/agents.js':'js/agents.js','/js/operations.js':'js/operations.js','/js/property-services.js':'js/property-services.js','/js/mobility.js':'js/mobility.js','/js/journeys.js':'js/journeys.js','/js/marketplace.js':'js/marketplace.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
+        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/agents.js':'js/agents.js','/js/analytics.js':'js/analytics.js','/js/operations.js':'js/operations.js','/js/property-services.js':'js/property-services.js','/js/mobility.js':'js/mobility.js','/js/journeys.js':'js/journeys.js','/js/marketplace.js':'js/marketplace.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
         if(method!=='GET' && method!=='HEAD')fail(405,'Method not allowed');
         if(!allowed[path])fail(404,'Page not found');
         const mime=path.endsWith('.js')?'application/javascript':path.endsWith('.css')?'text/css':'text/html';
@@ -135,6 +137,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      if(analytics.routes({path,method,user,body,send}))return;
       if(await agentWorkflows.routes({path,method,user,body,send}))return;
       if(await operations.routes({path,method,user,body,send,res,req}))return;
       if(marketplaceRoutes({path,method,user,body,send,res}))return;
@@ -177,6 +180,7 @@ function createApp(options={}) {
         if(body.budget!=null && (!Number.isFinite(Number(body.budget)) || Number(body.budget)<=0))fail(400,'Budget must be positive');
         const listings=supply.listPublic();
         const result=await searchProperties({message,searchText:message,userGoal:'property',location:{city:String(body.city||'Nairobi'),country:'Kenya'},budget:body.budget==null?undefined:Number(body.budget),availableTime:body.availableTime,properties:listings,propertyOpportunities:listings});
+        result.measurementId=result.success?analytics.recordSearch(user,result.recommendations||[]):null;
         return send(200,result);
       }
       if(path==='/api/bookings' && method==='POST') {
@@ -254,6 +258,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};

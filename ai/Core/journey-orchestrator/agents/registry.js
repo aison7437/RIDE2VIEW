@@ -12,6 +12,8 @@ const experiencesIntelligence = require('../../../experiences/experiences-intell
 function unavailable(name){return {name,async execute(task){return {schema_version:'1.0',task_id:task.task_id,journey_id:task.journey_id,agent:name,status:'UNAVAILABLE',data:{},confidence:null,source:[],timestamp:new Date().toISOString(),warnings:['Agent not implemented'],requires_confirmation:false,error:{code:'NOT_IMPLEMENTED'}};},async healthCheck(){return {status:'UNAVAILABLE'};}};}
 function createRegistry(overrides={}){
   const base={
+    'business-analytics-agent':require('../../../business/business-analytics-agent'),
+    'friction-hunter-agent':require('../../../business/friction-hunter-agent'),
     'agent-assistant':require('../../../property/agent-assistant'),
     'lead-qualification-agent':require('../../../user/lead-qualification-agent'),
     'driver-coach-agent':require('../../../driver/driver-coach-agent'),
