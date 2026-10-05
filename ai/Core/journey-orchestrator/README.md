@@ -6,13 +6,11 @@ The Journey Orchestrator is the coordination control plane for Ride2View AI capa
 
 It is not a payment processor, booking database, dispatch database, property search engine, or replacement for the Lifestyle Agent. Authoritative payment, booking, availability and driver states must continue to come from deterministic backend services.
 
-## Current V1
+## Current integration
 
-The first workflow models:
+Public search uses the read-only discovery workflow (Lifestyle → Property). The registry contains 14 specialists; recommendations do not assert authoritative booking, payment or dispatch facts.
 
-search/intent → property search → availability verification → viewing booking → payment verification → driver assignment → viewing completion.
-
-Only the existing Lifestyle Agent is connected directly. Other specialist adapters intentionally return `UNAVAILABLE` until corresponding production services are integrated. This avoids fabricating external functionality.
+Signed-in assistant assessments use `server/agents/runtime.js`, a SQLite store adapter with account isolation, token-fenced execution leases, versioned review and explicit restart recovery. See `docs/agent-workflows.md` for the capability matrix and limits. The generic property-viewing graph remains a composition contract, not an autonomous production checkout.
 
 ## Contract
 
@@ -28,4 +26,4 @@ Specialist adapters expose `execute(task, context)` and should return a versione
 - safe unavailable-agent states
 - concurrency for independent ready nodes
 
-The default store is in-memory and is **not production durable**. Integrate SQLite-backed journey state before using orchestration for real side effects.
+The default store is in-memory and is **not production durable**. The signed-in assessment runtime supplies a durable SQLite adapter. Real side effects still belong to their domain authorities.
