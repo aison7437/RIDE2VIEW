@@ -1,0 +1,17 @@
+const assert=require('node:assert/strict'),{chromium}=require('playwright'),{createApp}=require('../server/app');
+(async()=>{const app=createApp({dbPath:':memory:',adminEmail:'admin@quality.test',adminPassword:'Test-Administrator-1234',startOperationsRuntime:false,startSideEffectRuntime:false});let browser;
+ try{
+  const admin=app.db.prepare("SELECT id FROM users WHERE role='admin'").get().id,time=new Date().toISOString();app.db.prepare('INSERT INTO listings VALUES(?,?,?,0,1)').run('quality-listing',admin,JSON.stringify({title:'Synthetic property',price:1000,location:{city:'Nairobi'},property:{bedrooms:1}}));app.db.prepare("INSERT INTO bookings VALUES('missing-payment',?,?,'general',650,'requested',?,NULL,?)").run(admin,'quality-listing',time,time);
+  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+app.server.address().port;
+  browser=await chromium.launch({headless:true,...(process.env.R2V_CHROMIUM_EXECUTABLE?{executablePath:process.env.R2V_CHROMIUM_EXECUTABLE}:{}),args:['--no-sandbox','--disable-dev-shm-usage']});const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(base);
+  await page.locator('#app-auth-form [name=email]').fill('admin@quality.test');await page.locator('#app-auth-form [name=password]').fill('Test-Administrator-1234');await page.locator('#app-auth-form').getByRole('button',{name:'Sign in',exact:true}).click();
+  const root=page.locator('#app-agents');await root.getByLabel('Choose assistant').selectOption('data-quality');await root.getByRole('button',{name:'Run assessment',exact:true}).click();
+  await root.getByRole('button',{name:'Inspect viewing booking has no payment record',exact:true}).click();await root.getByText(/id: missing-payment/).first().waitFor();
+  const source=app.db.prepare("SELECT * FROM agent_workflows WHERE workflow='data-quality'").get(),j=JSON.parse(source.journey);j.nodes[0].provenance=[];app.db.prepare('UPDATE agent_workflows SET journey=? WHERE id=?').run(JSON.stringify(j),source.id);
+  await root.getByLabel('Choose assistant').selectOption('ai-critic');await root.getByLabel('Assessment to review').selectOption(source.id);await root.getByRole('button',{name:'Run assessment',exact:true}).click();await root.getByRole('button',{name:'Inspect source assessment',exact:true}).waitFor();
+  const critic=root.locator('[data-workflow-id]').filter({has:page.getByRole('button',{name:'Inspect source assessment',exact:true})});await critic.getByRole('button',{name:'Inspect source assessment',exact:true}).click();await critic.getByText(/Current source version/).waitFor();
+  await critic.getByRole('button',{name:'Mark reviewed',exact:true}).click();await page.waitForFunction(()=>Array.from(document.querySelectorAll('#app-agents [data-workflow-id] > summary')).some(x=>x.textContent.includes('AI Critic')&&x.textContent.endsWith('reviewed')));
+  await page.setViewportSize({width:390,height:844});assert.equal(await root.evaluate(e=>e.scrollWidth>e.clientWidth),false);
+  await page.locator('#app-logout').click();await page.waitForFunction(()=>document.getElementById('app-agents').hidden);assert.equal(await root.textContent(),'');assert.deepEqual(errors,[]);console.log('Quality browser: admin scan, evidence inspection, critic source selection, source review, mobile width and logout privacy passed.');
+ }finally{if(browser)await browser.close();await app.close();}
+})().catch(e=>{console.error(e);process.exitCode=1;});

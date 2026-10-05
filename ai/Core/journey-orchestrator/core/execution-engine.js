@@ -15,8 +15,8 @@ async function executeWithPolicy({journey,node,registry,store}){
     const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('TIMEOUT')),node.timeout);});
     const raw=await Promise.race([adapter.execute(task,{journey}),timeout]);
     const result=normalizeResult(node,journey,raw);
-    node.output=result.data;node.confidence=result.confidence;node.provenance=result.source||[];
-    if(result.requires_confirmation){node.status=NODE_STATUS.WAITING_CONFIRMATION;}
+    node.result_status=result.status;node.output=result.data;node.confidence=result.confidence;node.provenance=result.source||[];
+    if(result.requires_confirmation && result.status==='SUCCESS'){node.status=NODE_STATUS.WAITING_CONFIRMATION;}
     else if(result.status==='SUCCESS'){node.status=NODE_STATUS.SUCCESS;}
     else if(result.status==='PARTIAL'){node.status=NODE_STATUS.PARTIAL;}
     else {node.status=NODE_STATUS.FAILED;node.failure=result.error||{code:result.status};}

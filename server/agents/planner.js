@@ -9,10 +9,12 @@ const catalog=Object.freeze([
  {id:'commerce-advice',label:'Compare available catalog items',roles:['customer'],field:'category'},
  {id:'shipment-advice',label:'Shipment capacity review',roles:['customer'],field:'shipmentId'},
  {id:'opportunities',label:'Property opportunities matching your profile',roles:['customer']},
+ {id:'ai-critic',label:'Review an assessment with AI Critic',roles:['customer','agent','driver','admin'],field:'targetWorkflowId'},
+ {id:'data-quality',label:'Data quality review',roles:['admin']},
  {id:'experiences',label:'Experiences (provider not connected)',roles:['customer']}
 ]);
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
-function createPlanner({db,supply,expansion,analytics}) {
+function createPlanner({db,supply,expansion,analytics,quality}) {
  function authorize(actor,request) {
   if(!actor)fail(401,'Sign in to continue');
   const definition=catalog.find(x=>x.id===request.workflow);
@@ -22,6 +24,7 @@ function createPlanner({db,supply,expansion,analytics}) {
    if(!b||actor.role!=='admin'&&b.customer_id!==actor.id)fail(404,'Booking not found');
   }
   if(request.workflow==='shipment-advice'&&!db.prepare('SELECT id FROM logistics_shipments WHERE id=? AND customer_id=?').get(request.shipmentId,actor.id))fail(404,'Shipment not found');
+  if(request.workflow==='ai-critic'){const source=quality.target(actor,request.targetWorkflowId);let original;try{original=JSON.parse(source.request);}catch{fail(409,'Source request is malformed');}if(original.workflow!==source.workflow)fail(409,'Source workflow metadata does not match');if(original.workflow==='ai-critic')fail(409,'Choose an original assessment');authorize(actor,original);}
   return definition;
  }
  function normalize(actor,body) {
@@ -40,6 +43,8 @@ function createPlanner({db,supply,expansion,analytics}) {
   const add=(agent,input,dependencies=[])=>{nodes.push({node_id:agent,type:'advice',responsible_agent:agent,input,dependencies,timeout:5000});};
   const preferences=()=>JSON.parse(db.prepare('SELECT preferences FROM customer_profiles WHERE user_id=?').get(actor.id)?.preferences||'{}');
   const published=()=>supply.listPublic().slice(0,100);
+  if(request.workflow==='ai-critic')add('ai-critic-agent',{snapshot:quality.criticSnapshot(actor,request.targetWorkflowId)});
+  if(request.workflow==='data-quality')add('data-quality-agent',{snapshot:quality.snapshot(actor)});
   if(request.workflow==='operations-intelligence'){const snapshot=analytics.snapshot(actor,request);add('business-analytics-agent',{snapshot});add('friction-hunter-agent',{snapshot});}
   if(request.workflow==='property-advice') {
    const prefs=preferences();let properties=request.listingId?supply.listPublic().filter(p=>p.id===request.listingId):published();
