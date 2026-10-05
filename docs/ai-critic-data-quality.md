@@ -1,6 +1,6 @@
 # AI Critic and Data Quality
 
-The registry contains 18 specialist implementations plus the Journey Orchestrator. These two specialists use deterministic server-side rules and require no external inference provider. They produce recommendations and review records, never automatic operational repairs.
+The registry contains 19 specialist implementations plus the Journey Orchestrator. These two specialists use deterministic server-side rules and require no external inference provider. They produce recommendations and review records, never automatic operational repairs.
 
 ## AI Critic
 
@@ -38,4 +38,4 @@ Mark reviewed and Dismiss only acknowledge findings. Existing domain APIs remain
 
 `tests/quality-critic.test.js` covers inconsistent amounts, missing evidence, legacy/zero-cash cases, pagination, malformed records, altered analytics, stale payment advice, owner/role isolation and failure propagation. `tests/quality-browser.cjs` covers admin scanning, evidence inspection, source selection, review persistence, mobile width and logout privacy.
 
-Shared Memory & Learning remains a separate development phase. No cross-account learning, autonomous corrections or new external connections are introduced here.
+Shared Memory & Learning is now implemented as a subsequent phase; see `shared-memory-learning.md`. No cross-account learning, autonomous corrections or new external connections are introduced.

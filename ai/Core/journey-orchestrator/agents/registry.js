@@ -12,6 +12,7 @@ const experiencesIntelligence = require('../../../experiences/experiences-intell
 function unavailable(name){return {name,async execute(task){return {schema_version:'1.0',task_id:task.task_id,journey_id:task.journey_id,agent:name,status:'UNAVAILABLE',data:{},confidence:null,source:[],timestamp:new Date().toISOString(),warnings:['Agent not implemented'],requires_confirmation:false,error:{code:'NOT_IMPLEMENTED'}};},async healthCheck(){return {status:'UNAVAILABLE'};}};}
 function createRegistry(overrides={}){
   const base={
+    'memory-learning-agent':require('../../../core/memory-learning-agent'),
     'ai-critic-agent':require('../../../core/ai-critic-agent'),
     'data-quality-agent':require('../../../core/data-quality-agent'),
     'business-analytics-agent':require('../../../business/business-analytics-agent'),

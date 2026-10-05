@@ -4,27 +4,29 @@ const {createJourney}=require('../../ai/Core/journey-orchestrator/models/journey
 const {createPlanner}=require('./planner');
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
 const now=()=>new Date().toISOString();
-function createAgentWorkflows({db,supply,expansion,analytics,quality,audit=()=>{}}) {
- const planner=createPlanner({db,supply,expansion,analytics,quality}),running=new Set();let stopping=false;
+function createAgentWorkflows({db,supply,expansion,analytics,quality,memory,audit=()=>{}}) {
+ const planner=createPlanner({db,supply,expansion,analytics,quality,memory}),running=new Set();let stopping=false;
  function tx(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(e){db.exec('ROLLBACK');throw e;}}
  function owner(actor,id){if(!actor)fail(401,'Sign in to continue');const row=db.prepare('SELECT * FROM agent_workflows WHERE id=? AND owner_id=?').get(id,actor.id);if(!row)fail(404,'Agent workflow not found');planner.authorize(actor,JSON.parse(row.request));return row;}
  function event(actor,id,type,details={}){db.prepare('INSERT INTO agent_workflow_events VALUES(?,?,?,?,?,?)').run(randomUUID(),id,actor.id,type,JSON.stringify(details),now());audit(actor,'agent_workflow.'+type.toLowerCase(),id,details);}
  function present(row){
   let status=row.status;if(!['REVIEWED','DISMISSED'].includes(status)&&row.expires_at<=now())status='EXPIRED';else if(status==='RUNNING'&&row.lease_until<=Date.now())status='RECOVERABLE';
   let j;try{j=JSON.parse(row.journey);if(!Array.isArray(j.nodes)||j.nodes.some(n=>!n||typeof n!=='object'))throw new Error('Invalid nodes');}catch{j={nodes:[]};status='CORRUPT';}
-  return {id:row.id,workflow:row.workflow,status,version:row.version,createdAt:row.created_at,expiresAt:row.expires_at,authority:'RECOMMENDATION_ONLY',nodes:j.nodes.map(n=>({id:n.node_id,agent:n.responsible_agent,status:n.status,output:n.output,source:n.provenance,confidence:n.confidence,failure:n.failure,attempts:n.attempts})),limitations:['Outputs describe a saved snapshot. Recheck availability and prices in the booking or order workspace.','Review records your acknowledgement only; it does not book, pay, dispatch, publish or contact anyone.','Scores are heuristic rankings, not calibrated probabilities. Missing external evidence remains unavailable.']};
+  return {id:row.id,workflow:row.workflow,status,version:row.version,createdAt:row.created_at,expiresAt:row.expires_at,authority:'RECOMMENDATION_ONLY',memory:j.nodes.find(n=>n.input?.memoryState)?.input.memoryState||null,nodes:j.nodes.map(n=>({id:n.node_id,agent:n.responsible_agent,status:n.status,output:n.output,source:n.provenance,confidence:n.confidence,failure:n.failure,attempts:n.attempts})),limitations:['Outputs describe a saved snapshot. Recheck availability and prices in the booking or order workspace.','Review records your acknowledgement only; it does not book, pay, dispatch, publish or contact anyone.','Scores are heuristic rankings, not calibrated probabilities. Missing external evidence remains unavailable.']};
  }
  function get(actor,id){const row=owner(actor,id);return {...present(row),events:db.prepare('SELECT event,details,created_at FROM agent_workflow_events WHERE workflow_id=? ORDER BY rowid').all(id).map(e=>({...e,details:JSON.parse(e.details)}))};}
  function list(actor){if(!actor)fail(401,'Sign in to continue');return db.prepare('SELECT * FROM agent_workflows WHERE owner_id=? ORDER BY created_at DESC LIMIT 30').all(actor.id).filter(row=>{try{planner.authorize(actor,JSON.parse(row.request));return true;}catch{return false;}}).map(present);}
  async function execute(actor,id){
   if(stopping)fail(503,'Agent service is stopping');
   const claim=tx(()=>{const row=owner(actor,id);if(row.expires_at<=now())fail(409,'Workflow expired; create a fresh assessment');if(row.status!=='PENDING'&&!(row.status==='RUNNING'&&row.lease_until<=Date.now()))return null;
+   memory.assertCurrent(actor,JSON.parse(row.journey).nodes);
    const token=randomUUID();db.prepare("UPDATE agent_workflows SET status='RUNNING',lease_token=?,lease_until=?,version=version+1,updated_at=? WHERE id=?").run(token,Date.now()+60000,now(),id);event(actor,id,'STARTED');return {row,token};});
   if(!claim)return get(actor,id);
   const token=claim.token;const journey=JSON.parse(claim.row.journey);
   // These are read-only local computations. Interrupted nodes can safely recompute their saved input.
   for(const n of journey.nodes)if(n.status==='RUNNING')n.status='PENDING';
   const store={save:async j=>{
+   memory.assertCurrent(actor,j.nodes);
    const updated=db.prepare("UPDATE agent_workflows SET journey=?,updated_at=? WHERE id=? AND status='RUNNING' AND lease_token=? AND lease_until>?").run(JSON.stringify(j),now(),id,token,Date.now());
    if(!updated.changes)fail(409,'Agent execution lease lost');
   }};
@@ -33,7 +35,7 @@ function createAgentWorkflows({db,supply,expansion,analytics,quality,audit=()=>{
     const orchestrator=new JourneyOrchestrator({store,maxConcurrency:1});
     const result=await orchestrator.run(journey);
     tx(()=>{
-     const row=owner(actor,id);if(row.lease_token!==token||row.lease_until<=Date.now())fail(409,'Agent execution lease lost');
+     const row=owner(actor,id);memory.assertCurrent(actor,result.nodes);if(row.lease_token!==token||row.lease_until<=Date.now())fail(409,'Agent execution lease lost');
      const hasFailure=result.nodes.some(n=>['FAILED','BLOCKED'].includes(n.status));
      const waits=result.nodes.some(n=>n.status==='WAITING_CONFIRMATION');
      const status=hasFailure?'PARTIAL':waits?'REVIEW_REQUIRED':'COMPLETED';

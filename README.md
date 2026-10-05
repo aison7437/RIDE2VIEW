@@ -93,4 +93,6 @@ CI checks all JavaScript, the two existing 10-scenario suites, authorization and
 - Assigned driver/admin: `POST /api/bookings/:id/complete`.
 - Signed-in accounts: `GET /api/notifications`.
 
-The assistant registry now includes **18 specialists**. **AI Critic** reviews your saved assessments for implemented consistency checks and stale evidence. Administrators can run **Data Quality** across 16 rules and inspect matching records. Both produce reviewable findings without changing operational records. See [coverage and limitations](docs/ai-critic-data-quality.md).
+The assistant registry now includes **19 specialists**. **AI Critic** reviews your saved assessments for implemented consistency checks and stale evidence. Administrators can run **Data Quality** across 16 rules and inspect matching records. Both produce reviewable findings without changing operational records. See [coverage and limitations](docs/ai-critic-data-quality.md).
+
+**Shared Memory & Learning** now provides opt-in feedback and property exclusions reused across your property assistants. Enable, pause, forget and clear controls are available in Your assistants. See [memory behavior and retention](docs/shared-memory-learning.md).
