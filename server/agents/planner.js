@@ -9,13 +9,16 @@ const catalog=Object.freeze([
  {id:'commerce-advice',label:'Compare available catalog items',roles:['customer'],field:'category'},
  {id:'shipment-advice',label:'Shipment capacity review',roles:['customer'],field:'shipmentId'},
  {id:'opportunities',label:'Property opportunities matching your profile',roles:['customer']},
+ {id:'security-intelligence',label:'Security intelligence',roles:['admin']},
+ {id:'market-intelligence',label:'Internal market intelligence',roles:['admin']},
+ {id:'sales-intelligence',label:'Sales intelligence',roles:['agent']},
  {id:'memory-learning',label:'Shared memory and learning',roles:['customer','agent','driver','admin']},
  {id:'ai-critic',label:'Review an assessment with AI Critic',roles:['customer','agent','driver','admin'],field:'targetWorkflowId'},
  {id:'data-quality',label:'Data quality review',roles:['admin']},
  {id:'experiences',label:'Experiences (provider not connected)',roles:['customer']}
 ]);
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
-function createPlanner({db,supply,expansion,analytics,quality,memory}) {
+function createPlanner({db,supply,expansion,analytics,quality,memory,intelligence}) {
  function authorize(actor,request) {
   if(!actor)fail(401,'Sign in to continue');
   const definition=catalog.find(x=>x.id===request.workflow);
@@ -48,6 +51,7 @@ function createPlanner({db,supply,expansion,analytics,quality,memory}) {
   const excluded=new Set(memoryState?.exclusions.map(e=>e.listingId)||[]);
   const published=()=>supply.listPublic().filter(p=>!excluded.has(p.id)).slice(0,100);
   if(request.workflow==='memory-learning')add('memory-learning-agent',{memoryState});
+  for(const kind of ['security','market','sales'])if(request.workflow===kind+'-intelligence')add(kind+'-intelligence-agent',{snapshot:intelligence.snapshot(actor,kind)});
   if(request.workflow==='ai-critic')add('ai-critic-agent',{snapshot:quality.criticSnapshot(actor,request.targetWorkflowId)});
   if(request.workflow==='data-quality')add('data-quality-agent',{snapshot:quality.snapshot(actor)});
   if(request.workflow==='operations-intelligence'){const snapshot=analytics.snapshot(actor,request);add('business-analytics-agent',{snapshot});add('friction-hunter-agent',{snapshot});}

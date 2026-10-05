@@ -1,6 +1,6 @@
 # Persistent agent assessments
 
-This release adds a signed-in assistant workspace, SQLite checkpoints and three specialists: Agent Assistant, Lead Qualification and Driver Coach. The registry now contains 19 specialist implementations alongside the Journey Orchestrator.
+This release adds a signed-in assistant workspace, SQLite checkpoints and three specialists: Agent Assistant, Lead Qualification and Driver Coach. The registry now contains 22 specialist implementations alongside the Journey Orchestrator.
 
 These are deterministic, evidence-based recommendation modules. No LLM or external inference service is required. Their scores are heuristic rankings, not calibrated probabilities. This release does not complete the full historical multi-agent vision.
 
@@ -8,6 +8,9 @@ These are deterministic, evidence-based recommendation modules. No LLM or extern
 
 | Workspace assessment | Specialists | Server-side evidence and limits |
 | --- | --- | --- |
+| Security intelligence | Security Intelligence | Admin-only aggregate failure counters and session-count review; no security certification. See `security-market-sales.md`. |
+| Internal market intelligence | Market Intelligence | Admin-only published inventory statistics and recorded request demand; no external market forecast. |
+| Sales intelligence | Sales Intelligence | Agent-owned open-lead review queue with source inspection; no messages or conversion probabilities. |
 | Shared memory and learning | Memory & Learning | Opt-in account-scoped feedback and explicit property exclusions; source-linked, expiring and user-controlled. See `shared-memory-learning.md`. |
 | AI Critic | AI Critic | Owner-only saved assessment consistency and selected current-state checks. Source access is revalidated. See `ai-critic-data-quality.md`. |
 | Data Quality | Data Quality | Admin-only 16-rule cross-service scan with paginated source inspection; no automatic repair. |
@@ -57,7 +60,7 @@ The UI uses human-readable record selectors. Authenticated APIs apply the existi
 
 ## Remaining agent program
 
-Market Intelligence, Growth Hacker, Marketing Creative, SEO, Sales Intelligence, Partnership, Investor Relations, dedicated Security Intelligence, Experimentation, Autonomous Improvement, Digital CEO and EV Dealership Assistant remain separate work. The new Lead Qualification specialist handles stated preference fit, not a full conversational sales concierge. Driver Coach does not implement EV telemetry or predictive coaching.
+Growth Hacker, Marketing Creative, SEO, Partnership, Investor Relations, Experimentation, Autonomous Improvement and Digital CEO remain separate work. EV Dealership Assistant and EV-specific telemetry/predictive coaching are on hold at the user’s request. The new Lead Qualification specialist handles stated preference fit, not a full conversational sales concierge. Driver Coach does not implement EV telemetry or predictive coaching.
 
 Explicit Memory & Learning is implemented; semantic memory and outcome-trained learning remain future work.
 

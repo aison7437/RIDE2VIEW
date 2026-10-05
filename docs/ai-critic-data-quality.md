@@ -1,6 +1,6 @@
 # AI Critic and Data Quality
 
-The registry contains 19 specialist implementations plus the Journey Orchestrator. These two specialists use deterministic server-side rules and require no external inference provider. They produce recommendations and review records, never automatic operational repairs.
+The registry contains 22 specialist implementations plus the Journey Orchestrator. These two specialists use deterministic server-side rules and require no external inference provider. They produce recommendations and review records, never automatic operational repairs.
 
 ## AI Critic
 
