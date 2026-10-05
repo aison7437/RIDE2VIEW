@@ -54,6 +54,8 @@ There are no sample listings seeded into the live database. Tests use temporary 
 
 Signed-in customers, agents and drivers can run saved assessments from **Your assistants**. Agent Assistant, Lead Qualification and Driver Coach join the existing specialists through account-scoped, restart-recoverable workflows. Reviewing advice does not execute bookings, payments or messages. Capabilities, API and remaining agent work: [agent workflows](docs/agent-workflows.md).
 
+Administrators also have **Business analytics and friction**: Nairobi date filters, defined conversion cohorts, currency-separated ledger records, payout/refund allocations, performance and evidence-linked findings. Signed-in search-to-selection measurement starts with this release; historical abandonment is not inferred. See [report definitions and limits](docs/business-analytics-friction.md).
+
 ## Architecture
 
 Repository ownership and structural conventions are documented in [`docs/repository-architecture.md`](docs/repository-architecture.md). New code is organized by product capability and execution responsibility rather than geographic directory trees.

@@ -8,7 +8,8 @@ const {installMarketplaceSchema}=require('../marketplace/schema');
 const {installGrowthSchema}=require('../growth/schema');
 const {installMarketplaceExpansionSchema}=require('../marketplace-expansion/schema');
 const {installAgentWorkflowSchema}=require('../agents/schema');
-const CURRENT_SCHEMA_VERSION=22;
+const {installAnalyticsSchema}=require('../analytics/schema');
+const CURRENT_SCHEMA_VERSION=23;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -83,7 +84,8 @@ const migrations=[
  {version:19,name:'marketplace-financial-backbone',definition:'v19:relationship attribution driver and agent earnings payout evidence and customer subscriptions',up:installMarketplaceSchema},
  {version:20,name:'marketplace-growth-retention',definition:'v20:student pools subscription consumption reputation safety incidents and remote tour summaries',up:installGrowthSchema},
  {version:21,name:'rideplate-marketplace-expansion',definition:'v21:merchant catalogs multishop checkout parcel policies courier custody proof and settlement bindings',up:installMarketplaceExpansionSchema},
- {version:22,name:'persistent-agent-workflows',definition:'v22:account-scoped advisory journeys fenced leases payload-bound idempotency review events and expiry',up:installAgentWorkflowSchema}
+ {version:22,name:'persistent-agent-workflows',definition:'v22:account-scoped advisory journeys fenced leases payload-bound idempotency review events and expiry',up:installAgentWorkflowSchema},
+ {version:23,name:'measured-discovery-analytics',definition:'v23:minimal signed-in search and selection events with explicit collection start',up:installAnalyticsSchema}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}

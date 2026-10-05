@@ -1,6 +1,7 @@
 const {active,assertDriver,busy}=require('../mobility/onboarding/eligibility');
 const {remoteConflict}=require('../property-services/calendar');
 const catalog=Object.freeze([
+ {id:'operations-intelligence',label:'Business analytics and friction review',roles:['admin']},
  {id:'property-advice',label:'Property fit and viewing options',roles:['customer'],field:'listingId',optional:true},
  {id:'agent-assistant',label:'Property and lead assistant',roles:['agent']},
  {id:'driver-coach',label:'Driver readiness and earnings',roles:['driver']},
@@ -11,7 +12,7 @@ const catalog=Object.freeze([
  {id:'experiences',label:'Experiences (provider not connected)',roles:['customer']}
 ]);
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
-function createPlanner({db,supply,expansion}) {
+function createPlanner({db,supply,expansion,analytics}) {
  function authorize(actor,request) {
   if(!actor)fail(401,'Sign in to continue');
   const definition=catalog.find(x=>x.id===request.workflow);
@@ -27,9 +28,10 @@ function createPlanner({db,supply,expansion}) {
   const definition=catalog.find(x=>x.id===body.workflow);
   if(!definition)fail(400,'Unknown workflow');
   const request={workflow:definition.id};
-  const allowed=new Set(['workflow','idempotencyKey',...(definition.field?[definition.field]:[])]);
+  const allowed=new Set(['workflow','idempotencyKey',...(definition.field?[definition.field]:[]),...(definition.id==='operations-intelligence'?['from','to']:[])]);
   if(Object.keys(body).some(k=>!allowed.has(k)))fail(400,'Unexpected workflow input; evidence is loaded from your records');
   if(definition.field){const v=body[definition.field];if(v!==undefined&&typeof v!=='string')fail(400,'Invalid workflow reference');if(!definition.optional&&!v?.trim())fail(400,`${definition.field} is required`);if(v?.length>128)fail(400,'Workflow reference is too long');if(v?.trim())request[definition.field]=v.trim();}
+  if(definition.id==='operations-intelligence'){const p=analytics.period(body);request.from=p.from;request.to=p.to;}
   authorize(actor,request);return request;
  }
  function plan(actor,request) {
@@ -38,6 +40,7 @@ function createPlanner({db,supply,expansion}) {
   const add=(agent,input,dependencies=[])=>{nodes.push({node_id:agent,type:'advice',responsible_agent:agent,input,dependencies,timeout:5000});};
   const preferences=()=>JSON.parse(db.prepare('SELECT preferences FROM customer_profiles WHERE user_id=?').get(actor.id)?.preferences||'{}');
   const published=()=>supply.listPublic().slice(0,100);
+  if(request.workflow==='operations-intelligence'){const snapshot=analytics.snapshot(actor,request);add('business-analytics-agent',{snapshot});add('friction-hunter-agent',{snapshot});}
   if(request.workflow==='property-advice') {
    const prefs=preferences();let properties=request.listingId?supply.listPublic().filter(p=>p.id===request.listingId):published();
    if(request.listingId){properties=properties.filter(p=>p.id===request.listingId);if(!properties.length)fail(404,'Published property not found');}
