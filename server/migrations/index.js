@@ -7,7 +7,8 @@ const {installOperationsSchema}=require('../operations/schema');
 const {installMarketplaceSchema}=require('../marketplace/schema');
 const {installGrowthSchema}=require('../growth/schema');
 const {installMarketplaceExpansionSchema}=require('../marketplace-expansion/schema');
-const CURRENT_SCHEMA_VERSION=21;
+const {installAgentWorkflowSchema}=require('../agents/schema');
+const CURRENT_SCHEMA_VERSION=22;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -81,7 +82,8 @@ const migrations=[
  {version:18,name:'provider-operations-and-live-transport',definition:'v18:durable gateway jobs collections signed evidence verified communications receipts fiscal snapshots and scoped live tracking',up:installOperationsSchema},
  {version:19,name:'marketplace-financial-backbone',definition:'v19:relationship attribution driver and agent earnings payout evidence and customer subscriptions',up:installMarketplaceSchema},
  {version:20,name:'marketplace-growth-retention',definition:'v20:student pools subscription consumption reputation safety incidents and remote tour summaries',up:installGrowthSchema},
- {version:21,name:'rideplate-marketplace-expansion',definition:'v21:merchant catalogs multishop checkout parcel policies courier custody proof and settlement bindings',up:installMarketplaceExpansionSchema}
+ {version:21,name:'rideplate-marketplace-expansion',definition:'v21:merchant catalogs multishop checkout parcel policies courier custody proof and settlement bindings',up:installMarketplaceExpansionSchema},
+ {version:22,name:'persistent-agent-workflows',definition:'v22:account-scoped advisory journeys fenced leases payload-bound idempotency review events and expiry',up:installAgentWorkflowSchema}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}

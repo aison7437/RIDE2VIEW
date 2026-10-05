@@ -28,7 +28,9 @@ class JourneyOrchestrator {
   }
 
   async run(input = {}) {
-    const journey = input.nodes ? createJourney(input) : await this.plan(input);
+    // Resuming must preserve identity, outputs and terminal node states.
+    const journey = input.journey_id ? structuredClone(input) : input.nodes ? createJourney(input) : await this.plan(input);
+    validateGraph(journey);
     let progressed = true;
     while (progressed) {
       progressed = false;

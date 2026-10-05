@@ -37,3 +37,12 @@ test('search adapter exposes Lifestyle Agent context while preserving read-only 
  assert.equal(result.recommendations.length,1);
  assert.match(result.journeyId,/^JRN-/);
 });
+
+test('resume preserves journey identity and completed node evidence without rerunning it',async()=>{
+ let calls=0;
+ const registry={'test-agent':{execute:async()=>{calls++;return {status:'SUCCESS',data:{evidence:'saved'},source:['fixture'],requires_confirmation:false};}}};
+ const orchestrator=new JourneyOrchestrator({registry});
+ const first=await orchestrator.run({id:'durable-identity',nodes:[{node_id:'one',responsible_agent:'test-agent'}]});
+ const resumed=await orchestrator.resume(first.journey_id);
+ assert.equal(resumed.journey_id,'durable-identity');assert.equal(calls,1);assert.deepEqual(resumed.nodes[0].output,{evidence:'saved'});assert.deepEqual(resumed.nodes[0].provenance,['fixture']);assert.equal(resumed.nodes[0].attempts,1);
+});
