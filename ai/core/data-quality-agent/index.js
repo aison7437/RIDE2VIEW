@@ -1,0 +1,6 @@
+async function execute(task={}){
+ const s=task.input?.snapshot;if(!s)return {status:'UNAVAILABLE',data:{authority:'RECOMMENDATION_ONLY'},source:[],requires_confirmation:false,error:{code:'QUALITY_SNAPSHOT_REQUIRED'}};
+ const findings=s.checks.filter(c=>c.count>0).sort((a,b)=>(a.severity==='HIGH'?0:1)-(b.severity==='HIGH'?0:1)||b.count-a.count||a.rule.localeCompare(b.rule));
+ return {schema_version:'1.0',agent:'data-quality-agent',status:'SUCCESS',data:{authority:'RECOMMENDATION_ONLY',generatedAt:s.generatedAt,rulesVersion:'1.0',checkedRules:s.checks.length,checks:s.checks,findings,summary:findings.length?`${findings.length} checks found records requiring review.`:'No records matched the implemented checks.',limitations:['This is a bounded rule set over current internal records, not a completeness or accuracy certification.','Findings overlap and are not counts of unique customers.','Legacy journal gaps and expired checks require investigation; they do not prove fraud or financial loss.','No documents, external registries or bank statements were verified. Nothing was repaired automatically.']},source:['server-data-quality-snapshot-v1'],confidence:null,timestamp:s.generatedAt,requires_confirmation:findings.length>0};
+}
+module.exports={execute};

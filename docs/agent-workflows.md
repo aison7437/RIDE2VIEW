@@ -1,6 +1,6 @@
 # Persistent agent assessments
 
-This release adds a signed-in assistant workspace, SQLite checkpoints and three specialists: Agent Assistant, Lead Qualification and Driver Coach. The registry now contains 16 specialist implementations alongside the Journey Orchestrator.
+This release adds a signed-in assistant workspace, SQLite checkpoints and three specialists: Agent Assistant, Lead Qualification and Driver Coach. The registry now contains 18 specialist implementations alongside the Journey Orchestrator.
 
 These are deterministic, evidence-based recommendation modules. No LLM or external inference service is required. Their scores are heuristic rankings, not calibrated probabilities. This release does not complete the full historical multi-agent vision.
 
@@ -8,6 +8,8 @@ These are deterministic, evidence-based recommendation modules. No LLM or extern
 
 | Workspace assessment | Specialists | Server-side evidence and limits |
 | --- | --- | --- |
+| AI Critic | AI Critic | Owner-only saved assessment consistency and selected current-state checks. Source access is revalidated. See `ai-critic-data-quality.md`. |
+| Data Quality | Data Quality | Admin-only 16-rule cross-service scan with paginated source inspection; no automatic repair. |
 | Business analytics and friction review | Business Analytics, Friction Hunter | Admin-only saved report: date-filtered creation cohorts, ledger postings, evidence and operational review rules. See `business-analytics-friction.md`. |
 | Property fit and viewing options | Lifestyle, Property, Lead Qualification, Scheduling | Published listings and the customer's saved profile. Selected-property availability excludes occupied slots and overlapping agent/remote appointments. Single viewing only; zero inter-stop travel is not a live ETA. Booking revalidates all rules, including protected-tier eligibility. |
 | Property and lead assistant | Agent Assistant | Owning agent's publication state, photo counts, enabled future slots and lead stages. Up to 100 properties and 100 recent leads. No customer contacts or private evidence documents enter the agent. |
@@ -45,7 +47,7 @@ Assessment history is persisted, not a shared learning model. Existing explicit 
 - `GET /api/agents/capabilities`: role-appropriate workflow choices.
 - `GET /api/agents/choices`: own shipment references for the selector.
 - `GET /api/agents/workflows`: own latest 30 assessments.
-- `POST /api/agents/workflows`: `{workflow, idempotencyKey}` plus the selected workflow's `listingId` (optional), `bookingId`, `category` or `shipmentId`.
+- `POST /api/agents/workflows`: `{workflow, idempotencyKey}` plus the selected workflow's `listingId` (optional), `bookingId`, `category` `shipmentId` or `targetWorkflowId`.
 - `GET /api/agents/workflows/:id`: saved assessment and review events.
 - `POST /api/agents/workflows/:id/resume`: recover an interrupted run.
 - `POST /api/agents/workflows/:id/review`: `{version, decision: "REVIEWED" | "DISMISSED"}`.
@@ -54,7 +56,7 @@ The UI uses human-readable record selectors. Authenticated APIs apply the existi
 
 ## Remaining agent program
 
-Market Intelligence, Growth Hacker, Marketing Creative, SEO, Sales Intelligence, Partnership, Investor Relations, AI Critic/Reasoning Verification, cross-service Data Quality, dedicated Security Intelligence, shared Memory & Learning, Experimentation, Autonomous Improvement, Digital CEO and EV Dealership Assistant remain separate work. The new Lead Qualification specialist handles stated preference fit, not a full conversational sales concierge. Driver Coach does not implement EV telemetry or predictive coaching.
+Market Intelligence, Growth Hacker, Marketing Creative, SEO, Sales Intelligence, Partnership, Investor Relations, dedicated Security Intelligence, shared Memory & Learning, Experimentation, Autonomous Improvement, Digital CEO and EV Dealership Assistant remain separate work. The new Lead Qualification specialist handles stated preference fit, not a full conversational sales concierge. Driver Coach does not implement EV telemetry or predictive coaching.
 
 ## Verification
 

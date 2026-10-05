@@ -11,7 +11,7 @@
     "check": "node scripts/check.js",
     "check:integrations": "node scripts/check-integrations.js",
     "test:agent": "node ai/user/lifestyle-agent/test.js && node ai/user/lifestyle-agent/scenario-test.js",
-    "test:browser": "node tests/browser.cjs && node tests/property-services-browser.cjs && node tests/operations-v5-browser.cjs && node tests/agents-browser.cjs && node tests/analytics-browser.cjs",
+    "test:browser": "node tests/browser.cjs && node tests/property-services-browser.cjs && node tests/operations-v5-browser.cjs && node tests/agents-browser.cjs && node tests/analytics-browser.cjs && node tests/quality-browser.cjs",
     "db:backup": "node scripts/backup-db.js",
     "db:check": "node scripts/check-db.js"
   },

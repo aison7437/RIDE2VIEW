@@ -92,3 +92,5 @@ CI checks all JavaScript, the two existing 10-scenario suites, authorization and
 - Admin: `GET /api/admin/users`, `POST /api/admin/users/:id/approve`, `POST /api/payments/:id/verify`, `POST /api/bookings/:id/assign`, `GET /api/admin/audit`.
 - Assigned driver/admin: `POST /api/bookings/:id/complete`.
 - Signed-in accounts: `GET /api/notifications`.
+
+The assistant registry now includes **18 specialists**. **AI Critic** reviews your saved assessments for implemented consistency checks and stale evidence. Administrators can run **Data Quality** across 16 rules and inspect matching records. Both produce reviewable findings without changing operational records. See [coverage and limitations](docs/ai-critic-data-quality.md).
