@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { createApp } = require('../server/app');
 const {approveAgent,publishProperty,createSlot}=require('./helpers/supply.cjs');
 (async()=>{
- const app=createApp({dbPath:':memory:',adminEmail:'admin@example.test',adminPassword:'Administrator-Test-Only-42'});
+ const app=createApp({dbPath:':memory:',adminEmail:'admin@example.test',adminPassword:'Administrator-Test-Only-42',apiRateLimit:10000});
  let browser;
  try {
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+app.server.address().port;
