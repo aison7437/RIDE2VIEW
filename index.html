@@ -1118,7 +1118,7 @@
  <p id="app-status" role="status" aria-live="polite">Connecting…</p>
  <section id="app-auth"><h2>Account</h2><form id="app-auth-form"><label>Name (new accounts)<input name="name" autocomplete="name"></label><label>Email<input name="email" type="email" required autocomplete="email"></label><label>Password<input name="password" type="password" required minlength="12" autocomplete="current-password"></label><label>Account type<select name="role"><option value="customer">Customer</option><option value="agent">Property agent</option><option value="driver">Driver</option></select></label><button type="submit">Sign in</button><button type="button" id="app-register">Create account</button></form></section>
  <section id="app-account" hidden><p id="app-user"></p><button id="app-logout">Sign out</button></section>
- <section><h2>Search approved listings</h2><form id="app-search"><label>What are you looking for?<input name="message" value="Find a suitable property in Nairobi" required></label><label>City<input name="city" value="Nairobi" required></label><label>Monthly rent budget (KES)<input name="budget" type="number" min="1" value="50000"></label><label>Available time<input name="availableTime" placeholder="1 hour"></label><button>Search</button><button type="button" id="app-voice">Voice search</button></form><div id="app-results"></div></section>
+ <section id="app-discovery"><h2>Search approved listings</h2><form id="app-search"><label>What are you looking for?<input name="message" value="Find a suitable property in Nairobi" required></label><label>City<input name="city" value="Nairobi" required></label><label>Monthly rent budget (KES)<input name="budget" type="number" min="1" value="50000"></label><label>Available time<input name="availableTime" placeholder="1 hour"></label><button>Search</button><button type="button" id="app-voice">Voice search</button></form><div id="app-results"></div></section>
  <section id="app-booking-form-section" hidden><h2>Request a viewing</h2><p id="app-chosen"></p><form id="app-booking-form"><label>Available viewing slot<select name="slotId" id="app-viewing-slots" required></select></label><label>Ride tier<select name="tier" id="app-tiers"></select></label><button>Request viewing</button></form><p>The agent confirms the viewing first. Payment and transport follow acceptance. Complete your city, budget and rent/buy preferences before requesting.</p></section>
  <section id="app-bookings-section" hidden><h2>Viewing bookings</h2><button id="app-refresh">Refresh status</button><div id="app-bookings"></div></section>
  <section id="supply-customer" hidden><h2>Profile and property journey</h2>
@@ -1154,7 +1154,10 @@
 <script src="/js/journeys.js" defer></script>
 <script src="/js/agents.js" defer></script>
 <script src="/js/analytics.js" defer></script>
-<script src="/js/marketplace.js" defer></script>\n<script src="/js/preview.js" defer></script>
+<script src="/js/shopping.js" defer></script>
+<script src="/js/marketplace.js" defer></script>
+<script src="/js/dashboard.js" defer></script>
+<script src="/js/preview.js" defer></script>
 </body>
 </html>
 

@@ -1716,6 +1716,8 @@ function renderProfile() {
 
 /* ════ TOAST ════ */
 function toast(msg) {
+  // Preview feedback must not overlay the signed-in production workspace.
+  if (document.getElementById('app-workspace')?.hidden === false) return;
   const t = document.getElementById('toast');
   if (!t) return;
   t.textContent = msg;
