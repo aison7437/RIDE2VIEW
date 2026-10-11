@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $=id=>document.getElementById(id);
-  let user=null,chosen=null,users=[],recognition=null;
+  let user=null,chosen=null,users=[],recognition=null,refreshGeneration=0;
   const status=message=>{$('app-status').textContent=message;};
   async function api(path,method='GET',body) {
     const response=await fetch('/api'+path,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
@@ -17,20 +17,18 @@
     $('app-user').textContent=user?`${user.name} · ${user.role}${user.verified?'':' · awaiting approval'}`:'';
   }
   async function refresh() {
-    if(user){try{user=await api('/auth/me');}catch{user=null;status('Sign in to continue.');}}
-    roleUI();if(!user){await window.R2VSupply?.refresh(null);await window.R2VJourney?.refresh(null);await window.R2VMobility?.refresh(null);await window.R2VPropertyServices?.refresh(null);await window.R2VOperations?.refresh(null);await window.R2VMarketplace?.refresh(null);await window.R2VAgents?.refresh(null);await window.R2VAnalytics?.refresh(null);return;}
-    if(user.role==='admin'){users=(await api('/admin/users')).users;renderUsers();}
-    if(['admin','customer','driver'].includes(user.role))renderBookings((await api('/bookings')).bookings);
-    await window.R2VMobility?.refresh(user);
-    await window.R2VPropertyServices?.refresh(user);
-    await window.R2VOperations?.refresh(user);
-    await window.R2VJourney?.refresh(user);
-    await window.R2VSupply?.refresh(user);
-    await window.R2VMarketplace?.refresh(user);
-    await window.R2VAgents?.refresh(user);
-    await window.R2VAnalytics?.refresh(user);
-    const notifications=(await api('/notifications')).notifications;$('app-notifications').replaceChildren(...notifications.map(n=>node('p',n.message)));
-    if(user.role==='admin'){$('app-audit').replaceChildren(...(await api('/admin/audit')).events.map(e=>node('p',`${e.created_at} · ${e.action} · ${e.entity_id}`)));}
+    const token=++refreshGeneration;
+    const current=()=>token===refreshGeneration;
+    if(user){try{const account=await api('/auth/me');if(!current())return;user=account;}catch{if(!current())return;user=null;status('Sign in to continue.');}}
+    roleUI();await window.R2VDashboard?.refresh(user);if(!current())return;
+    const modules=['R2VMobility','R2VPropertyServices','R2VOperations','R2VJourney','R2VSupply','R2VMarketplace','R2VAgents','R2VAnalytics'];
+    if(!user){for(const name of modules){await window[name]?.refresh(null);if(!current())return;}return;}
+    if(user.role==='admin'){const result=await api('/admin/users');if(!current())return;users=result.users;renderUsers();}
+    if(['admin','customer','driver'].includes(user.role)){const result=await api('/bookings');if(!current())return;renderBookings(result.bookings);}
+    for(const name of modules){await window[name]?.refresh(user);if(!current())return;}
+    const notifications=(await api('/notifications')).notifications;if(!current())return;
+    $('app-notifications').replaceChildren(...notifications.map(n=>node('p',n.message)));
+    if(user.role==='admin'){const result=await api('/admin/audit');if(!current())return;$('app-audit').replaceChildren(...result.events.map(e=>node('p',`${e.created_at} · ${e.action} · ${e.entity_id}`)));}
   }
   function renderResults(items,measurementId=null) {
     $('app-results').replaceChildren();if(!items.length){$('app-results').append(node('p','No approved available listings matched. Try another search or ask an agent to add a listing.'));return;}
@@ -65,7 +63,7 @@
   $('app-listing-form').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{const d=formData(e.target);await api('/listings','POST',{title:d.title,description:d.description,price:Number(d.price),transactionType:d.transactionType,location:{city:d.city},property:{bedrooms:Number(d.bedrooms)},timing:{duration:d.duration?Number(d.duration):null}});status('Property draft created. Submit marketing and ownership evidence, then request publication review.');e.target.reset();await refresh();});});
   $('app-refresh').addEventListener('click',()=>perform(refresh));$('app-preview').addEventListener('click',()=>{$('app-workspace').hidden=true;});
   function openVoice() {$('app-workspace').hidden=false;$('voice-overlay').hidden=false;$('voice-status').textContent='Speak a property search. Review it before searching.';}
-  window.R2V={openVoice,api,node,button,perform,status,refresh,getUser:()=>user};$('app-voice').addEventListener('click',openVoice);
+  window.R2V={openVoice,showListings:renderResults,api,node,button,perform,status,refresh,getUser:()=>user};$('app-voice').addEventListener('click',openVoice);
   $('app-voice-close').addEventListener('click',()=>{recognition?.stop();$('voice-overlay').hidden=true;});
   $('app-listen').addEventListener('click',()=>{const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Speech){$('voice-status').textContent='Voice recognition is unavailable in this browser. Type your search instead.';return;}recognition?.stop();recognition=new Speech();recognition.lang='en-KE';recognition.onresult=e=>{const text=e.results[0][0].transcript;$('voice-transcript').textContent=text;$('app-search').elements.message.value=text;$('voice-status').textContent='Search captured. Close this panel and press Search.';};recognition.onerror=e=>{$('voice-status').textContent='Voice input failed: '+e.error;};recognition.start();$('voice-status').textContent='Listening…';});
   perform(async()=>{const config=await api('/config');for(const [tier,price]of Object.entries(config.tiers)){const option=node('option',`${tier} · KES ${price}`);option.value=tier;$('app-tiers').append(option);}try{user=await api('/auth/me');}catch{user=null;}await refresh();status('Ready. Search approved listings or sign in.');});

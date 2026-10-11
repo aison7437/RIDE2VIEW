@@ -50,6 +50,10 @@ The normalized `R2V_GATEWAY_*` contract deliberately separates Ride2View busines
 The full API, review model, migration behavior and remaining phases are documented in [`docs/agent-property-supply-v1.md`](docs/agent-property-supply-v1.md).
 There are no sample listings seeded into the live database. Tests use temporary fixture data only. Internal notifications work without providers. External payment, SMS/WhatsApp, road routing and fiscal connections require the V5 configuration and gateway described above. Email, Web Push, external identity/eligibility registries and external analytics remain unconnected.
 
+## Client and driver dashboards
+
+Signed-in customers and drivers now have responsive account overviews backed by their actual activity. Customers can use a persistent Ride Plate cart, review current prices and stock, place one order per merchant, and reopen payment/fulfilment status from order history. Merchants prepare orders for collection and administrators verify actual received payments. Online Ride Plate collection remains unconnected. See [checkout, dashboards and operational limits](docs/checkout-dashboards.md).
+
 ## Personal assistants
 
 Signed-in customers, agents and drivers can run saved assessments from **Your assistants**. Agent Assistant, Lead Qualification and Driver Coach join the existing specialists through account-scoped, restart-recoverable workflows. Reviewing advice does not execute bookings, payments or messages. Capabilities, API and remaining agent work: [agent workflows](docs/agent-workflows.md).

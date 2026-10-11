@@ -1,10 +1,10 @@
 const {approveDriver}=require('./helpers/mobility.cjs');
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
-const { createApp } = require('../server/app');
+const { createBrowserApp: createApp } = require('./helpers/browser-app.cjs');
 const {approveAgent,publishProperty,createSlot}=require('./helpers/supply.cjs');
 (async()=>{
- const app=createApp({dbPath:':memory:',adminEmail:'admin@example.test',adminPassword:'Administrator-Test-Only-42',apiRateLimit:10000});
+ const app=createApp({dbPath:':memory:',adminEmail:'admin@example.test',adminPassword:'Administrator-Test-Only-42'});
  let browser;
  try {
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+app.server.address().port;

@@ -1,3 +1,5 @@
+const {createDashboard}=require('./dashboard');
+const {createShopping}=require('./shopping/authority');
 const {createIntelligence}=require('./intelligence/authority');
 const {createMemory}=require('./memory/authority');
 const {createQuality}=require('./quality/authority');
@@ -85,6 +87,7 @@ function createApp(options={}) {
   const journeyRoutes=createJourneyRoutes({journeys});
   const onboarding=createOnboardingAuthority({db,audit,notify});
   const rides=createRideAuthority({db,audit,notify});
+  const dashboard=createDashboard({db,supply,journeys,onboarding,rides});
   const mobilityRoutes=createMobilityRoutes({onboarding,rides});
   const services=createPropertyServices({db,supply,audit,notify});
   const propertyServiceRoutes=createPropertyServiceRoutes({services});
@@ -98,6 +101,7 @@ function createApp(options={}) {
   const fulfillment=createFulfillmentAuthority({db,audit});
   const expansion=createMarketplaceExpansion({db,orders:commerceOrders,inventory:commerceInventory,fulfillment,marketplace,audit});
   const expansionRoutes=createExpansionRoutes({expansion});
+  const shopping=createShopping({db,orders:commerceOrders,paymentAuthority,audit});
   const analytics=createAnalytics({db});
   const quality=createQuality({db,supply});
   const intelligence=createIntelligence({db,supply});
@@ -139,7 +143,7 @@ function createApp(options={}) {
       }
       if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected,paymentRecoveryConnected});
       if(!path.startsWith('/api/')) {
-        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/agents.js':'js/agents.js','/js/analytics.js':'js/analytics.js','/js/operations.js':'js/operations.js','/js/property-services.js':'js/property-services.js','/js/mobility.js':'js/mobility.js','/js/journeys.js':'js/journeys.js','/js/marketplace.js':'js/marketplace.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
+        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/agents.js':'js/agents.js','/js/analytics.js':'js/analytics.js','/js/operations.js':'js/operations.js','/js/property-services.js':'js/property-services.js','/js/mobility.js':'js/mobility.js','/js/journeys.js':'js/journeys.js','/js/dashboard.js':'js/dashboard.js','/js/shopping.js':'js/shopping.js','/js/marketplace.js':'js/marketplace.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
         if(method!=='GET' && method!=='HEAD')fail(405,'Method not allowed');
         if(!allowed[path])fail(404,'Page not found');
         const mime=path.endsWith('.js')?'application/javascript':path.endsWith('.css')?'text/css':'text/html';
@@ -148,6 +152,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      if(path==='/api/dashboard'&&method==='GET')return send(200,dashboard.get(user));
       if(intelligence.routes({path,method,user,body,send}))return;
       if(memory.routes({path,method,user,body,send}))return;
       if(quality.routes({path,method,user,body,send}))return;
@@ -156,6 +161,7 @@ function createApp(options={}) {
       if(await operations.routes({path,method,user,body,send,res,req}))return;
       if(marketplaceRoutes({path,method,user,body,send,res}))return;
       if(growthRoutes({path,method,user,body,send,res}))return;
+      if(shopping.routes({path,method,user,body,send,url}))return;
       if(expansionRoutes({path,method,user,body,send,res}))return;
       if(propertyServiceRoutes({path,method,user,body,send,res}))return;
       if(mobilityRoutes({path,method,user,body,send,res}))return;
@@ -272,6 +278,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,intelligence,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,dashboard,shopping,intelligence,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};

@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict'),{chromium}=require('playwright'),{createApp}=require('../server/app');
+const assert=require('node:assert/strict'),{chromium}=require('playwright'),{createBrowserApp:createApp}=require('./helpers/browser-app.cjs');
 (async()=>{const app=createApp({dbPath:':memory:',adminEmail:'admin@memory.test',adminPassword:'Test-Administrator-1234',startOperationsRuntime:false,startSideEffectRuntime:false});let browser;
  try{
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+app.server.address().port,email='customer@memory.test',password='Test-Customer-1234';

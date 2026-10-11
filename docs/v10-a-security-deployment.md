@@ -13,3 +13,12 @@ This change is intentionally isolated from EV development and payment provider i
 A per-process fixed-window API limiter now applies to all /api/ requests (default 120 requests/minute per remote address). Authentication retains its stricter existing limit. At multi-instance scale use a shared store or enforce equivalent limits at an ingress/load balancer.
 ## Logging policy
 Server errors log structured request metadata and correlation IDs, never request payloads, passwords or provider secrets. For client errors, normal HTTP responses remain authoritative.
+
+## Browser test isolation
+All browser journey suites use `tests/helpers/browser-app.cjs`, which explicitly
+sets a 10,000-request test quota. Fixture setup, repeated workspace refreshes and
+multiple customer/agent/administrator/driver sessions all share one loopback IP;
+they do not represent a single customer's normal one-minute traffic. This override
+is confined to test code. HTTP regressions verify the unchanged production default
+of 120 API requests/minute, `429`/`Retry-After`, health-probe availability, and the
+separate stricter sign-in quota. Do not increase the production quota to fix CI.
