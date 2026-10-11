@@ -1,7 +1,7 @@
 const {approveDriver}=require('./helpers/mobility.cjs');
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
-const { createApp } = require('../server/app');
+const { createBrowserApp: createApp } = require('./helpers/browser-app.cjs');
 const {approveAgent,publishProperty,createSlot}=require('./helpers/supply.cjs');
 (async()=>{
  const app=createApp({dbPath:':memory:',adminEmail:'admin@example.test',adminPassword:'Administrator-Test-Only-42'});

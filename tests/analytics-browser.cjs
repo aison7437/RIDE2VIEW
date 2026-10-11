@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict'),{chromium}=require('playwright'),{createApp}=require('../server/app');
+const assert=require('node:assert/strict'),{chromium}=require('playwright'),{createBrowserApp:createApp}=require('./helpers/browser-app.cjs');
 (async()=>{const app=createApp({dbPath:':memory:',adminEmail:'admin@analytics.test',adminPassword:'Test-Administrator-1234',startOperationsRuntime:false,startSideEffectRuntime:false});let browser;
  try{
   const time=new Date(Date.now()-2*86400000).toISOString();app.db.prepare("INSERT INTO support_cases(id,incident_type,severity,status,idempotency_key,created_at,updated_at) VALUES('support-browser','PAYMENT_FAILED','HIGH','OPEN','support-browser',?,?)").run(time,time);

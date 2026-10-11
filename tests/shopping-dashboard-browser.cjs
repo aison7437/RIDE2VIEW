@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict'),{chromium}=require('playwright'),{createApp}=require('../server/app');
+const assert=require('node:assert/strict'),{chromium}=require('playwright'),{createBrowserApp:createApp}=require('./helpers/browser-app.cjs');
 const {profileData}=require('./helpers/mobility.cjs');
 const {pdf,expiry}=require('./helpers/supply.cjs');
 const {REQUIRED}=require('../server/mobility/onboarding/authority');

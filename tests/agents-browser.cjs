@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const {chromium}=require('playwright');
-const {createApp}=require('../server/app');
+const {createBrowserApp:createApp}=require('./helpers/browser-app.cjs');
 (async()=>{
  const app=createApp({dbPath:':memory:',startOperationsRuntime:false,startSideEffectRuntime:false});let browser;
  try{

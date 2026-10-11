@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict'),{chromium}=require('playwright'),{createApp}=require('../server/app');
+const assert=require('node:assert/strict'),{chromium}=require('playwright'),{createBrowserApp:createApp}=require('./helpers/browser-app.cjs');
 (async()=>{const app=createApp({dbPath:':memory:',adminEmail:'admin@quality.test',adminPassword:'Test-Administrator-1234',startOperationsRuntime:false,startSideEffectRuntime:false});let browser;
  try{
   const admin=app.db.prepare("SELECT id FROM users WHERE role='admin'").get().id,time=new Date().toISOString();app.db.prepare('INSERT INTO listings VALUES(?,?,?,0,1)').run('quality-listing',admin,JSON.stringify({title:'Synthetic property',price:1000,location:{city:'Nairobi'},property:{bedrooms:1}}));app.db.prepare("INSERT INTO bookings VALUES('missing-payment',?,?,'general',650,'requested',?,NULL,?)").run(admin,'quality-listing',time,time);

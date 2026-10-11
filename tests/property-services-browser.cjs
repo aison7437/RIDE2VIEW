@@ -1,6 +1,6 @@
 // Real browser workflow coverage; all provider URLs and evidence are synthetic.
 const {chromium}=require('playwright'),assert=require('node:assert/strict');
-const {createApp}=require('../server/app');
+const {createBrowserApp:createApp}=require('./helpers/browser-app.cjs');
 const {approveAgent,publishProperty,pdf}=require('./helpers/supply.cjs');
 (async()=>{const app=createApp({dbPath:':memory:',adminEmail:'ops@example.test',adminPassword:'Operations-Test-Password-42',startSideEffectRuntime:false});let browser;try{
  await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+app.server.address().port;
