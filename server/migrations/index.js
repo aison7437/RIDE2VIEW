@@ -12,7 +12,8 @@ const {installAnalyticsSchema}=require('../analytics/schema');
 const {installMemorySchema}=require('../memory/schema');
 const {installIntelligenceSchema}=require('../intelligence/schema');
 const {installShoppingSchema}=require('../shopping/schema');
-const CURRENT_SCHEMA_VERSION=26;
+const {installAgentVisibilitySchema}=require('../agent-visibility/schema');
+const CURRENT_SCHEMA_VERSION=27;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -91,7 +92,8 @@ const migrations=[
  {version:23,name:'measured-discovery-analytics',definition:'v23:minimal signed-in search and selection events with explicit collection start',up:installAnalyticsSchema},
  {version:24,name:'explicit-account-agent-memory',definition:'v24:opt-in versioned memory settings and bounded expiring source-linked explicit feedback and property exclusions',up:installMemorySchema},
  {version:25,name:'security-signal-collection',definition:'v25:aggregate minute security failure counters with collection start metadata and no personal identifiers',up:installIntelligenceSchema},
- {version:26,name:'durable-shopping-cart-reviews',definition:'v26:account-scoped versioned carts expiring immutable checkout reviews and atomic order bindings',up:installShoppingSchema}
+ {version:26,name:'durable-shopping-cart-reviews',definition:'v26:account-scoped versioned carts expiring immutable checkout reviews and atomic order bindings',up:installShoppingSchema},
+ {version:27,name:'agent-visibility-memberships',definition:'v27:separate agent membership plans pending verification and premium sponsored slots',up:installAgentVisibilitySchema}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}
