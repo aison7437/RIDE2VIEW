@@ -84,7 +84,8 @@ function createApp(options={}) {
   safetyAuthority=createSafetyAuthority({db,audit});
   reservationAuthority=createReservationAuthority({db,audit});
   const cancellationCoordinator=createCancellationCoordinator({db,dispatchAuthority,reservationAuthority,paymentAuthority,audit,notify});
-  const supply=createSupplyAuthority({db,audit,notify,tiers:TIERS});
+  const agentVisibility=createAgentVisibilityAuthority({db,audit});
+  const supply=createSupplyAuthority({db,audit,notify,tiers:TIERS,visibilityCapacity:user=>agentVisibility.capacity(user)});
   const journeys=createJourneyAuthority({db,supply,audit,notify,dispatch:dispatchAuthority});
   const journeyRoutes=createJourneyRoutes({journeys});
   const onboarding=createOnboardingAuthority({db,audit,notify});
@@ -96,7 +97,6 @@ function createApp(options={}) {
   const operations=createOperations({db,integrations:options.integrations||{},paymentAuthority,rides,services,journeys,dispatchAuthority,audit});
   const marketplace=createMarketplaceAuthority({db,audit});
   const marketplaceRoutes=createMarketplaceRoutes({marketplace});
-  const agentVisibility=createAgentVisibilityAuthority({db,audit});
   const agentVisibilityRoutes=createAgentVisibilityRoutes({visibility:agentVisibility});
   const growth=createGrowthAuthority({db,audit});
   const growthRoutes=createGrowthRoutes({growth});
