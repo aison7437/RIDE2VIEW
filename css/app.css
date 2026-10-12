@@ -63,3 +63,14 @@
 .ride2go-completion{border:1px solid #24824f;border-radius:12px;padding:1rem;margin-top:1rem}
 .ride2go-completion-actions{display:flex;flex-wrap:wrap;gap:.65rem;margin:.65rem 0}
 .ride2go-completion-actions button{flex:1 1 180px}
+
+/* V10-G: Google Maps 2D/3D progressive enhancement */
+.r2v-map-panel{margin:1rem 0;border:1px solid #b9d4c1;border-radius:14px;overflow:hidden;background:#edf4ef}
+.r2v-map-toolbar{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:.7rem .85rem;flex-wrap:wrap}
+.r2v-map-controls{display:flex;gap:.45rem}
+.r2v-map-controls button{border:1px solid #58876a;border-radius:9px;padding:.4rem .7rem;background:white;color:#174f2d;cursor:pointer}
+.r2v-map-controls button[aria-pressed=true]{background:#174f2d;color:white}
+.r2v-map-viewport{height:300px;min-height:220px;background:#e4ebe5}
+.r2v-map-fallback{display:flex;flex-direction:column;justify-content:center;padding:1rem 1.2rem;min-height:180px}
+.r2v-map-fallback p{margin:.3rem 0}
+@media (max-width:600px){.r2v-map-viewport{height:260px}}
