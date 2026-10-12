@@ -7,7 +7,7 @@
   },
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test tests/*.test.js",
+    "test": "node --test tests/*.test.js tests/*.test.cjs",
     "check": "node scripts/check.js",
     "check:integrations": "node scripts/check-integrations.js",
     "test:agent": "node ai/user/lifestyle-agent/test.js && node ai/user/lifestyle-agent/scenario-test.js",

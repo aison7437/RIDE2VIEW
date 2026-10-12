@@ -3,7 +3,7 @@
  // Google Maps keys are public browser identifiers. Restrict yours by HTTP referrer and API.
  const DEFAULT={latitude:-1.286389,longitude:36.817223};
  let configPromise=null,loaderPromise=null;
- const valid=p=>p&&Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude))&&Math.abs(Number(p.latitude))<=90&&Math.abs(Number(p.longitude))<=180;
+ const valid=p=>p&&p.latitude!==null&&p.latitude!==undefined&&p.latitude!==''&&p.longitude!==null&&p.longitude!==undefined&&p.longitude!==''&&Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude))&&Math.abs(Number(p.latitude))<=90&&Math.abs(Number(p.longitude))<=180;
  const latLng=p=>({lat:Number(p.latitude),lng:Number(p.longitude)});
  // Never show stale GPS as a live animated vehicle; headings from stationary fixes are ignored.
  const liveVehicle=p=>valid(p)&&p.stale!==true&&p.live!==false&&
@@ -75,6 +75,18 @@
    return false;
   }
  }
+ // A live marker may interpolate only between two authenticated observed fixes.
+ // Never extrapolate beyond the last received driver GPS coordinate.
+ function interpolateVehicle(previous,next,ratio){
+  if(!liveVehicle(previous)||!liveVehicle(next))return null;
+  const a=Date.parse(previous.capturedAt),b=Date.parse(next.capturedAt);
+  if(b<=a||b-a>60000||Number(next.accuracy)>150||Number(previous.accuracy)>150)return null;
+  const t=Math.min(1,Math.max(0,Number(ratio)));
+  if(!Number.isFinite(t))return null;
+  return {latitude:Number(previous.latitude)+(Number(next.latitude)-Number(previous.latitude))*t,
+   longitude:Number(previous.longitude)+(Number(next.longitude)-Number(previous.longitude))*t,
+   heading:bearing(previous,next),capturedAt:next.capturedAt,stale:false};
+ }
  const PREFERENCE_KEY='r2v.map.spatial.preference.v1';
  function readPreference(){
   try{const value=JSON.parse(localStorage.getItem(PREFERENCE_KEY)||'null');return value&&value.remember===true&&['2d','3d'].includes(value.mode)?value.mode:null;}catch{return null;}
@@ -139,5 +151,5 @@
   return {update(next){points=next;draw();},destroy(){destroyed=true;generation++;section.remove();}};
  }
 
- window.R2VMaps={mount,render,valid,liveVehicle,bearing};
+ window.R2VMaps={mount,render,valid,liveVehicle,bearing,interpolateVehicle};
 })();
