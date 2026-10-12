@@ -70,7 +70,7 @@
   const label=element('div','r2v-spatial-brand');
   label.append(element('span','r2v-spatial-brandmark','✦'));
   const headings=element('div');headings.append(element('strong',null,'RIDE2VIEW'),element('small',null,'SPATIAL MAPS'));label.append(headings);
-  const pill=element('span','r2v-spatial-live','EXPERIENCE PREVIEW');
+  const pill=element('span','r2v-spatial-live',context==='property'?'EXPLORE NEIGHBORHOOD':'SPATIAL MAPS');
   top.append(label,pill);
   const caption=element('div','r2v-spatial-caption');
   caption.append(element('small',null,context==='property'?'EXPLORE YOUR NEIGHBORHOOD':'YOUR JOURNEY'),element('strong',null,title));
