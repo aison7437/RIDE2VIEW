@@ -20,6 +20,8 @@ const {createPropertyServices}=require('./property-services/authority');
 const {createPropertyServiceRoutes}=require('./property-services/routes');
 const {createOnboardingAuthority}=require('./mobility/onboarding/authority');
 const {createRideAuthority}=require('./mobility/ride2go/authority');
+const {createRide2GoFeedback}=require('./mobility/ride2go/post-trip');
+const {createRide2GoFeedbackRoutes}=require('./mobility/ride2go/routes-feedback');
 const {createMobilityRoutes}=require('./mobility/routes');
 const {active:mobilityActive}=require('./mobility/onboarding/eligibility');
 const {createJourneyAuthority}=require('./journeys/authority');
@@ -87,6 +89,8 @@ function createApp(options={}) {
   const journeyRoutes=createJourneyRoutes({journeys});
   const onboarding=createOnboardingAuthority({db,audit,notify});
   const rides=createRideAuthority({db,audit,notify});
+  const ride2goFeedback=createRide2GoFeedback({db,audit});
+  const ride2goFeedbackRoutes=createRide2GoFeedbackRoutes({feedback:ride2goFeedback});
   const dashboard=createDashboard({db,supply,journeys,onboarding,rides});
   const mobilityRoutes=createMobilityRoutes({onboarding,rides});
   const services=createPropertyServices({db,supply,audit,notify});
@@ -165,6 +169,7 @@ function createApp(options={}) {
       if(expansionRoutes({path,method,user,body,send,res}))return;
       if(propertyServiceRoutes({path,method,user,body,send,res}))return;
       if(mobilityRoutes({path,method,user,body,send,res}))return;
+      if(ride2goFeedbackRoutes({path,method,user,body,send,res}))return;
       if(journeyRoutes({path,method,user,body,send,res}))return;
       if(supplyRoutes({path,method,user,body,send,res}))return;
       if(path==='/api/auth/register' && method==='POST') {
