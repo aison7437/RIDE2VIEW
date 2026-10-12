@@ -5,6 +5,20 @@
  let configPromise=null,loaderPromise=null;
  const valid=p=>p&&Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude))&&Math.abs(Number(p.latitude))<=90&&Math.abs(Number(p.longitude))<=180;
  const latLng=p=>({lat:Number(p.latitude),lng:Number(p.longitude)});
+ // Never show stale GPS as a live animated vehicle; headings from stationary fixes are ignored.
+ const liveVehicle=p=>valid(p)&&p.stale!==true&&p.live!==false&&
+   Number.isFinite(Date.parse(p.capturedAt))&&Date.now()-Date.parse(p.capturedAt)>=-30000&&
+   Date.now()-Date.parse(p.capturedAt)<=60000;
+ function bearing(from,to){
+  const lat1=Number(from.latitude)*Math.PI/180,lat2=Number(to.latitude)*Math.PI/180;
+  const dLon=(Number(to.longitude)-Number(from.longitude))*Math.PI/180;
+  const y=Math.sin(dLon)*Math.cos(lat2),x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+ }
+ function carIcon(heading=0){
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><circle cx="24" cy="24" r="22" fill="#123c29" stroke="#a6f0b9" stroke-width="2"/><g transform="rotate('+Math.round(heading)+',24,24)"><path d="M24 6 29 14 19 14Z" fill="#a6f0b9"/><rect x="16" y="14" width="16" height="23" rx="5" fill="#fff"/><rect x="19" y="18" width="10" height="8" rx="2" fill="#4e9c78"/><rect x="19" y="30" width="10" height="4" rx="1" fill="#4e9c78"/></g></svg>';
+  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
+ }
  const element=(tag,klass,text)=>{const e=document.createElement(tag);if(klass)e.className=klass;if(text)e.textContent=text;return e;};
  function config(){return configPromise||(configPromise=fetch('/api/maps/config',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw new Error('Map configuration unavailable');return r.json();}).catch(()=>({enabled:false}))); }
  function load(key){
@@ -41,13 +55,18 @@
     const m=new Map3DElement({center:{...latLng(center),altitude:380},tilt:65,heading:0,mode:'HYBRID'});
     m.style.width='100%';m.style.height='100%';m.setAttribute('aria-label','3D neighborhood map');
     const {Marker3DElement}=await maps.importLibrary('maps3d');
-    for(const p of clean){const marker=new Marker3DElement({position:{...latLng(p.point),altitude:0},label:p.label||p.role||'Location'});m.append(marker);}
+    for(const p of clean){const marker=new Marker3DElement({position:{...latLng(p.point),altitude:0},label:p.role==='driver'&&liveVehicle(p.point)?'Live driver vehicle':p.label||p.role||'Location'});m.append(marker);}
     target.replaceChildren(m);
    }else{
     const {Map}=await maps.importLibrary('maps');
     const m=new Map(target,{center:latLng(center),zoom:14,mapTypeControl:false,streetViewControl:false,fullscreenControl:true});
     const bounds=new maps.LatLngBounds();
-    for(const p of clean){new maps.Marker({position:latLng(p.point),map:m,title:p.label||p.role||'Location'});bounds.extend(latLng(p.point));}
+    for(const p of clean){
+     const isCar=p.role==='driver'&&liveVehicle(p.point);
+     const markerOptions={position:latLng(p.point),map:m,title:isCar?'Live driver vehicle':p.label||p.role||'Location'};
+     if(isCar)markerOptions.icon={url:carIcon(Number.isFinite(p.point.heading)?p.point.heading:0),scaledSize:new maps.Size(48,48),anchor:new maps.Point(24,24)};
+     new maps.Marker(markerOptions);bounds.extend(latLng(p.point));
+    }
     if(clean.length>1)m.fitBounds(bounds,60);
    }
    return true;
@@ -120,5 +139,5 @@
   return {update(next){points=next;draw();},destroy(){destroyed=true;generation++;section.remove();}};
  }
 
- window.R2VMaps={mount,render,valid};
+ window.R2VMaps={mount,render,valid,liveVehicle,bearing};
 })();
