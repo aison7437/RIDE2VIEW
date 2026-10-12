@@ -8,7 +8,7 @@ const now=()=>new Date().toISOString();
 function fail(status,message){throw Object.assign(new Error(message),{status});}
 function text(value,label,max=200){if(typeof value!=='string'||!value.trim()||value.length>max)fail(400,`${label} is required (maximum ${max} characters)`);return value.trim();}
 function future(value){if(typeof value!=='string'||!/(Z|[+-]\d\d:\d\d)$/.test(value)||!Number.isFinite(Date.parse(value))||Date.parse(value)<=Date.now())fail(400,'A future time with an explicit UTC offset is required');return new Date(value).toISOString();}
-function createSupplyAuthority({db,audit=()=>{},notify=()=>{},tiers}){
+function createSupplyAuthority({db,audit=()=>{},notify=()=>{},tiers,visibilityCapacity=null}){
   const ledger=createLedgerAuthority({db,audit});
   function tx(fn){db.exec('BEGIN IMMEDIATE');try{const r=fn();db.exec('COMMIT');return r;}catch(e){db.exec('ROLLBACK');throw e;}}
   function role(actor,...roles){if(!actor)fail(401,'Sign in to continue');if(!roles.includes(actor.role))fail(403,'This action is not permitted for this account');}
@@ -71,7 +71,7 @@ function createSupplyAuthority({db,audit=()=>{},notify=()=>{},tiers}){
     });
   }
   function createListing(actor,data){role(actor,'agent','admin');if(!agentEligible(actor.id))fail(403,'Agent identity and agency approval are required');let payload;try{payload=validateListing(data);}catch(e){fail(400,e.message);}const id=randomUUID();payload.id=id;
-    return tx(()=>{db.prepare('INSERT INTO listings VALUES(?,?,?,?,1)').run(id,actor.id,JSON.stringify(payload),0);invalidateProperty(id);audit(actor,'listing.created',id);return publicListing(listing(id));});
+    return tx(()=>{if(actor.role==='agent'&&visibilityCapacity){const limit=visibilityCapacity(actor).listingLimit;const count=db.prepare('SELECT COUNT(*) AS n FROM listings WHERE owner_id=?').get(actor.id).n;if(count>=limit)fail(409,'Agent listing limit reached; upgrade or contact operations');}db.prepare('INSERT INTO listings VALUES(?,?,?,?,1)').run(id,actor.id,JSON.stringify(payload),0);invalidateProperty(id);audit(actor,'listing.created',id);return publicListing(listing(id));});
   }
   function editListing(actor,id,data){return tx(()=>{const row=listing(id,actor);if(data.approved!==undefined)fail(409,'Use documentary verification and publication review');if(data.available!==undefined&&typeof data.available!=='boolean')fail(400,'Availability must be a boolean');let payload=JSON.parse(row.payload);const contentKeys=['title','description','price','property','location','timing','tags','transactionType'];const edited=contentKeys.some(k=>Object.hasOwn(data,k));if(edited){try{payload={...validateListing({...payload,...data}),id};}catch(e){fail(400,e.message);}}
     db.prepare('UPDATE listings SET payload=?,available=? WHERE id=?').run(JSON.stringify(payload),data.available===undefined?row.available:Number(data.available),id);if(edited)invalidateProperty(id);audit(actor,'listing.updated',id,{edited,available:data.available});return publicListing(listing(id));});}

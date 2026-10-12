@@ -7,6 +7,8 @@ const {createAnalytics}=require('./analytics/authority');
 const {createAgentWorkflows}=require('./agents/runtime');
 const {createLedgerAuthority}=require('./payments/ledger/ledger-authority');
 const {createMarketplaceAuthority}=require('./marketplace/authority');
+const {createAgentVisibilityAuthority}=require('./agent-visibility/authority');
+const {createAgentVisibilityRoutes}=require('./agent-visibility/routes');
 const {createMarketplaceRoutes}=require('./marketplace/routes');
 const {createGrowthAuthority}=require('./growth/authority');
 const {createGrowthRoutes}=require('./growth/routes');
@@ -82,7 +84,8 @@ function createApp(options={}) {
   safetyAuthority=createSafetyAuthority({db,audit});
   reservationAuthority=createReservationAuthority({db,audit});
   const cancellationCoordinator=createCancellationCoordinator({db,dispatchAuthority,reservationAuthority,paymentAuthority,audit,notify});
-  const supply=createSupplyAuthority({db,audit,notify,tiers:TIERS});
+  const agentVisibility=createAgentVisibilityAuthority({db,audit});
+  const supply=createSupplyAuthority({db,audit,notify,tiers:TIERS,visibilityCapacity:user=>agentVisibility.capacity(user)});
   const journeys=createJourneyAuthority({db,supply,audit,notify,dispatch:dispatchAuthority});
   const journeyRoutes=createJourneyRoutes({journeys});
   const onboarding=createOnboardingAuthority({db,audit,notify});
@@ -94,6 +97,7 @@ function createApp(options={}) {
   const operations=createOperations({db,integrations:options.integrations||{},paymentAuthority,rides,services,journeys,dispatchAuthority,audit});
   const marketplace=createMarketplaceAuthority({db,audit});
   const marketplaceRoutes=createMarketplaceRoutes({marketplace});
+  const agentVisibilityRoutes=createAgentVisibilityRoutes({visibility:agentVisibility});
   const growth=createGrowthAuthority({db,audit});
   const growthRoutes=createGrowthRoutes({growth});
   const commerceOrders=createOrderAuthority({db,audit});
@@ -160,6 +164,7 @@ function createApp(options={}) {
       if(await agentWorkflows.routes({path,method,user,body,send}))return;
       if(await operations.routes({path,method,user,body,send,res,req}))return;
       if(marketplaceRoutes({path,method,user,body,send,res}))return;
+      if(agentVisibilityRoutes({path,method,user,body,send,res}))return;
       if(growthRoutes({path,method,user,body,send,res}))return;
       if(shopping.routes({path,method,user,body,send,url}))return;
       if(expansionRoutes({path,method,user,body,send,res}))return;
@@ -190,7 +195,7 @@ function createApp(options={}) {
       if(path==='/api/listings' && method==='GET') {
         const mine=url.searchParams.get('mine')==='true';
         if(mine)return send(200,{listings:supply.dashboard(user).properties});
-        return send(200,{listings:supply.listPublic()});
+        return send(200,{listings:agentVisibility.decorate(supply.listPublic())});
       }
       if(path==='/api/listings' && method==='POST')return send(201,supply.createListing(user,body));
       const listingMatch=path.match(/^\/api\/listings\/([^/]+)$/);
