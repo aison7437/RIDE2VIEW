@@ -147,7 +147,7 @@ function createApp(options={}) {
       }
       if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected,paymentRecoveryConnected});
       if(!path.startsWith('/api/')) {
-        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/agents.js':'js/agents.js','/js/analytics.js':'js/analytics.js','/js/operations.js':'js/operations.js','/js/property-services.js':'js/property-services.js','/js/mobility.js':'js/mobility.js','/js/journeys.js':'js/journeys.js','/js/dashboard.js':'js/dashboard.js','/js/shopping.js':'js/shopping.js','/js/marketplace.js':'js/marketplace.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
+        const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/agents.js':'js/agents.js','/js/analytics.js':'js/analytics.js','/js/operations.js':'js/operations.js','/js/property-services.js':'js/property-services.js','/js/mobility.js':'js/mobility.js','/js/maps.js':'js/maps.js','/js/journeys.js':'js/journeys.js','/js/dashboard.js':'js/dashboard.js','/js/shopping.js':'js/shopping.js','/js/marketplace.js':'js/marketplace.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
         if(method!=='GET' && method!=='HEAD')fail(405,'Method not allowed');
         if(!allowed[path])fail(404,'Page not found');
         const mime=path.endsWith('.js')?'application/javascript':path.endsWith('.css')?'text/css':'text/html';
@@ -156,6 +156,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      if(path==='/api/maps/config'&&method==='GET'){const key=options.mapsBrowserKey ?? process.env.GOOGLE_MAPS_BROWSER_KEY ?? '';return send(200,{enabled:Boolean(key),browserKey:key||null,features:{maps2d:Boolean(key),maps3d:Boolean(key)}});}
       if(path==='/api/dashboard'&&method==='GET')return send(200,dashboard.get(user));
       if(intelligence.routes({path,method,user,body,send}))return;
       if(memory.routes({path,method,user,body,send}))return;
