@@ -92,9 +92,11 @@
    // Render into a detached frame; a slow earlier request must never replace a newer choice.
    const next=element('div','r2v-map-frame');
    next.setAttribute('aria-label',mode==='3d'?'3D neighborhood map':'2D navigation map');
+   next.style.visibility='hidden';
    stage.append(next);
    render(next,{points,mode}).then(ok=>{
     if(destroyed||current!==generation){next.remove();return;}
+    next.style.visibility='visible';
     for(const old of stage.querySelectorAll('.r2v-map-frame'))if(old!==next)old.remove();
     if(!ok&&mode==='3d'){
      mode='2d';setButtons();hint.textContent='3D is unavailable here. Continuing with the standard map.';
