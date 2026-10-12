@@ -1,0 +1,37 @@
+services:
+  app:
+    build:
+      context: ../..
+    restart: unless-stopped
+    env_file: .env.staging
+    environment:
+      NODE_ENV: production
+      COOKIE_SECURE: "true"
+      DB_PATH: /app/data/staging.sqlite
+    volumes:
+      - staging-data:/app/data
+    expose:
+      - "3000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+  ingress:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      STAGING_HOST: ${STAGING_HOST:?Set a staging DNS hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+volumes:
+  staging-data:
+  caddy-data:
+  caddy-config:
