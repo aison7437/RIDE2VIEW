@@ -18,9 +18,9 @@ function createAgentVisibilityAuthority({db,audit=()=>{}}){
    const id=randomUUID(),t=now();
    if(plan.price_kes===0){
     const end=new Date(Date.parse(t)+plan.duration_days*86400000).toISOString();
-    db.prepare('INSERT INTO agent_visibility_subscriptions VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id,user.id,plan.code,'ACTIVE',t,end,null,0,plan.listing_limit,plan.featured_slots,t,t);
+    db.prepare('INSERT INTO agent_visibility_subscriptions VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(id,user.id,plan.code,'ACTIVE',t,end,null,0,plan.listing_limit,plan.featured_slots,t,t);
    }else{
-    db.prepare('INSERT INTO agent_visibility_subscriptions VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(id,user.id,plan.code,'PENDING',null,null,null,plan.price_kes,plan.listing_limit,plan.featured_slots,t,t);
+    db.prepare('INSERT INTO agent_visibility_subscriptions VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(id,user.id,plan.code,'PENDING',null,null,null,plan.price_kes,plan.listing_limit,plan.featured_slots,t,t);
    }
    audit(user,'agent_visibility.requested',id,{planCode:plan.code});return db.prepare('SELECT * FROM agent_visibility_subscriptions WHERE id=?').get(id);
   });
