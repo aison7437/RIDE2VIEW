@@ -56,18 +56,67 @@
    return false;
   }
  }
- function mount(host,{points=[],title='Location preview',allow3d=true}={}){
-  const section=element('section','r2v-map-panel');
-  const header=element('div','r2v-map-toolbar');
-  header.append(element('strong',null,title));
-  const controls=element('div','r2v-map-controls'),viewport=element('div','r2v-map-viewport');
-  let mode='2d',generation=0;
-  function draw(){const current=++generation;const snapshot=points;render(viewport,{points:snapshot,mode}).then(()=>{if(current!==generation)return;});}
-  function button(label,value){const b=element('button',null,label);b.type='button';b.dataset.mapMode=value;b.setAttribute('aria-pressed',String(mode===value));b.addEventListener('click',()=>{mode=value;for(const x of controls.querySelectorAll('button'))x.setAttribute('aria-pressed',String(x.dataset.mapMode===mode));draw();});controls.append(b);}
-  button('2D map','2d');if(allow3d)button('3D preview','3d');
-  header.append(controls);section.append(header,viewport);
-  host.append(section);draw();
-  return {update(next){points=next;draw();},destroy(){generation++;section.remove();}};
+ const PREFERENCE_KEY='r2v.map.spatial.preference.v1';
+ function readPreference(){
+  try{const value=JSON.parse(localStorage.getItem(PREFERENCE_KEY)||'null');return value&&value.remember===true&&['2d','3d'].includes(value.mode)?value.mode:null;}catch{return null;}
  }
+ function savePreference(mode,remember){
+  try{if(remember)localStorage.setItem(PREFERENCE_KEY,JSON.stringify({mode,remember:true}));else localStorage.removeItem(PREFERENCE_KEY);}catch{/* Blocked storage must never block maps. */}
+ }
+ function mount(host,{points=[],title='Location preview',allow3d=true,context='trip'}={}){
+  const section=element('section','r2v-map-panel r2v-map-spatial');
+  const stage=element('div','r2v-map-stage');
+  const top=element('div','r2v-spatial-top');
+  const label=element('div','r2v-spatial-brand');
+  label.append(element('span','r2v-spatial-brandmark','✦'));
+  const headings=element('div');headings.append(element('strong',null,'RIDE2VIEW'),element('small',null,'SPATIAL MAPS'));label.append(headings);
+  const pill=element('span','r2v-spatial-live','EXPERIENCE PREVIEW');
+  top.append(label,pill);
+  const caption=element('div','r2v-spatial-caption');
+  caption.append(element('small',null,context==='property'?'EXPLORE YOUR NEIGHBORHOOD':'YOUR JOURNEY'),element('strong',null,title));
+  const controls=element('div','r2v-map-controls');
+  controls.setAttribute('role','group');controls.setAttribute('aria-label','Map perspective');
+  const footer=element('div','r2v-spatial-footer');
+  const preference=element('label','r2v-spatial-remember');
+  const rememberBox=element('input');rememberBox.type='checkbox';
+  const preferenceText=element('span');preferenceText.append(element('strong',null,'Remember my view'),element('small',null,'Use my preferred perspective next time'));
+  preference.append(rememberBox,preferenceText);
+  const hint=element('p','r2v-spatial-hint','A new perspective, one tap away.');
+  const stored=readPreference();
+  let remember=stored!==null,mode=allow3d&&stored==='3d'?'3d':'2d',generation=0,destroyed=false;
+  rememberBox.checked=remember;
+  const buttons=[];
+  function setButtons(){for(const b of buttons){const active=b.dataset.mapMode===mode;b.setAttribute('aria-pressed',String(active));b.classList.toggle('is-active',active);}hint.textContent=mode==='3d'?'Explore buildings and the surrounding neighborhood.':'Clear navigation, beautifully simple.';}
+  function draw(){
+   const current=++generation;
+   // Render into a detached frame; a slow earlier request must never replace a newer choice.
+   const next=element('div','r2v-map-frame');
+   next.setAttribute('aria-label',mode==='3d'?'3D neighborhood map':'2D navigation map');
+   stage.append(next);
+   render(next,{points,mode}).then(ok=>{
+    if(destroyed||current!==generation){next.remove();return;}
+    for(const old of stage.querySelectorAll('.r2v-map-frame'))if(old!==next)old.remove();
+    if(!ok&&mode==='3d'){
+     mode='2d';setButtons();hint.textContent='3D is unavailable here. Continuing with the standard map.';
+     savePreference(mode,remember);draw();
+    }
+   }).catch(()=>{next.remove();});
+  }
+  function addButton(value,textLabel,icon){
+   const b=element('button','r2v-spatial-option');
+   b.type='button';b.dataset.mapMode=value;
+   b.append(element('span','r2v-spatial-option-icon',icon),element('span',null,textLabel));
+   b.addEventListener('click',()=>{if(mode===value)return;mode=value;setButtons();savePreference(mode,remember);draw();});
+   controls.append(b);buttons.push(b);
+  }
+  addButton('2d','2D Classic','▤');
+  if(allow3d)addButton('3d','3D Spatial','▧');
+  rememberBox.addEventListener('change',()=>{remember=rememberBox.checked;savePreference(mode,remember);});
+  footer.append(controls,preference,hint);
+  stage.append(top,caption);section.append(stage,footer);
+  host.append(section);setButtons();draw();
+  return {update(next){points=next;draw();},destroy(){destroyed=true;generation++;section.remove();}};
+ }
+
  window.R2VMaps={mount,render,valid};
 })();
