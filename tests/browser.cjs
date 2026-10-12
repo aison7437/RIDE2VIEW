@@ -1,10 +1,13 @@
 const {approveDriver}=require('./helpers/mobility.cjs');
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
+const {createHmac}=require('node:crypto');
 const { createBrowserApp: createApp } = require('./helpers/browser-app.cjs');
 const {approveAgent,publishProperty,createSlot}=require('./helpers/supply.cjs');
 (async()=>{
- const app=createApp({dbPath:':memory:',adminEmail:'admin@example.test',adminPassword:'Administrator-Test-Only-42'});
+ const callbackSecret='v10-b-synthetic-callback-secret-42';
+ const gateway={async send(job){return {requestId:'sandbox-'+job.id};},async lookup(){return {status:'NOT_FOUND'};}};
+ const app=createApp({startOperationsRuntime:false,integrations:{gateway,callbackSecret},dbPath:':memory:',adminEmail:'admin@example.test',adminPassword:'Administrator-Test-Only-42'});
  let browser;
  try {
   await new Promise(r=>app.server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+app.server.address().port;
@@ -28,7 +31,17 @@ const {approveAgent,publishProperty,createSlot}=require('./helpers/supply.cjs');
   await client.locator('#app-booking-form [name=slotId]').selectOption({index:0});await client.getByRole('button',{name:'Request viewing',exact:true}).click();await client.waitForFunction(()=>document.getElementById('supply-customer-viewings').textContent.includes('REQUESTED'));
   await agentPage.evaluate(()=>window.R2V.refresh());await agentPage.getByRole('button',{name:'Accept viewing request',exact:true}).click();await agentPage.waitForFunction(()=>document.getElementById('supply-agent-viewings').textContent.includes('ACCEPTED'));
   await client.getByRole('button',{name:'Refresh status',exact:true}).click();await client.waitForFunction(()=>document.getElementById('app-bookings').textContent.includes('Payment: pending'));
-  const operations=await pageFor('admin@example.test','Administrator-Test-Only-42');await operations.getByLabel('Transaction reference').fill('BROWSER_RECEIPT_001');await operations.getByRole('button',{name:'Verify received payment',exact:true}).click();await operations.getByRole('button',{name:'Offer viewing to driver',exact:true}).click();await operations.waitForFunction(()=>document.getElementById('app-status').textContent.includes('Viewing offered to driver.'));const offered=app.db.prepare("SELECT * FROM dispatch_assignments WHERE driver_id=? AND status='OFFERED' ORDER BY created_at DESC LIMIT 1").get(registered.data.id);assert(offered);const driverPage=await pageFor(driver.email,driver.password);await driverPage.getByRole('button',{name:'Accept viewing',exact:true}).click();await driverPage.waitForFunction(()=>document.getElementById('app-bookings').textContent.includes('Status: assigned'));await operations.getByRole('button',{name:'Refresh status',exact:true}).click();await operations.waitForFunction(()=>document.getElementById('app-bookings').textContent.includes('Status: assigned'));
+  const booking=app.db.prepare('SELECT id FROM bookings').get();
+  const customerCookie=(await call('/auth/login',customer)).cookie;
+  const collection=(await call('/operations/collections',{kind:'booking',targetId:booking.id,phone:'+254700000001',idempotencyKey:'v10-b-browser-collection'},customerCookie)).data;
+  const job=app.db.prepare('SELECT id FROM integration_jobs WHERE event_key=?').get('collect:'+collection.id);
+  await app.operations.jobs.process(job.id);
+  const confirmed=app.operations.collections.get({id:app.db.prepare('SELECT customer_id FROM bookings WHERE id=?').get(booking.id).customer_id,role:'customer'},collection.id);
+  const raw=JSON.stringify({eventId:'v10-b-browser-payment',collectionId:collection.id,requestId:confirmed.provider_request_id,status:'SUCCEEDED',amount:confirmed.amount,currency:'KES',reference:'BROWSER_RECEIPT_001'});
+  const timestamp=String(Math.floor(Date.now()/1000));
+  const callback=await fetch(base+'/api/operations/payment-events',{method:'POST',headers:{'Content-Type':'application/json','x-r2v-timestamp':timestamp,'x-r2v-signature':createHmac('sha256',callbackSecret).update(timestamp+'.'+raw).digest('hex')},body:raw});
+  assert.equal(callback.status,200);assert.equal((await callback.json()).status,'CONFIRMED');
+  const operations=await pageFor('admin@example.test','Administrator-Test-Only-42');await operations.getByRole('button',{name:'Offer viewing to driver',exact:true}).click();await operations.waitForFunction(()=>document.getElementById('app-status').textContent.includes('Viewing offered to driver.'));const offered=app.db.prepare("SELECT * FROM dispatch_assignments WHERE driver_id=? AND status='OFFERED' ORDER BY created_at DESC LIMIT 1").get(registered.data.id);assert(offered);const driverPage=await pageFor(driver.email,driver.password);await driverPage.getByRole('button',{name:'Accept viewing',exact:true}).click();await driverPage.waitForFunction(()=>document.getElementById('app-bookings').textContent.includes('Status: assigned'));await operations.getByRole('button',{name:'Refresh status',exact:true}).click();await operations.waitForFunction(()=>document.getElementById('app-bookings').textContent.includes('Status: assigned'));
   await driverPage.getByRole('button',{name:'Complete viewing',exact:true}).click();await driverPage.waitForFunction(()=>document.getElementById('app-bookings').textContent.includes('Status: completed'));
   await client.getByRole('button',{name:'Refresh status',exact:true}).click();await client.waitForFunction(()=>document.getElementById('app-bookings').textContent.includes('Status: completed'));
   await client.locator('#supply-customer-viewings').getByRole('button',{name:'Record viewing outcome',exact:true}).click();await client.waitForFunction(()=>document.getElementById('supply-customer-viewings').textContent.includes('Outcome: INTERESTED'));

@@ -28,3 +28,30 @@ test('settled refund application failure is reviewable and never transfers funds
 test('reconciliation requires operations, records discrepancies and cannot be rewritten',async t=>{const f=await fixture(t);await f.paid();await f.call('/operations/reconciliations','GET',undefined,f.customer.cookie,403);const records=(await f.call('/operations/reconciliations','GET',undefined,f.admin.cookie)).data.records;const id=records[0].ledger_event_id;await f.call('/operations/reconciliations/'+id,'POST',{observedAmount:-1,evidenceRef:'bad'},f.admin.cookie,400);const r=(await f.call('/operations/reconciliations/'+id,'POST',{observedAmount:1100,evidenceRef:'Synthetic settlement discrepancy'},f.admin.cookie)).data;assert.equal(r.status,'DISCREPANCY');assert.equal(r.discrepancy,-100);await f.call('/operations/reconciliations/'+id,'POST',{observedAmount:1200,evidenceRef:'Replace original evidence'},f.admin.cookie,409);});
 test('environment configuration defaults closed and requires explicit capabilities and callback secret',()=>{const {fromEnvironment}=require('../server/operations/providers');const empty=fromEnvironment({});assert.equal(empty.gateway,null);assert.deepEqual(empty.capabilities,{payments:false,refunds:false,messaging:false,fiscal:false});assert.throws(()=>fromEnvironment({R2V_GATEWAY_CAPABILITIES:'payments',R2V_GATEWAY_URL:'https://gateway.example.test',R2V_GATEWAY_TOKEN:'test'}),/secret/);const partial=fromEnvironment({R2V_GATEWAY_URL:'https://gateway.example.test',R2V_GATEWAY_TOKEN:'test',R2V_GATEWAY_CAPABILITIES:'messaging'});assert.equal(partial.capabilities.messaging,true);assert.equal(partial.capabilities.payments,false);});
 test('expired delivery leases require recovery instead of accepting stale worker settlement',async t=>{const f=await fixture(t),p=await f.payable(),c=f.app.operations.collections.request(f.customer,{kind:p.kind,targetId:p.id,phone:'+254700000001',idempotencyKey:'lease-expiry'}),j=f.app.db.prepare('SELECT id FROM integration_jobs WHERE event_key=?').get('collect:'+c.id);const send=f.gateway.send;f.gateway.send=async job=>{const result=await send(job);f.app.db.prepare("UPDATE integration_jobs SET lease_until='2000-01-01T00:00:00Z' WHERE id=?").run(job.id);return result;};await assert.rejects(f.app.operations.jobs.process(j.id),e=>e.status===502);assert.equal(f.app.operations.jobs.get(j.id).status,'REVIEW');await f.app.operations.jobs.reconcile(f.admin,j.id,'Recover provider acceptance after worker lease expired');assert.equal(f.sent.length,1);assert.equal(f.app.operations.jobs.get(j.id).status,'SENT');});
+
+// V10-B acceptance: one authoritative provider-paid journey across every role.
+test('V10-B provider-paid viewing survives driver rejection and synchronizes all role workspaces',async t=>{
+ const f=await fixture(t),p=await f.payable('booking');
+ const discovery=(await f.call('/search','POST',{message:'Find a property in Nairobi',budget:50000})).data;
+ assert(discovery.recommendations.some(x=>x.id===f.listing.id));
+ const c=await f.collection(p);assert.equal((await f.callback(c)).status,'CONFIRMED');
+ assert.equal((await f.callback(c)).duplicate,true);
+ const offer=async key=>(await f.call('/bookings/'+p.id+'/assign','POST',{driverId:f.driver.id,idempotencyKey:key},f.admin.cookie)).data;
+ const rejected=await offer('acceptance-rejected');
+ await f.call('/dispatch/'+rejected.assignmentId+'/reject','POST',{},f.driver.cookie);
+ assert.equal(f.app.db.prepare('SELECT status FROM bookings WHERE id=?').get(p.id).status,'confirmed');
+ const replacement=await offer('acceptance-replacement');
+ await f.call('/dispatch/'+replacement.assignmentId+'/accept','POST',{},f.driver.cookie);
+ for(const actor of [f.customer,f.admin,f.driver]){
+  const b=(await f.call('/bookings','GET',undefined,actor.cookie)).data.bookings.find(x=>x.id===p.id);
+  assert.equal(b.status,'assigned');assert.equal(b.payment_status,'paid');
+ }
+ await f.call('/bookings/'+p.id+'/complete','POST',{},f.driver.cookie);
+ for(const actor of [f.customer,f.admin,f.driver]){
+  const b=(await f.call('/bookings','GET',undefined,actor.cookie)).data.bookings.find(x=>x.id===p.id);
+  assert.equal(b.status,'completed');assert.equal(b.payment_status,'paid');
+ }
+ const agent=(await f.call('/viewing-requests','GET',undefined,f.agent.cookie)).data.viewings.find(x=>x.booking_id===p.id);
+ assert.equal(agent.booking_status,'completed');assert.equal(agent.payment_status,'paid');
+ assert.equal(f.app.db.prepare("SELECT COUNT(*) n FROM financial_ledger_events WHERE reference=?").get('RECEIPT_'+c.id).n,1);
+});

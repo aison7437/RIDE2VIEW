@@ -4,3 +4,6 @@ data/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+
+.env.*
+acceptance-evidence/
