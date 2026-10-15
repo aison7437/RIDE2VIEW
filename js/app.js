@@ -67,5 +67,43 @@
   window.R2V={openVoice,showListings:renderResults,api,node,button,perform,status,refresh,getUser:()=>user};$('app-voice').addEventListener('click',openVoice);
   $('app-voice-close').addEventListener('click',()=>{recognition?.stop();$('voice-overlay').hidden=true;});
   $('app-listen').addEventListener('click',()=>{const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Speech){$('voice-status').textContent='Voice recognition is unavailable in this browser. Type your search instead.';return;}recognition?.stop();recognition=new Speech();recognition.lang='en-KE';recognition.onresult=e=>{const text=e.results[0][0].transcript;$('voice-transcript').textContent=text;$('app-search').elements.message.value=text;$('voice-status').textContent='Search captured. Close this panel and press Search.';};recognition.onerror=e=>{$('voice-status').textContent='Voice input failed: '+e.error;};recognition.start();$('voice-status').textContent='Listening…';});
+
+  // Customer search: keyboard, speech dictation, and assisted voice share the same search form.
+  function installDualSearch() {
+    const form=$('app-search'), message=form?.elements.message;
+    if(!form||!message)return;
+    const style=document.createElement('style');
+    style.textContent=`.r2v-dual-search{display:flex;align-items:center;gap:8px;background:#242729;color:white;border-radius:999px;padding:8px 10px;max-width:100%;box-sizing:border-box}.r2v-dual-search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:white;padding:8px;font:inherit}.r2v-dual-search button{border:0;cursor:pointer;display:grid;place-items:center;flex-shrink:0;width:42px;height:42px;border-radius:50%;background:#424646;color:white;font-size:21px}.r2v-dual-search button.r2v-ai-voice{background:#c4f000;color:#111;font-weight:700}.r2v-dual-search button:focus-visible{outline:3px solid #fff;outline-offset:2px}.r2v-dual-hint{font-size:12px;margin:6px 0;color:inherit}.r2v-dual-search button[aria-pressed="true"]{box-shadow:0 0 0 3px #c4f000}`;
+    document.head.append(style);
+    const parent=message.parentElement,bar=document.createElement('div');bar.className='r2v-dual-search';bar.setAttribute('role','search');
+    message.replaceWith(bar);bar.append(message);message.placeholder='Search properties, areas or services…';message.setAttribute('aria-label','Describe the property you want');
+    const mic=node('button','🎙');mic.type='button';mic.title='Dictate search';mic.setAttribute('aria-label','Dictate search');mic.setAttribute('aria-pressed','false');
+    const ai=node('button','▥','r2v-ai-voice');ai.type='button';ai.title='AI-assisted voice search';ai.setAttribute('aria-label','AI-assisted voice search');ai.setAttribute('aria-pressed','false');bar.append(mic,ai);
+    const hint=node('p','Type or dictate a search. AI Voice helps you describe what you need; review before submitting.','r2v-dual-hint');parent.append(hint);
+    let active=null;
+    function listen(mode){
+      if(active){active.stop();active=null;mic.setAttribute('aria-pressed','false');ai.setAttribute('aria-pressed','false');hint.textContent='Listening stopped. Review your query.';return;}
+      const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
+      if(!Speech){hint.textContent='Speech recognition is not supported here. Please type your request.';message.focus();return;}
+      const instance=new Speech();active=instance;instance.lang='en-KE';instance.interimResults=false;instance.maxAlternatives=1;
+      const control=mode==='ai'?ai:mic;control.setAttribute('aria-pressed','true');hint.textContent=mode==='ai'?'Listening for your property preferences…':'Listening for search terms…';
+      instance.onresult=e=>{message.value=e.results[0][0].transcript;message.dispatchEvent(new Event('input',{bubbles:true}));hint.textContent=mode==='ai'?'AI-assisted request captured. Review and press Search to see matching listings.':'Speech captured. Review and press Search.';message.focus();};
+      instance.onerror=e=>{hint.textContent=e.error==='not-allowed'?'Microphone access denied. Type your search instead.':'Voice recognition unavailable ('+e.error+'). Type your search instead.';};
+      instance.onend=()=>{active=null;control.setAttribute('aria-pressed','false');};
+      try{instance.start();}catch{active=null;control.setAttribute('aria-pressed','false');hint.textContent='Could not start the microphone. Type your search instead.';}
+    }
+    mic.addEventListener('click',()=>listen('dictation'));ai.addEventListener('click',()=>listen('ai'));
+    // Preview search bars remain navigational, but each voice button opens the real connected search.
+    document.querySelectorAll('.search-bar').forEach(bar=>{
+      const existing=bar.querySelector('.search-mic');if(!existing)return;
+      existing.setAttribute('role','button');existing.setAttribute('tabindex','0');existing.setAttribute('aria-label','Dictate a property search');
+      const open=e=>{e.stopPropagation();$('app-workspace').hidden=false;$('voice-overlay').hidden=true;$('app-discovery').scrollIntoView({behavior:'smooth'});listen('dictation');};
+      existing.addEventListener('click',open,true);existing.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open(e);}});
+      const aiButton=node('button','▥','r2v-ai-voice');aiButton.type='button';aiButton.setAttribute('aria-label','AI-assisted voice search');aiButton.title='AI-assisted voice search';
+      aiButton.style.cssText='background:#c4f000;color:#111;border:0;border-radius:50%;width:36px;height:36px;cursor:pointer;flex-shrink:0';
+      aiButton.addEventListener('click',e=>{e.stopPropagation();$('app-workspace').hidden=false;$('voice-overlay').hidden=true;$('app-discovery').scrollIntoView({behavior:'smooth'});listen('ai');});bar.append(aiButton);
+    });
+  }
+  installDualSearch();
   perform(async()=>{const config=await api('/config');for(const [tier,price]of Object.entries(config.tiers)){const option=node('option',`${tier} · KES ${price}`);option.value=tier;$('app-tiers').append(option);}try{user=await api('/auth/me');}catch{user=null;}await refresh();status('Ready. Search approved listings or sign in.');});
 })();
