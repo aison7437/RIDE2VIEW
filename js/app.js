@@ -80,14 +80,36 @@
     const mic=node('button','🎙');mic.type='button';mic.title='Dictate search';mic.setAttribute('aria-label','Dictate search');mic.setAttribute('aria-pressed','false');
     const ai=node('button','▥','r2v-ai-voice');ai.type='button';ai.title='AI-assisted voice search';ai.setAttribute('aria-label','AI-assisted voice search');ai.setAttribute('aria-pressed','false');bar.append(mic,ai);
     const hint=node('p','Type or dictate a search. AI Voice helps you describe what you need; review before submitting.','r2v-dual-hint');parent.append(hint);
-    let active=null;
+    let active=null,conversation=[],speaking=false;
+    const voicePanel=node('section',null,'r2v-voice-conversation');
+    voicePanel.hidden=true;voicePanel.setAttribute('aria-label','Voice conversation');
+    voicePanel.style.cssText='padding:12px;margin:8px 0;border:1px solid #b3b3b3;border-radius:14px';
+    const log=node('div');log.setAttribute('role','log');log.setAttribute('aria-live','polite');
+    const controls=node('div');controls.style.cssText='display:flex;gap:8px;flex-wrap:wrap';
+    const ask=node('button','Search these preferences');ask.type='button';
+    const stop=node('button','Stop speaking');stop.type='button';
+    const reset=node('button','Clear conversation');reset.type='button';
+    controls.append(ask,stop,reset);voicePanel.append(log,controls);parent.append(voicePanel);
+    function say(words){if(!('speechSynthesis'in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(words);u.lang='en-KE';u.onstart=()=>{speaking=true;};u.onend=()=>{speaking=false;};u.onerror=()=>{speaking=false;};window.speechSynthesis.speak(u);}
+    function addTurn(role,words){conversation.push({role,words});log.append(node('p',role+': '+words));}
+    function respond(words){
+      addTurn('You',words);const combined=conversation.filter(t=>t.role==='You').map(t=>t.words).join('. ');
+      message.value=combined;message.dispatchEvent(new Event('input',{bubbles:true}));
+      const question=conversation.filter(t=>t.role==='You').length===1?'Thanks. What city or neighborhood and budget would you prefer?':'Got it. You can add more details, or select Search these preferences to review available listings.';
+      addTurn('Voice guide',question);say(question);hint.textContent='Conversation is a guided voice form, not a live AI model. Review before searching.';
+    }
+    ask.addEventListener('click',()=>{window.speechSynthesis?.cancel();voicePanel.hidden=true;message.focus();form.requestSubmit();});
+    stop.addEventListener('click',()=>{active?.stop();window.speechSynthesis?.cancel();speaking=false;hint.textContent='Voice stopped. Your search remains editable.';});
+    reset.addEventListener('click',()=>{conversation=[];log.replaceChildren();message.value='';window.speechSynthesis?.cancel();hint.textContent='Conversation cleared.';});
     function listen(mode){
       if(active){active.stop();active=null;mic.setAttribute('aria-pressed','false');ai.setAttribute('aria-pressed','false');hint.textContent='Listening stopped. Review your query.';return;}
+      if(mode==='ai'){voicePanel.hidden=false;if(!conversation.length){addTurn('Voice guide','Tell me what kind of property you want.');say('Tell me what kind of property you want.');}}
+      if(speaking)window.speechSynthesis?.cancel();
       const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
       if(!Speech){hint.textContent='Speech recognition is not supported here. Please type your request.';message.focus();return;}
       const instance=new Speech();active=instance;instance.lang='en-KE';instance.interimResults=false;instance.maxAlternatives=1;
       const control=mode==='ai'?ai:mic;control.setAttribute('aria-pressed','true');hint.textContent=mode==='ai'?'Listening for your property preferences…':'Listening for search terms…';
-      instance.onresult=e=>{message.value=e.results[0][0].transcript;message.dispatchEvent(new Event('input',{bubbles:true}));hint.textContent=mode==='ai'?'AI-assisted request captured. Review and press Search to see matching listings.':'Speech captured. Review and press Search.';message.focus();};
+      instance.onresult=e=>{const transcript=e.results[0][0].transcript;if(mode==='ai'){respond(transcript);}else{message.value=transcript;message.dispatchEvent(new Event('input',{bubbles:true}));hint.textContent='Speech captured. Review and press Search.';message.focus();}};
       instance.onerror=e=>{hint.textContent=e.error==='not-allowed'?'Microphone access denied. Type your search instead.':'Voice recognition unavailable ('+e.error+'). Type your search instead.';};
       instance.onend=()=>{active=null;control.setAttribute('aria-pressed','false');};
       try{instance.start();}catch{active=null;control.setAttribute('aria-pressed','false');hint.textContent='Could not start the microphone. Type your search instead.';}
