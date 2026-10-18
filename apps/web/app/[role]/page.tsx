@@ -32,11 +32,12 @@ export default function RolePage() {
   const [status,setStatus]=useState<'loading'|'signed-out'|'forbidden'|'ready'|'error'>('loading');
   const [records,setRecords]=useState<RecordValue[]>([]);
   const [dataStatus,setDataStatus]=useState<'loading'|'ready'|'error'>('loading');
+  const [viewings,setViewings]=useState<RecordValue[]>([]);
   useEffect(()=>{
     if(!roles.includes(role))return;
     const controller=new AbortController();
     async function load(){
-      setStatus('loading');setRecords([]);setDataStatus('loading');
+      setStatus('loading');setRecords([]);setViewings([]);setDataStatus('loading');
       try{
         const response=await fetch('/api/auth/me',{credentials:'same-origin',cache:'no-store',signal:controller.signal});
         if(response.status===401){setStatus('signed-out');return;}
@@ -53,6 +54,13 @@ export default function RolePage() {
         if(controller.signal.aborted)return;
         const collection=body?.[config.collection];
         setRecords(Array.isArray(collection)?collection:[]);
+        if(role==='customer'||role==='agent'){
+          const requests=await fetch('/api/viewing-requests',{credentials:'same-origin',cache:'no-store',signal:controller.signal});
+          if(!requests.ok){setDataStatus('error');return;}
+          const body=await requests.json();
+          if(controller.signal.aborted)return;
+          setViewings(Array.isArray(body.viewings)?body.viewings:[]);
+        }
         setDataStatus('ready');
       }catch{if(!controller.signal.aborted){setStatus(current=>current==='ready'?current:'error');setDataStatus('error');}}
     }
@@ -73,6 +81,9 @@ export default function RolePage() {
       {dataStatus==='loading'&&<p role="status">Loading current records…</p>}
       {dataStatus==='error'&&<p role="alert">Unable to load records. Please retry later.</p>}
       {dataStatus==='ready'&&(records.length?<ul>{records.map((item,index)=><li key={safeText(item.id)||index}><strong>{itemTitle(item,role,index)}</strong><span>{itemDetail(item,role)}</span></li>)}</ul>:<p>{config.empty}</p>)}
+      {(role==='customer'||role==='agent')&&<><h2>Viewing requests</h2>
+        {viewings.length?<ul>{viewings.map((item,index)=><li key={safeText(item.id)||index}><strong>Viewing {index+1}</strong><span>{safeText(item.status)||'Status unavailable'}</span></li>)}</ul>:<p>No viewing requests returned.</p>}
+      </>}
       <p>This workspace currently provides a read-only overview. Use the existing operational interface for actions and approvals.</p>
     </section>}
     <footer>Server API permissions remain authoritative. This page does not grant privileges or expose payment controls.</footer>
