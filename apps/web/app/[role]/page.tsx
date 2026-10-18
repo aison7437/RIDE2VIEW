@@ -101,6 +101,25 @@ export default function RolePage() {
     }catch(error){setViewingMessage(error instanceof Error?error.message:'Viewing acceptance failed');}
     finally{setPendingViewing(null);}
   }
+  async function cancelViewing(id:string){
+    if(role!=='customer'||pendingViewing)return;
+    const reason=window.prompt('Reason for cancelling this viewing request (required, maximum 1000 characters):');
+    if(reason===null)return;
+    const trimmed=reason.trim();
+    if(!trimmed||trimmed.length>1000){setViewingMessage('Enter a cancellation reason of 1–1000 characters.');return;}
+    if(!window.confirm('Confirm cancellation? This action may not be reversible.'))return;
+    setPendingViewing(id);setViewingMessage('');
+    try{
+      const response=await fetch('/api/viewing-requests/'+encodeURIComponent(id)+'/cancel',{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:trimmed})
+      });
+      const body=await response.json();
+      if(!response.ok)throw new Error(typeof body.error==='string'?body.error:'Cancellation failed');
+      setViewings(previous=>previous.map(item=>item.id===id?{...item,status:'CANCELLED'}:item));
+      setViewingMessage('Cancellation recorded by the server.');
+    }catch(error){setViewingMessage(error instanceof Error?error.message:'Cancellation failed');}
+    finally{setPendingViewing(null);}
+  }
   if(!roles.includes(role))return <main><h1>Dashboard not found</h1><a href="/">Return to Ride2View</a></main>;
   const config=configs[role];
   return <main><header><strong>Ride2View</strong><a href="/">Home</a></header>
@@ -124,6 +143,8 @@ export default function RolePage() {
         {viewings.length?<ul>{viewings.map((item,index)=><li key={safeText(item.id)||index}><strong>Viewing {index+1}</strong><span>{safeText(item.status)||'Status unavailable'}</span>
           {role==='agent'&&safeText(item.status)==='REQUESTED'&&safeText(item.id)&&
             <button type="button" disabled={pendingViewing!==null} onClick={()=>acceptViewing(String(item.id))}>Accept viewing</button>}
+          {role==='customer'&&safeText(item.status)==='REQUESTED'&&safeText(item.id)&&
+            <button type="button" disabled={pendingViewing!==null} onClick={()=>cancelViewing(String(item.id))}>Cancel request</button>}
           </li>)}</ul>:<p>No viewing requests returned.</p>}
         {viewingMessage&&<p role="status">{viewingMessage}</p>}
       </>}
