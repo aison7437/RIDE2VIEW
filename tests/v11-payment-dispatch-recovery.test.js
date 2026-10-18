@@ -21,7 +21,7 @@ test('V11 payment-to-dispatch recovery: unpaid denial, authoritative payment, of
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM dispatch_assignments').get().n,0);
   // Simulates the committed payment authority's resulting state; no provider callback is invoked here.
   db.transaction(()=>{
-   db.prepare("UPDATE payments SET status='paid',reference='synthetic-v11-reference',paid_at=? WHERE id='p'").run(now);
+   db.prepare("UPDATE payments SET status='paid',reference='synthetic-v11-reference',verified_at=? WHERE id='p'").run(now);
    db.prepare("UPDATE bookings SET status='confirmed' WHERE id='b'").run();
   })();
   const first=offer();
