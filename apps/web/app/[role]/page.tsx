@@ -37,6 +37,9 @@ export default function RolePage() {
   const [offerMessage,setOfferMessage]=useState('');
   const [pendingViewing,setPendingViewing]=useState<string|null>(null);
   const [viewingMessage,setViewingMessage]=useState('');
+  const [preferences,setPreferences]=useState({city:'',budget:'',goal:'rent',bedrooms:'0'});
+  const [profileMessage,setProfileMessage]=useState('');
+  const [profileBusy,setProfileBusy]=useState(false);
   useEffect(()=>{
     if(!roles.includes(role))return;
     const controller=new AbortController();
@@ -51,6 +54,13 @@ export default function RolePage() {
         setAccount(data);
         if(data.role!==role){setStatus('forbidden');return;}
         setStatus('ready');
+        if(role==='customer'){
+          const profile=await fetch('/api/customer/profile',{credentials:'same-origin',cache:'no-store',signal:controller.signal});
+          if(profile.ok){
+            const data=await profile.json();const p=data.preferences||{};
+            if(!controller.signal.aborted)setPreferences({city:typeof p.city==='string'?p.city:'',budget:Number.isSafeInteger(p.budget)?String(p.budget):'',goal:p.goal==='buy'?'buy':'rent',bedrooms:Number.isInteger(p.bedrooms)?String(p.bedrooms):'0'});
+          }
+        }
         const config=configs[role];
         const result=await fetch(config.endpoint,{credentials:'same-origin',cache:'no-store',signal:controller.signal});
         if(!result.ok){setDataStatus('error');return;}
@@ -120,6 +130,21 @@ export default function RolePage() {
     }catch(error){setViewingMessage(error instanceof Error?error.message:'Cancellation failed');}
     finally{setPendingViewing(null);}
   }
+  async function saveCustomerProfile(event:React.FormEvent<HTMLFormElement>){
+    event.preventDefault();
+    if(role!=='customer'||profileBusy)return;
+    const budget=Number(preferences.budget),bedrooms=Number(preferences.bedrooms);
+    if(!Number.isSafeInteger(budget)||budget<=0||!Number.isInteger(bedrooms)||bedrooms<0||bedrooms>30||!preferences.city.trim()){setProfileMessage('Enter a valid city, positive whole KES budget and bedrooms (0–30).');return;}
+    setProfileBusy(true);setProfileMessage('');
+    try{
+      const response=await fetch('/api/customer/profile',{method:'PUT',credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},body:JSON.stringify({city:preferences.city.trim(),budget,goal:preferences.goal,bedrooms})});
+      const body=await response.json();
+      if(!response.ok)throw new Error(typeof body.error==='string'?body.error:'Unable to save preferences');
+      setProfileMessage('Preferences saved. Property and viewing eligibility are checked by the server.');
+    }catch(error){setProfileMessage(error instanceof Error?error.message:'Unable to save preferences');}
+    finally{setProfileBusy(false);}
+  }
   if(!roles.includes(role))return <main><h1>Dashboard not found</h1><a href="/">Return to Ride2View</a></main>;
   const config=configs[role];
   return <main><header><strong>Ride2View</strong><a href="/">Home</a></header>
@@ -130,6 +155,17 @@ export default function RolePage() {
       {status==='error'&&<p role="alert">Unable to verify access. Please try again later.</p>}
       {status==='ready'&&<p>Welcome, {account?.name||'Ride2View member'}.</p>}
     </section>
+    {status==='ready'&&role==='customer'&&<section><h2>Property preferences</h2>
+      <p>Complete these preferences before requesting a property viewing.</p>
+      <form onSubmit={saveCustomerProfile}>
+        <label htmlFor="customer-city">City</label><input id="customer-city" maxLength={100} required value={preferences.city} onChange={event=>setPreferences(p=>({...p,city:event.target.value}))}/>
+        <label htmlFor="customer-budget">Maximum budget (KES)</label><input id="customer-budget" type="number" min="1" step="1" required value={preferences.budget} onChange={event=>setPreferences(p=>({...p,budget:event.target.value}))}/>
+        <label htmlFor="customer-goal">Goal</label><select id="customer-goal" value={preferences.goal} onChange={event=>setPreferences(p=>({...p,goal:event.target.value}))}><option value="rent">Rent</option><option value="buy">Buy</option></select>
+        <label htmlFor="customer-bedrooms">Bedrooms</label><input id="customer-bedrooms" type="number" min="0" max="30" step="1" value={preferences.bedrooms} onChange={event=>setPreferences(p=>({...p,bedrooms:event.target.value}))}/>
+        <button type="submit" disabled={profileBusy}>{profileBusy?'Saving…':'Save preferences'}</button>
+      </form>
+      {profileMessage&&<p role="status">{profileMessage}</p>}
+    </section>}
     {status==='ready'&&<section><h2>{config.title}</h2>
       {dataStatus==='loading'&&<p role="status">Loading current records…</p>}
       {dataStatus==='error'&&<p role="alert">Unable to load records. Please retry later.</p>}
