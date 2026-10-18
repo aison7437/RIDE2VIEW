@@ -33,6 +33,8 @@ export default function RolePage() {
   const [records,setRecords]=useState<RecordValue[]>([]);
   const [dataStatus,setDataStatus]=useState<'loading'|'ready'|'error'>('loading');
   const [viewings,setViewings]=useState<RecordValue[]>([]);
+  const [pendingOffer,setPendingOffer]=useState<string|null>(null);
+  const [offerMessage,setOfferMessage]=useState('');
   useEffect(()=>{
     if(!roles.includes(role))return;
     const controller=new AbortController();
@@ -67,6 +69,21 @@ export default function RolePage() {
     load();
     return()=>controller.abort();
   },[role]);
+  async function respondToOffer(assignmentId:string,action:'accept'|'reject'){
+    if(role!=='driver'||pendingOffer)return;
+    if(!window.confirm(action==='accept'?'Accept this trip offer?':'Reject this trip offer?'))return;
+    setPendingOffer(assignmentId);setOfferMessage('');
+    try{
+      const response=await fetch('/api/dispatch/'+encodeURIComponent(assignmentId)+'/'+action,{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'
+      });
+      const body=await response.json();
+      if(!response.ok)throw new Error(typeof body.error==='string'?body.error:'Unable to update offer');
+      setRecords(previous=>previous.map(item=>item.assignment_id===assignmentId?{...item,assignment_status:body.status}:item));
+      setOfferMessage('Offer response recorded by the server.');
+    }catch(error){setOfferMessage(error instanceof Error?error.message:'Offer response failed');}
+    finally{setPendingOffer(null);}
+  }
   if(!roles.includes(role))return <main><h1>Dashboard not found</h1><a href="/">Return to Ride2View</a></main>;
   const config=configs[role];
   return <main><header><strong>Ride2View</strong><a href="/">Home</a></header>
@@ -80,11 +97,16 @@ export default function RolePage() {
     {status==='ready'&&<section><h2>{config.title}</h2>
       {dataStatus==='loading'&&<p role="status">Loading current records…</p>}
       {dataStatus==='error'&&<p role="alert">Unable to load records. Please retry later.</p>}
-      {dataStatus==='ready'&&(records.length?<ul>{records.map((item,index)=><li key={safeText(item.id)||index}><strong>{itemTitle(item,role,index)}</strong><span>{itemDetail(item,role)}</span></li>)}</ul>:<p>{config.empty}</p>)}
+      {dataStatus==='ready'&&(records.length?<ul>{records.map((item,index)=><li key={safeText(item.id)||index}><strong>{itemTitle(item,role,index)}</strong><span>{itemDetail(item,role)}</span>
+        {role==='driver'&&safeText(item.assignment_status)==='OFFERED'&&safeText(item.assignment_id)&&
+          <span><button type="button" disabled={pendingOffer!==null} onClick={()=>respondToOffer(String(item.assignment_id),'accept')}>Accept offer</button>{' '}
+          <button type="button" disabled={pendingOffer!==null} onClick={()=>respondToOffer(String(item.assignment_id),'reject')}>Reject offer</button></span>}
+        </li>)}</ul>:<p>{config.empty}</p>)}
+      {role==='driver'&&offerMessage&&<p role="status">{offerMessage}</p>}
       {(role==='customer'||role==='agent')&&<><h2>Viewing requests</h2>
         {viewings.length?<ul>{viewings.map((item,index)=><li key={safeText(item.id)||index}><strong>Viewing {index+1}</strong><span>{safeText(item.status)||'Status unavailable'}</span></li>)}</ul>:<p>No viewing requests returned.</p>}
       </>}
-      <p>This workspace currently provides a read-only overview. Use the existing operational interface for actions and approvals.</p>
+      <p>Driver offer responses use the server-authorized dispatch endpoint. Other operational actions remain in the existing interface.</p>
     </section>}
     <footer>Server API permissions remain authoritative. This page does not grant privileges or expose payment controls.</footer>
   </main>;
