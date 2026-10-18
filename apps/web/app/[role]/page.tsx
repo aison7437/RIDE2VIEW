@@ -35,6 +35,8 @@ export default function RolePage() {
   const [viewings,setViewings]=useState<RecordValue[]>([]);
   const [pendingOffer,setPendingOffer]=useState<string|null>(null);
   const [offerMessage,setOfferMessage]=useState('');
+  const [pendingViewing,setPendingViewing]=useState<string|null>(null);
+  const [viewingMessage,setViewingMessage]=useState('');
   useEffect(()=>{
     if(!roles.includes(role))return;
     const controller=new AbortController();
@@ -84,6 +86,21 @@ export default function RolePage() {
     }catch(error){setOfferMessage(error instanceof Error?error.message:'Offer response failed');}
     finally{setPendingOffer(null);}
   }
+  async function acceptViewing(id:string){
+    if(role!=='agent'||pendingViewing)return;
+    if(!window.confirm('Accept this viewing request? The server will create a payable booking and hold a reservation if eligible.'))return;
+    setPendingViewing(id);setViewingMessage('');
+    try{
+      const response=await fetch('/api/viewing-requests/'+encodeURIComponent(id)+'/accept',{
+        method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'
+      });
+      const body=await response.json();
+      if(!response.ok)throw new Error(typeof body.error==='string'?body.error:'Viewing acceptance failed');
+      setViewings(previous=>previous.map(item=>item.id===id?{...item,status:'ACCEPTED'}:item));
+      setViewingMessage('Viewing accepted by the server. Payment and reservation status must still be confirmed.');
+    }catch(error){setViewingMessage(error instanceof Error?error.message:'Viewing acceptance failed');}
+    finally{setPendingViewing(null);}
+  }
   if(!roles.includes(role))return <main><h1>Dashboard not found</h1><a href="/">Return to Ride2View</a></main>;
   const config=configs[role];
   return <main><header><strong>Ride2View</strong><a href="/">Home</a></header>
@@ -104,9 +121,13 @@ export default function RolePage() {
         </li>)}</ul>:<p>{config.empty}</p>)}
       {role==='driver'&&offerMessage&&<p role="status">{offerMessage}</p>}
       {(role==='customer'||role==='agent')&&<><h2>Viewing requests</h2>
-        {viewings.length?<ul>{viewings.map((item,index)=><li key={safeText(item.id)||index}><strong>Viewing {index+1}</strong><span>{safeText(item.status)||'Status unavailable'}</span></li>)}</ul>:<p>No viewing requests returned.</p>}
+        {viewings.length?<ul>{viewings.map((item,index)=><li key={safeText(item.id)||index}><strong>Viewing {index+1}</strong><span>{safeText(item.status)||'Status unavailable'}</span>
+          {role==='agent'&&safeText(item.status)==='REQUESTED'&&safeText(item.id)&&
+            <button type="button" disabled={pendingViewing!==null} onClick={()=>acceptViewing(String(item.id))}>Accept viewing</button>}
+          </li>)}</ul>:<p>No viewing requests returned.</p>}
+        {viewingMessage&&<p role="status">{viewingMessage}</p>}
       </>}
-      <p>Driver offer responses use the server-authorized dispatch endpoint. Other operational actions remain in the existing interface.</p>
+      <p>Driver offer responses use the server-authorized dispatch endpoint. Agent viewing acceptance also uses the backend's eligibility, conflict and reservation checks. Other operational actions remain in the existing interface.</p>
     </section>}
     <footer>Server API permissions remain authoritative. This page does not grant privileges or expose payment controls.</footer>
   </main>;
