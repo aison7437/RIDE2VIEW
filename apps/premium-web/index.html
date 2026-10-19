@@ -1870,6 +1870,42 @@ button#voice-fab,
   animation: voicePulse 1.2s infinite;
 }
 
+
+/* Ride2View responsive desktop layout: keep the existing mobile presentation below 768px. */
+@media (min-width:768px) {
+  html,body {width:100%;min-height:100%;margin:0;}
+  body, [data-theme="black"] body {
+    display:block;
+    background:var(--bg);
+    padding:0;
+    min-height:100vh;
+  }
+  .shell {
+    width:100%;
+    max-width:none;
+    height:100vh;
+    height:100dvh;
+    min-height:0;
+    margin:0;
+    border-radius:0;
+    box-shadow:none;
+  }
+  .sbar {display:none;}
+  .app-hdr {padding:20px clamp(24px,4vw,72px);}
+  .screen {width:100%;}
+  .screen > :not(.app-hdr) {flex-shrink:0;}
+  .prop-grid2 {grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
+  .cat-grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;}
+  .sm-grid {grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;}
+  .nav-bar {padding:10px clamp(24px,6vw,100px) 12px;}
+  .nav-label {font-size:12px;}
+  .nav-icon {font-size:23px;}
+}
+@media (min-width:1200px) {
+  .prop-grid2 {grid-template-columns:repeat(4,minmax(0,1fr));}
+  .cat-grid {grid-template-columns:repeat(6,minmax(0,1fr));}
+  .sm-grid {grid-template-columns:repeat(4,minmax(0,1fr));}
+}
 </style>
 </head>
 <body>
