@@ -166,7 +166,7 @@ function createApp(options={}) {
           const received=providerBoundary.receive({provider,rawBody:req.rawBody,signature,headers:req.headers});
           return send(received.duplicate?200:202,{accepted:true,duplicate:!!received.duplicate,eventId:received.provider_event_id,status:received.status});
         }catch(error){
-          if(['INVALID_PROVIDER_SIGNATURE','INVALID_PROVIDER_EVENT','UNSUPPORTED_PROVIDER_EVENT','RAW_BODY_REQUIRED','PROVIDER_CORRELATION_MISMATCH','PROVIDER_INTENT_AMOUNT_MISMATCH','PROVIDER_EVENT_REPLAY_CONFLICT'].includes(error.code))fail(error.code==='PROVIDER_EVENT_REPLAY_CONFLICT'?409:400,error.code);
+          if(['INVALID_PROVIDER_SIGNATURE','INVALID_PROVIDER_EVENT','UNSUPPORTED_DARAJA_CALLBACK_FORMAT','UNSUPPORTED_PROVIDER_EVENT','RAW_BODY_REQUIRED','PROVIDER_CORRELATION_MISMATCH','PROVIDER_INTENT_AMOUNT_MISMATCH','PROVIDER_EVENT_REPLAY_CONFLICT'].includes(error.code))fail(error.code==='PROVIDER_EVENT_REPLAY_CONFLICT'?409:400,error.code);
           throw error;
         }
       }
