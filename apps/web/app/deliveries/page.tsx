@@ -1,0 +1,1 @@
+export default function Deliveries(){return <main><section className="hero"><p>DELIVERIES</p><h1>Move what matters.</h1><p>Parcel and cargo services are planned for this customer experience. Booking and pricing are not yet connected to this Next.js deployment.</p></section></main>}

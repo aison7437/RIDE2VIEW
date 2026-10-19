@@ -1,0 +1,1 @@
+export default function RidePlate(){return <main><section className="hero"><p>RIDE PLATE</p><h1>Food delivery</h1><p>Ride Plate is part of the Ride2View platform. Checkout and merchant availability are not yet connected to this Next.js deployment.</p></section></main>}
