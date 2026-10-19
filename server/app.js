@@ -155,7 +155,7 @@ function createApp(options={}) {
       }
       // Provider callbacks authenticate using the configured adapter's signature, not a customer session.
       // Persist the verified event before acknowledging; the callback worker confirms payment asynchronously.
-      const providerCallbackMatch=path.match(/^\\/api\\/provider-callbacks\\/([a-z0-9_-]+)$/i);
+      const providerCallbackMatch=path.match(/^\/api\/provider-callbacks\/([a-z0-9_-]+)$/i);
       if(providerCallbackMatch){
         if(method!=='POST')fail(405,'Method not allowed');
         const provider=providerCallbackMatch[1];
