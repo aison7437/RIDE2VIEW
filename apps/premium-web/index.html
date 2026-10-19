@@ -1906,6 +1906,39 @@ button#voice-fab,
   .cat-grid {grid-template-columns:repeat(6,minmax(0,1fr));}
   .sm-grid {grid-template-columns:repeat(4,minmax(0,1fr));}
 }
+
+/* Desktop alignment: keep all home sections on the same fluid content grid. */
+@media (min-width:768px) {
+  *,*::before,*::after {box-sizing:border-box;}
+  .shell,.screen,.home-body,.browse-body,.shop-body {min-width:0;}
+  .home-body,.browse-body,.shop-body {
+    width:100%;
+    padding-left:clamp(24px,4vw,72px);
+    padding-right:clamp(24px,4vw,72px);
+  }
+  .home-body .feat-scroll {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:18px;
+    overflow:visible;
+    margin:0;
+    padding:4px 0 8px;
+  }
+  .home-body .feat-card {width:auto;min-width:0;flex-shrink:1;}
+  .home-body .cat-grid {width:100%;min-width:0;grid-template-columns:repeat(3,minmax(0,1fr));}
+  .home-body .citem {min-width:0;overflow:hidden;}
+  .home-body .mode-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;}
+  .home-body .sec-hdr {width:100%;}
+  .browse-body .prop-grid2,.shop-body .sm-grid {width:100%;min-width:0;}
+  .browse-body .pcard,.shop-body .sm-card {min-width:0;}
+}
+@media (min-width:1200px) {
+  .home-body .feat-scroll {grid-template-columns:repeat(4,minmax(0,1fr));}
+  .home-body .cat-grid {grid-template-columns:repeat(4,minmax(0,1fr));}
+}
+@media (min-width:1600px) {
+  .home-body .cat-grid {grid-template-columns:repeat(6,minmax(0,1fr));}
+}
 </style>
 </head>
 <body>
