@@ -1,0 +1,45 @@
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {createHmac}=require('node:crypto');
+const {createApp}=require('../server/app');
+const {createMpesaAdapter}=require('../server/payments/providers/mpesa-adapter');
+
+test('configured M-Pesa adapter verifies raw-body HMAC over HTTP and recovers failed processing',async(t)=>{
+ const secret='v11c-test-only-secret';
+ const app=createApp({dbPath:':memory:',paymentProviders:{mpesa:createMpesaAdapter({webhookSecret:secret})},startProviderCallbackRuntime:false,startPaymentInitiationRuntime:false,startSideEffectRuntime:false});
+ t.after(async()=>app.close());
+ const db=app.db,now=new Date().toISOString();
+ db.prepare("INSERT INTO users VALUES('c','c@x','C','x','customer',1),('ag','ag@x','Agent','x','agent',1)").run();
+ db.prepare("INSERT INTO listings VALUES('l','ag','{}',1,1)").run();
+ db.prepare("INSERT INTO bookings VALUES('b','c','l','general',650,'requested',?,NULL,?)").run(now,now);
+ db.prepare("INSERT INTO payments VALUES('p','b',650,'pending',NULL,NULL,NULL)").run();
+ db.prepare("INSERT INTO payment_intents(id,payment_kind,payment_id,provider,amount,currency,customer_contact,idempotency_key,correlation_id,provider_request_id,status,created_at,updated_at) VALUES('i','booking_payment','p','mpesa',650,'KES','254700000000','v11c-http','corr-v11c',NULL,'REQUESTED',?,?)").run(now,now);
+ await new Promise(resolve=>app.server.listen(0,'127.0.0.1',resolve));
+ const url='http://127.0.0.1:'+app.server.address().port+'/api/provider-callbacks/mpesa';
+ const event={eventId:'mpesa-event-v11c',correlationId:'corr-v11c',paymentKind:'booking_payment',paymentId:'p',type:'PAYMENT_SUCCEEDED',amount:650,currency:'KES',reference:'MPESAV11CREF'};
+ const raw=JSON.stringify(event),sign=body=>createHmac('sha256',secret).update(body).digest('hex');
+ async function send(body,signature){const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json','x-provider-signature':signature},body});return {status:response.status,data:await response.json()};}
+ assert.equal((await send(raw,'bad')).status,400);
+ assert.equal((await send(JSON.stringify({...event,amount:651}),sign(raw))).status,400);
+ assert.equal(db.prepare('SELECT COUNT(*) AS n FROM provider_callback_inbox').get().n,0);
+ const first=await send(raw,sign(raw));
+ assert.equal(first.status,202);
+ assert.equal(first.data.status,'RECEIVED');
+ assert.equal((await send(raw,sign(raw))).data.duplicate,true);
+ assert.equal((await send(JSON.stringify({...event,reference:'REPLAYV11C'}),sign(JSON.stringify({...event,reference:'REPLAYV11C'})))).status,409);
+ db.prepare("UPDATE bookings SET status='cancelled' WHERE id='b'").run();
+ const failed=app.providerBoundary.processDue({workerId:'v11c-worker'});
+ assert.equal(failed.length,1);
+ assert.equal(failed[0].ok,false);
+ assert.equal(db.prepare('SELECT status FROM payments WHERE id=?').get('p').status,'pending');
+ assert.equal(db.prepare('SELECT COUNT(*) AS n FROM provider_payment_events').get().n,0);
+ const inbox=db.prepare('SELECT * FROM provider_callback_inbox WHERE provider_event_id=?').get(event.eventId);
+ assert.equal(inbox.status,'FAILED');
+ db.prepare("UPDATE bookings SET status='requested' WHERE id='b'").run();
+ const success=app.providerBoundary.process({inboxId:inbox.id,workerId:'v11c-worker'});
+ assert.equal(success.booking_status,'confirmed');
+ assert.equal(db.prepare('SELECT status FROM payments WHERE id=?').get('p').status,'paid');
+ assert.equal(db.prepare('SELECT status FROM payment_intents WHERE id=?').get('i').status,'CONFIRMED');
+ assert.equal(db.prepare('SELECT COUNT(*) AS n FROM provider_payment_events').get().n,1);
+ assert.equal((await send(raw,sign(raw))).data.duplicate,true);
+});
