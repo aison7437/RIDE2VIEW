@@ -153,6 +153,23 @@ function createApp(options={}) {
         const mime=path.endsWith('.js')?'application/javascript':path.endsWith('.css')?'text/css':'text/html';
         res.writeHead(200,{'Content-Type':mime+'; charset=utf-8'});return res.end(method==='HEAD'?'':readFileSync(join(root,allowed[path])));
       }
+      // Provider callbacks authenticate using the configured adapter's signature, not a customer session.
+      // Persist the verified event before acknowledging; the callback worker confirms payment asynchronously.
+      const providerCallbackMatch=path.match(/^\/api\/provider-callbacks\/([a-z0-9_-]+)$/i);
+      if(providerCallbackMatch){
+        if(method!=='POST')fail(405,'Method not allowed');
+        const provider=providerCallbackMatch[1];
+        if(!paymentProviders[provider])fail(404,'Payment provider not configured');
+        await readBody(req);
+        const signature=String(req.headers['x-provider-signature']||'');
+        try{
+          const received=providerBoundary.receive({provider,rawBody:req.rawBody,signature,headers:req.headers});
+          return send(received.duplicate?200:202,{accepted:true,duplicate:!!received.duplicate,eventId:received.provider_event_id,status:received.status});
+        }catch(error){
+          if(['INVALID_PROVIDER_SIGNATURE','INVALID_PROVIDER_EVENT','UNSUPPORTED_PROVIDER_EVENT','RAW_BODY_REQUIRED','PROVIDER_CORRELATION_MISMATCH','PROVIDER_INTENT_AMOUNT_MISMATCH','PROVIDER_EVENT_REPLAY_CONFLICT'].includes(error.code))fail(error.code==='PROVIDER_EVENT_REPLAY_CONFLICT'?409:400,error.code);
+          throw error;
+        }
+      }
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
