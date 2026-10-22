@@ -42,14 +42,18 @@ const { createDispatchAuthority } = require('./mobility/dispatch');
 const { createSafetyAuthority } = require('./safety');
 const { createReservationAuthority } = require('./scheduling/reservations');
 const { createCancellationCoordinator } = require('./recovery/cancellation-coordinator');
+const { createAuthOnboarding } = require('./auth/onboarding');
+const { fromEnvironment: authVerificationProviders } = require('./auth/providers');
 const TIERS = Object.freeze({general:650, women:750, students:450, vip:2000});
 const passwordHash = password => { const salt=randomBytes(16).toString('hex'); return salt+':'+scryptSync(password,salt,64).toString('hex'); };
 function passwordMatches(password, stored) { const [salt,hash]=stored.split(':'); const a=scryptSync(password,salt,64); const b=Buffer.from(hash,'hex'); return a.length===b.length && timingSafeEqual(a,b); }
 const digest = value => createHash('sha256').update(value).digest('hex');
 function createApp(options={}) {
-  productionConfig(options.environment || process.env);
+  const environment=options.environment || process.env;
+  productionConfig(environment);
   const db=openStore(options.dbPath || process.env.DB_PATH || './data/ride2view.sqlite');
-  const secure=options.secureCookies ?? process.env.COOKIE_SECURE==='true';
+  const secure=options.secureCookies ?? environment.COOKIE_SECURE==='true';
+  const requireVerifiedAuth=options.requireVerifiedAuth ?? environment.NODE_ENV==='production';
   const root=join(__dirname,'..');
   const bootEmail=options.adminEmail || process.env.ADMIN_EMAIL;
   const bootPassword=options.adminPassword || process.env.ADMIN_PASSWORD;
@@ -115,7 +119,10 @@ function createApp(options={}) {
   const supplyRoutes=createSupplyRoutes({supply,cancellationCoordinator,journeys});
   function fail(status,message) {const e=new Error(message);e.status=status;throw e;}
   function requireRole(user,...roles) { if(!user) fail(401,'Sign in to continue'); if(!roles.includes(user.role)) fail(403,'This action is not permitted for this account'); }
-  function getUser(req) {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(!token)return null;return db.prepare('SELECT u.id,u.name,u.email,u.role,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>?').get(digest(token),Date.now()) || null;}
+  function setSession(res,token) {res.setHeader('Set-Cookie',`r2v_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${secure?'; Secure':''}`);}
+  function getUser(req) {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(!token)return null;return db.prepare("SELECT u.id,u.name,CASE WHEN u.email LIKE '%@phone.ride2view.invalid' THEN NULL ELSE u.email END AS email,u.role,u.verified,(SELECT address FROM auth_contacts c WHERE c.user_id=u.id AND c.kind='phone' AND c.verified_at IS NOT NULL LIMIT 1) AS phone FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>?").get(digest(token),Date.now()) || null;}
+  const authProvider=options.authVerificationProvider || authVerificationProviders(environment,options.fetchFn||fetch);
+  const authOnboarding=createAuthOnboarding({db,audit,otpSecret:options.otpSecret ?? environment.R2V_AUTH_OTP_SECRET,verificationProvider:authProvider,passwordHash,digest,setSession,now:options.authClock});
   function bookingFor(id,user) {const b=db.prepare('SELECT b.*,l.payload AS listing FROM bookings b JOIN listings l ON l.id=b.listing_id WHERE b.id=?').get(id);if(!b)fail(404,'Booking not found');if(user.role!=='admin' && b.customer_id!==user.id && b.driver_id!==user.id)fail(403,'Booking belongs to another account');return b;}
   async function readBody(req) {let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>(['/api/supply/documents','/api/mobility/documents','/api/property-services/documents'].includes(req.url)?3000000:65536))fail(413,'Request is too large');chunks.push(c);}try{req.rawBody=Buffer.concat(chunks).toString() || '{}';return JSON.parse(req.rawBody);}catch{fail(400,'Invalid JSON body');}}
   const apiLimiter=createRateLimiter({limit:options.apiRateLimit ?? 120,windowMs:options.apiRateWindowMs ?? 60000});
@@ -145,7 +152,7 @@ function createApp(options={}) {
           return send(503,{status:'not_ready',database:false,schemaVersion:null,expectedSchemaVersion:CURRENT_SCHEMA_VERSION});
         }
       }
-      if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected,paymentRecoveryConnected});
+      if(path==='/api/config' && method==='GET')return send(200,{tiers:TIERS,paymentMode:initiationPaymentsConnected?'provider':'manual_verification',externalPaymentsConnected,initiationPaymentsConnected,callbackPaymentsConnected,paymentRecoveryConnected,authVerificationEnabled:authOnboarding.enabled,authVerificationChannels:authOnboarding.channels});
       if(!path.startsWith('/api/')) {
         const allowed={'/':'index.html','/index.html':'index.html','/js/app.js':'js/app.js','/js/agents.js':'js/agents.js','/js/analytics.js':'js/analytics.js','/js/operations.js':'js/operations.js','/js/property-services.js':'js/property-services.js','/js/mobility.js':'js/mobility.js','/js/maps.js':'js/maps.js','/js/journeys.js':'js/journeys.js','/js/dashboard.js':'js/dashboard.js','/js/shopping.js':'js/shopping.js','/js/marketplace.js':'js/marketplace.js','/js/supply.js':'js/supply.js','/js/preview.js':'js/preview.js','/css/style.css':'css/style.css','/css/app.css':'css/app.css'};
         if(method!=='GET' && method!=='HEAD')fail(405,'Method not allowed');
@@ -173,6 +180,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      if(await authOnboarding.routes({path,method,user,body,send,res}))return;
       if(path==='/api/maps/config'&&method==='GET'){const key=options.mapsBrowserKey ?? process.env.GOOGLE_MAPS_BROWSER_KEY ?? '';return send(200,{enabled:Boolean(key),browserKey:key||null,features:{maps2d:Boolean(key),maps3d:Boolean(key)}});}
       if(path==='/api/dashboard'&&method==='GET')return send(200,dashboard.get(user));
       if(intelligence.routes({path,method,user,body,send}))return;
@@ -191,6 +199,7 @@ function createApp(options={}) {
       if(journeyRoutes({path,method,user,body,send,res}))return;
       if(supplyRoutes({path,method,user,body,send,res}))return;
       if(path==='/api/auth/register' && method==='POST') {
+        if(requireVerifiedAuth)fail(410,'Use the verified email or phone registration flow');
         rateLimit(req);const email=String(body.email||'').trim().toLowerCase();const name=String(body.name||'').trim();const role=body.role||'customer';
         if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)fail(400,'A valid email is required');
         if(name.length<2||name.length>100)fail(400,'Name must contain 2–100 characters');
@@ -204,9 +213,11 @@ function createApp(options={}) {
         const account=db.prepare('SELECT * FROM users WHERE email=?').get(String(body.email||'').trim().toLowerCase());
         const dummy='00000000000000000000000000000000:'+ '00'.repeat(64);
         if(!passwordMatches(body.password,account?.password || dummy)||!account)fail(401,'Invalid credentials');
-        const token=randomBytes(32).toString('hex');db.prepare('DELETE FROM sessions WHERE expires<?').run(Date.now());db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(digest(token),account.id,Date.now()+86400000);
-        res.setHeader('Set-Cookie',`r2v_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${secure?'; Secure':''}`);
-        return send(200,{id:account.id,name:account.name,email:account.email,role:account.role,verified:account.verified});
+        if(requireVerifiedAuth&&!db.prepare('SELECT 1 FROM auth_contacts WHERE user_id=? AND verified_at IS NOT NULL LIMIT 1').get(account.id))fail(403,'Verify your email or phone before signing in');
+        const token=randomBytes(32).toString('hex');db.prepare('DELETE FROM sessions WHERE expires<?').run(Date.now());db.prepare('INSERT INTO sessions VALUES(?,?,?)').run(digest(token),account.id,Date.now()+86400000);setSession(res,token);
+        const publicEmail=account.email?.endsWith('@phone.ride2view.invalid')?null:account.email;
+        const phone=db.prepare("SELECT address FROM auth_contacts WHERE user_id=? AND kind='phone' AND verified_at IS NOT NULL LIMIT 1").get(account.id)?.address||null;
+        return send(200,{id:account.id,name:account.name,email:publicEmail,phone,role:account.role,verified:account.verified});
       }
       if(path==='/api/auth/me' && method==='GET') {if(!user)fail(401,'Sign in to continue');return send(200,user);}
       if(path==='/api/auth/logout' && method==='POST') {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(token)db.prepare('DELETE FROM sessions WHERE token=?').run(digest(token));res.setHeader('Set-Cookie','r2v_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(200,{success:true});}
@@ -285,7 +296,7 @@ function createApp(options={}) {
         if(user.role==='driver')fail(403,'Drivers cannot cancel customer bookings');if(b.status==='completed')fail(409,'Booking cannot be cancelled');
         try{const result=cancellationCoordinator.cancel({bookingId:b.id,actor:user});return send(200,result);}catch(e){fail(409,e.code||'Booking cancellation failed');}
       }
-      if(path==='/api/admin/users' && method==='GET') {requireRole(user,'admin');return send(200,{users:db.prepare('SELECT id,email,name,role,verified FROM users ORDER BY name').all().map(u=>({...u,mobilityEligible:u.role==='driver'&&mobilityActive(db,u.id,'driver'),online:Boolean(db.prepare('SELECT online FROM driver_profiles WHERE user_id=?').get(u.id)?.online)}))});}
+      if(path==='/api/admin/users' && method==='GET') {requireRole(user,'admin');return send(200,{users:db.prepare("SELECT id,CASE WHEN email LIKE '%@phone.ride2view.invalid' THEN NULL ELSE email END AS email,name,role,verified FROM users ORDER BY name").all().map(u=>({...u,mobilityEligible:u.role==='driver'&&mobilityActive(db,u.id,'driver'),online:Boolean(db.prepare('SELECT online FROM driver_profiles WHERE user_id=?').get(u.id)?.online)}))});}
       const approveMatch=path.match(/^\/api\/admin\/users\/([^/]+)\/approve$/);
       if(approveMatch && method==='POST') {requireRole(user,'admin');const target=db.prepare('SELECT id,role FROM users WHERE id=?').get(approveMatch[1]);if(!target||!['driver','agent'].includes(target.role))fail(400,'Only driver and agent accounts require approval');if(target.role==='agent')fail(409,'Use agent identity and agency documentary reviews');fail(409,'Use driver profile, private documents and mobility review before dispatch');}
       const callbackRetryMatch=path.match(/^\/api\/admin\/payment-operations\/callbacks\/([^/]+)\/retry$/);
@@ -301,6 +312,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,dashboard,shopping,intelligence,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,dashboard,shopping,intelligence,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,authOnboarding,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};
