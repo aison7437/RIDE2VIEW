@@ -594,7 +594,8 @@ button#voice-fab,
 .rmc-stage{width:100%;height:74px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.4));}
 .rmc-stage svg{width:100%;height:100%;}
 .rmc-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:6px;}
-.rmc-bottom{display:flex;align-items:center;justify-content:space-between;}.rmc-price{font-size:11px;color:rgba(255,255,255,.5);font-weight:600;display:flex;align-items:center;gap:3px;}
+.rmc-bottom{display:flex;align-items:center;justify-content:space-between;}
+.rmc-price{font-size:11px;color:rgba(255,255,255,.5);font-weight:600;display:flex;align-items:center;gap:3px;}
 .rmc-price b{color:#FFC04D;font-size:12px;}
 .rmc-arrow{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#FFB020,#FF8A00);display:flex;align-items:center;justify-content:center;color:#1A1200;font-size:13px;font-weight:900;flex-shrink:0;box-shadow:0 3px 10px rgba(255,140,0,.4);transition:transform .15s;}
 .ride-mode-card.selected .rmc-arrow{transform:scale(1.12) rotate(45deg);}
@@ -1193,7 +1194,8 @@ const VI = (() => {
     },
     BOOK_RIDE(e) {
       goTo('ride');
-      return {        title: `Booking ${e.tier === 'vip' ? '👑 Elite Tour' : e.tier === 'women' ? '🌸 SafeRide' : '🚗 Ride'}`,
+      return {
+        title: `Booking ${e.tier === 'vip' ? '👑 Elite Tour' : e.tier === 'women' ? '🌸 SafeRide' : '🚗 Ride'}`,
         body:  `Opening Ride2Go. ${_context.lastProperty ? `Destination: ${_context.lastProperty.location}.` : 'Set your destination.'}`,
         actions: [{ label:'Choose Tier 🚀', fn:'openTierSelect()' }],
         speech: `Opening Ride to Go. ${_context.lastProperty ? `I\'ll set your destination to ${_context.lastProperty.title}.` : 'Please choose your ride tier.'}`
@@ -1792,7 +1794,8 @@ const _origGoTo = typeof goTo === 'function' ? goTo : null;
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════     VOICE INTELLIGENCE SYSTEM — Ride2View
+<!-- ═══════════════════════════════════════════════════
+     VOICE INTELLIGENCE SYSTEM — Ride2View
      Layer: Voice Input UI + Overlay
 ═══════════════════════════════════════════════════ -->
 
