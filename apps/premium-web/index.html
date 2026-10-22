@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 146231)
-Total output lines: 6994
-
 <!DOCTYPE html>
 <html lang="en" data-theme="green">
 <head>
@@ -597,8 +594,7 @@ button#voice-fab,
 .rmc-stage{width:100%;height:74px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.4));}
 .rmc-stage svg{width:100%;height:100%;}
 .rmc-name{font-size:13px;font-weight:700;color:#fff;margin-bottom:6px;}
-.rmc-bottom{display:flex;align-items:center;justify-content:space-between;}
-.rmc-price{font-size:11px;color:rgba(255,255,255,.5);font-weight:600;display:flex;align-items:center;gap:3px;}
+.rmc-bottom{display:flex;align-items:center;justify-content:space-between;}.rmc-price{font-size:11px;color:rgba(255,255,255,.5);font-weight:600;display:flex;align-items:center;gap:3px;}
 .rmc-price b{color:#FFC04D;font-size:12px;}
 .rmc-arrow{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#FFB020,#FF8A00);display:flex;align-items:center;justify-content:center;color:#1A1200;font-size:13px;font-weight:900;flex-shrink:0;box-shadow:0 3px 10px rgba(255,140,0,.4);transition:transform .15s;}
 .ride-mode-card.selected .rmc-arrow{transform:scale(1.12) rotate(45deg);}
@@ -1197,8 +1193,7 @@ const VI = (() => {
     },
     BOOK_RIDE(e) {
       goTo('ride');
-      return {
-        title: `Booking ${e.tier === 'vip' ? '👑 Elite Tour' : e.tier === 'women' ? '🌸 SafeRide' : '🚗 Ride'}`,
+      return {        title: `Booking ${e.tier === 'vip' ? '👑 Elite Tour' : e.tier === 'women' ? '🌸 SafeRide' : '🚗 Ride'}`,
         body:  `Opening Ride2Go. ${_context.lastProperty ? `Destination: ${_context.lastProperty.location}.` : 'Set your destination.'}`,
         actions: [{ label:'Choose Tier 🚀', fn:'openTierSelect()' }],
         speech: `Opening Ride to Go. ${_context.lastProperty ? `I\'ll set your destination to ${_context.lastProperty.title}.` : 'Please choose your ride tier.'}`
@@ -1797,8 +1792,7 @@ const _origGoTo = typeof goTo === 'function' ? goTo : null;
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════
-     VOICE INTELLIGENCE SYSTEM — Ride2View
+<!-- ═══════════════════════════════════════════════════     VOICE INTELLIGENCE SYSTEM — Ride2View
      Layer: Voice Input UI + Overlay
 ═══════════════════════════════════════════════════ -->
 
@@ -1895,6 +1889,37 @@ const _origGoTo = typeof goTo === 'function' ? goTo : null;
 #r2v-auth-dialog[open]{animation:r2v-auth-in .16s ease-out}
 @keyframes r2v-auth-in{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
 @media(max-width:560px){#r2v-auth-open{top:calc(env(safe-area-inset-top,0px) + 62px);right:12px;padding:10px 14px}.r2v-auth-shell{padding:22px 18px}}
+
+/* Ride2View premium visual refinement: cohesive image-led cards and clearer interaction states. */
+:root { --r2v-card-shadow: 0 8px 24px rgba(13,31,22,.08); --r2v-card-shadow-hover: 0 14px 32px rgba(13,31,22,.14); }
+.home-body, .browse-body { padding: 18px 16px 24px; }
+.mode-grid { gap: 12px; margin-bottom: 22px; }
+.mcard { min-height: 158px; border-radius: 20px; box-shadow: 0 12px 28px rgba(0,0,0,.18); isolation: isolate; }
+.mcard .mc-bg { transition: transform .55s cubic-bezier(.2,.65,.3,1); }
+.mcard.go .mc-overlay, .mcard.view .mc-overlay { background: linear-gradient(180deg,rgba(8,18,13,.04) 0%,rgba(8,18,13,.14) 34%,rgba(8,18,13,.78) 100%); }
+.feat-card, .scard, .pcard, .wish-card, .tcard { border-radius: 18px; border: 1px solid var(--border); box-shadow: var(--r2v-card-shadow); }
+.feat-img, .scard-img, .pimg { background-color: var(--brand-faint); }
+.feat-img img, .scard-img img, .pimg img, .dhero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.pimg { height: 124px; }
+.scard-img.tall { height: 168px; }
+.feat-body, .scard-body, .pbody { padding: 12px 13px 14px; }
+.ftitle, .sc-title, .pname { line-height: 1.4; }
+.pprice, .sc-price { font-size: 14px; }
+.search-bar { min-height: 48px; transition: box-shadow .2s ease, transform .2s ease; }
+.search-mic { width: 34px; height: 34px; border-radius: 10px; }
+.nav-item { min-height: 48px; justify-content: center; }
+.dhero { height: 260px; background: var(--brand-faint); }
+.dback, .hbtn2 { box-shadow: 0 3px 12px rgba(0,0,0,.14); }
+@media (hover:hover) and (pointer:fine) {
+  .mcard:hover, .feat-card:hover, .scard:hover, .pcard:hover, .tcard:hover { transform: translateY(-3px); box-shadow: var(--r2v-card-shadow-hover); }
+  .search-bar:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,.16); }
+}
+:where(button,a,.nav-item,.search-mic,.mcard,.feat-card,.scard,.pcard,.tcard):focus-visible { outline: 3px solid var(--brand-light); outline-offset: 3px; }
+@media (max-width:360px) { .home-body,.browse-body { padding-inline:12px; } .mode-grid { gap:9px; } .mcard { min-height:144px; } .pimg { height:112px; } }
+@media (prefers-reduced-motion:reduce) {
+  .mcard,.mcard .mc-bg,.feat-card,.scard,.pcard,.tcard,.search-bar { transition:none!important; }
+  .mcard:hover,.feat-card:hover,.scard:hover,.pcard:hover,.tcard:hover,.search-bar:hover { transform:none; }
+}
 </style>
 <script>
 (()=>{'use strict';
