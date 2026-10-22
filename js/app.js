@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $=id=>document.getElementById(id);
-  let user=null,chosen=null,users=[],recognition=null,refreshGeneration=0;
+  let user=null,chosen=null,users=[],recognition=null,refreshGeneration=0,authChallenge=null;
   const status=message=>{$('app-status').textContent=message;};
   async function api(path,method='GET',body) {
     const response=await fetch('/api'+path,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
@@ -14,7 +14,8 @@
   function roleUI() {
     $('app-auth').hidden=!!user;$('app-account').hidden=!user;$('app-bookings-section').hidden=!user||user.role==='agent';
     $('app-listings-section').hidden=!user||!['admin','agent'].includes(user.role);$('app-admin').hidden=user?.role!=='admin';$('app-notifications-section').hidden=!user;
-    $('app-user').textContent=user?`${user.name} · ${user.role}${user.verified?'':' · awaiting approval'}`:'';
+    $('app-user').textContent=user?`${user.name} · ${user.role}${user.email?' · '+user.email:''}${user.phone?' · '+user.phone:''}${user.verified?'':' · awaiting approval'}`:'';
+    if(user){$('app-link-email').hidden=Boolean(user.email);$('app-link-phone').hidden=Boolean(user.phone);$('app-link-credentials').hidden=Boolean(user.email&&user.phone);}
   }
   async function refresh() {
     const token=++refreshGeneration;
@@ -57,7 +58,14 @@
   }
   function renderUsers(){const target=$('app-users');target.replaceChildren();for(const u of users){const row=node('div',null,'app-card');row.append(node('p',`${u.name} · ${u.email} · ${u.role} · ${u.verified?'Approved':'Pending'}`));if(u.role==='driver')row.append(node('p',`Documentary eligibility: ${u.mobilityEligible?'Current':'Requires review'} · ${u.online?'Online':'Offline'}`));target.append(row);}}
   $('app-auth-form').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{user=await api('/auth/login','POST',formData(e.target));status('Signed in.');await refresh();});});
-  $('app-register').addEventListener('click',()=>perform(async()=>{const data=formData($('app-auth-form'));await api('/auth/register','POST',data);user=await api('/auth/login','POST',data);status('Account created. Agent and driver accounts need administrator approval.');await refresh();}));
+  $('app-email-register').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{const result=await api('/auth/email/challenges','POST',formData(e.target));authChallenge=result.challengeId;$('app-email-verify-form').hidden=false;status('Enter the code sent to your email. It expires in five minutes.');});});
+  $('app-password-recovery').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{const result=await api('/auth/email/recovery/challenges','POST',formData(e.target));authChallenge=result.challengeId;$('app-email-verify-form').hidden=false;status('Enter the code sent to your email to complete password recovery.');});});
+  $('app-phone-register').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{const result=await api('/auth/phone/challenges','POST',formData(e.target));authChallenge=result.challengeId;$('app-phone-verify-form').hidden=false;status('Enter the SMS code. It expires in five minutes.');});});
+  async function verifyChallenge(form,successText){const data=formData(form);if(!authChallenge)throw new Error('Request a new verification code first');user=await api('/auth/challenges/verify','POST',{challengeId:authChallenge,code:data.code});authChallenge=null;$('app-email-verify-form').hidden=true;$('app-phone-verify-form').hidden=true;status(successText);await refresh();}
+  $('app-email-verify-form').addEventListener('submit',e=>{e.preventDefault();perform(()=>verifyChallenge(e.target,'Email verified. You are signed in.'));});
+  $('app-phone-verify-form').addEventListener('submit',e=>{e.preventDefault();perform(()=>verifyChallenge(e.target,'Phone verified. You are signed in.'));});
+  $('app-link-email').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{const result=await api('/auth/email/link/challenges','POST',formData(e.target));authChallenge=result.challengeId;$('app-email-verify-form').hidden=false;status('Enter the email verification code to link this address.');});});
+  $('app-link-phone').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{const result=await api('/auth/phone/link/challenges','POST',formData(e.target));authChallenge=result.challengeId;$('app-phone-verify-form').hidden=false;status('Enter the SMS code to link this phone.');});});
   $('app-logout').addEventListener('click',()=>perform(async()=>{await api('/auth/logout','POST',{});user=null;chosen=null;$('app-booking-form-section').hidden=true;$('app-results').replaceChildren();await refresh();status('Signed out.');}));
   $('app-search').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{const data=formData(e.target);if(!data.budget)delete data.budget;const result=await api('/search','POST',data);renderResults(result.recommendations||[],result.measurementId);status(result.summary||'Search completed.');});});
   $('app-booking-form').addEventListener('submit',e=>{e.preventDefault();perform(async()=>{if(!chosen)throw new Error('Choose a property first');const d=formData(e.target);await api('/viewing-requests','POST',{listingId:chosen.id,tier:d.tier,slotId:d.slotId,idempotencyKey:crypto.randomUUID()});status('Viewing requested. Awaiting agent acceptance.');$('app-booking-form-section').hidden=true;await refresh();});});

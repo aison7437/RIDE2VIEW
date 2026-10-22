@@ -15,4 +15,12 @@
 - Existing POST /api/auth/register and /api/auth/login are email/password APIs; they do not provide verified email or SMS OTP yet.
 
 ## Current implementation scope
-This branch adds reusable Kenyan phone normalization and cryptographic OTP primitives with unit tests. It does **not** enable OTP delivery, registration endpoints, or a production signup experience. The next increment must implement persistent challenges, provider adapters, secure API endpoints and end-to-end tests before exposing registration controls.
+V12 now includes persistent five-minute email and phone challenges, attempt/resend limits, one-use codes, HMAC digests, verified credential linking, email password recovery with prior-session revocation, HttpOnly session issuance, and customer-facing signup forms. The OTP and verification challenge are never stored in plaintext. Phone numbers are normalized to Kenyan `+254` format. Email verification uses Resend; SMS verification uses Africa's Talking. Both providers use server-only environment configuration and HTTPS API endpoints.
+
+## Deployment configuration
+Set `AT_USERNAME` and `AT_API_KEY` for a production Africa's Talking application. `AT_SENDER_ID` is optional and should only be set to a sender ID/shortcode registered for that account. Set `RESEND_API_KEY` and `R2V_AUTH_EMAIL_FROM` to a sender on a verified Resend domain. Set `R2V_AUTH_OTP_SECRET` to a random secret of at least 32 characters. Do not commit real values or expose them to browser projects.
+
+`GET /api/config` reports which verification channels are configured. A channel stays disabled if its provider credentials or OTP secret are missing. Routes are `POST /api/auth/email/challenges`, `POST /api/auth/phone/challenges`, `POST /api/auth/email/link/challenges`, `POST /api/auth/phone/link/challenges`, `POST /api/auth/email/recovery/challenges`, and `POST /api/auth/challenges/verify`. Existing legacy users must verify their contact through the matching challenge flow before production password login. Agents and drivers still require their separate documentary review.
+
+## Verification boundary
+Automated tests use injected provider fakes and confirm challenge expiry, resend limits, attempt limits, single-use behavior, account linking, password recovery/session revocation, provider failure behavior, safe session cookies, restart persistence, and that raw OTPs are absent from the database. A live customer registration is not operational until the production secrets are installed, both provider accounts are active, Vercel/server origins are routed to the Node API, and staging tests receive real messages and complete signup, sign-in, sign-out, recovery, and cross-device persistence.

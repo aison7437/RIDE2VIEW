@@ -1,6 +1,6 @@
 # Ride2View Premium — standalone Vercel deployment
 
-The premium customer interface is a **static demonstration** at `apps/premium-web/index.html`. The legacy root `index.html` and Next.js app at `apps/web` are separate entry points. Do not configure this static project to replace the existing `ride-2-view` project.
+The premium customer interface is a static site at `apps/premium-web/index.html`. Account actions are routed through its same-origin Vercel function in `apps/premium-web/api/[...path].js`; browser requests never receive provider API keys. The legacy root `index.html` and Next.js app at `apps/web` are separate entry points. Do not configure this static project to replace the existing `ride-2-view` project.
 
 ## Vercel project setup
 
@@ -11,6 +11,12 @@ The premium customer interface is a **static demonstration** at `apps/premium-we
 5. Leave the output directory at the project root/default for static files. `vercel.json` sets no custom build or output directory.
 6. Deploy a preview first. Verify that the deployment serves the premium `index.html` (page title: **Ride2View Pro — Theme System + Inventory**), not the existing Next.js `apps/web` application.
 7. Only after preview validation, promote the separate project to production and configure its custom domain, if desired.
+
+## Authentication connection
+
+Before enabling account registration on this static project, deploy the Ride2View Node API over HTTPS and set the Vercel project environment variable `R2V_API_ORIGIN` to that API origin (scheme and host only, for example `https://api.example.com`). The proxy forwards only the approved auth routes and `/api/config`, rewrites the upstream `Origin` for the API's same-origin check, and passes back the secure HttpOnly session cookie. It intentionally returns `503` while no API origin is configured. Do not expose provider credentials in this static project's browser code.
+
+The API host must separately configure `AT_USERNAME`, `AT_API_KEY`, optional `AT_SENDER_ID`, `RESEND_API_KEY`, `R2V_AUTH_EMAIL_FROM`, and `R2V_AUTH_OTP_SECRET`. Configure the sender ID with Africa's Talking and verify the email sender domain with Resend before real sends. The Vercel proxy being deployed does not prove that the upstream API or SMS/email providers are active; complete the staging message-delivery and sign-in checks before announcing registration as live.
 
 ## Release acceptance checklist
 

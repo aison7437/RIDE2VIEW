@@ -12,7 +12,7 @@ const {installAnalyticsSchema}=require('../analytics/schema');
 const {installMemorySchema}=require('../memory/schema');
 const {installIntelligenceSchema}=require('../intelligence/schema');
 const {installShoppingSchema}=require('../shopping/schema');
-const CURRENT_SCHEMA_VERSION=27;
+const CURRENT_SCHEMA_VERSION=28;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -92,7 +92,18 @@ const migrations=[
  {version:24,name:'explicit-account-agent-memory',definition:'v24:opt-in versioned memory settings and bounded expiring source-linked explicit feedback and property exclusions',up:installMemorySchema},
  {version:25,name:'security-signal-collection',definition:'v25:aggregate minute security failure counters with collection start metadata and no personal identifiers',up:installIntelligenceSchema},
  {version:26,name:'durable-shopping-cart-reviews',definition:'v26:account-scoped versioned carts expiring immutable checkout reviews and atomic order bindings',up:installShoppingSchema},
- {version:27,name:'ride2go-completion-feedback',definition:'v27:immutable account-scoped Ride2Go completion ratings and comments',up:db=>db.exec("CREATE TABLE ride2go_feedback(trip_id TEXT PRIMARY KEY REFERENCES ride2go_trips(id),customer_id TEXT NOT NULL REFERENCES users(id),rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),comment TEXT NOT NULL,created_at TEXT NOT NULL);CREATE INDEX ride2go_feedback_customer ON ride2go_feedback(customer_id,created_at)")} 
+ {version:27,name:'ride2go-completion-feedback',definition:'v27:immutable account-scoped Ride2Go completion ratings and comments',up:db=>db.exec("CREATE TABLE ride2go_feedback(trip_id TEXT PRIMARY KEY REFERENCES ride2go_trips(id),customer_id TEXT NOT NULL REFERENCES users(id),rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),comment TEXT NOT NULL,created_at TEXT NOT NULL);CREATE INDEX ride2go_feedback_customer ON ride2go_feedback(customer_id,created_at)")},
+ {version:28,name:'verified-authentication-contacts',definition:'v28:persist expiring verified email and Kenyan phone challenges without storing plaintext OTPs',up:db=>db.exec(`CREATE TABLE auth_contacts(
+  user_id TEXT NOT NULL REFERENCES users(id),kind TEXT NOT NULL CHECK(kind IN ('email','phone')),address TEXT NOT NULL,
+  verified_at TEXT,created_at TEXT NOT NULL,PRIMARY KEY(kind,address)
+ );CREATE INDEX auth_contacts_user ON auth_contacts(user_id,kind);
+ CREATE TABLE auth_verification_challenges(
+  id TEXT PRIMARY KEY,kind TEXT NOT NULL CHECK(kind IN ('email','phone','email_link','phone_link','email_recovery')),
+  destination TEXT NOT NULL,user_id TEXT,draft TEXT NOT NULL DEFAULT '{}',code_digest TEXT NOT NULL,
+  expires_at TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,
+  created_at TEXT NOT NULL,updated_at TEXT NOT NULL
+ );CREATE INDEX auth_challenge_destination ON auth_verification_challenges(kind,destination,created_at);
+ CREATE INDEX auth_challenge_expiry ON auth_verification_challenges(status,expires_at);`)}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}
