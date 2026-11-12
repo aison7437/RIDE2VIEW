@@ -15,7 +15,8 @@
     "db:backup": "node scripts/backup-db.js",
     "db:check": "node scripts/check-db.js",
     "test:acceptance": "node scripts/acceptance.js",
-    "check:staging": "node scripts/staging-smoke.js"
+    "check:staging": "node scripts/staging-smoke.js",
+    "check:frontend-api": "node scripts/frontend-api-smoke.js"
   },
   "devDependencies": {
     "playwright": "1.62.1"
