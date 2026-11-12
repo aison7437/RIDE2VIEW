@@ -23,3 +23,6 @@ Run `FRONTEND_URL=https://your-customer-origin.example npm run check:frontend-ap
 
 ## Release rule
 Do not merge or enable paid public booking based only on this PR. CI and live infrastructure checks must pass; credentials, hosting topology, payment providers and data backups require separate operational verification.
+
+## Operator-triggered GitHub deployment check
+The workflow `.github/workflows/p0-01-public-api.yml` provides a manual `workflow_dispatch` gate that accepts the exact customer-facing HTTPS origin and executes `npm run check:frontend-api` from a GitHub-hosted runner. GitHub typically requires a manually dispatched workflow file to exist on the default branch; therefore it cannot be relied upon until this PR has passed review and been merged. In the meantime, run the command from a trusted machine or CI checkout against the actual public origin and preserve the output with the deployed SHA. Do not mark the public-origin gate PASS based solely on synthetic unit tests or successful Vercel checks.
