@@ -15,6 +15,38 @@
  async function rescheduleForm(j,card){const f=form('Reschedule whole package',d=>api('/journeys/'+j.id+'/reschedule','POST',{version:j.version,slotIds:j.plan.stops.map((s,i)=>d['slot'+i])}));for(let i=0;i<j.plan.stops.length;i++){const s=j.plan.stops[i],slots=(await api('/properties/'+s.listingId+'/slots')).slots;select(f,'New slot for property '+(i+1),'slot'+i,slots.map(v=>[v.id,new Date(v.start_at).toLocaleString()]));}card.append(f);}
  async function renderJourneys(rows,user){const target=$('journey-list');target.replaceChildren();if(!rows.length)target.append(node('p','No viewing packages yet.'));for(const j of rows){const card=node('article',null,'app-card');card.dataset.journeyId=j.id;card.append(node('h3','Viewing package · '+j.status),node('p','Package reference: '+j.id));if(j.plan.contact&&['customer','admin','driver'].includes(user.role))card.append(node('p','Pickup: '+j.plan.contact.pickup),node('p','Participants: '+j.plan.participants.map(p=>p.name).join(', ')));
  for(const s of j.stops){const row=node('div',null,'app-card');row.append(node('h4',`${s.position+1}. ${s.listing.title}`),node('p',`${new Date(s.startAt).toLocaleString()} · Agent ${s.request_status} · Stop ${s.status}`));if(['agent','admin'].includes(user.role)&&j.status==='PENDING_AGENTS'&&s.request_status==='REQUESTED'){row.append(button('Confirm package stop',async()=>{await api('/journeys/'+j.id+'/stops/'+s.position+'/confirm','POST',{version:j.version,decision:'ACCEPTED'});await refresh();}));const df=form('Decline whole package',d=>api('/journeys/'+j.id+'/stops/'+s.position+'/confirm','POST',{version:j.version,decision:'DECLINED',reason:d.reason}));field(df,'Decline reason','reason').required=true;row.append(df);}if(['driver','admin'].includes(user.role)&&j.status==='IN_PROGRESS'&&s.status!=='COMPLETED')row.append(button('Complete package stop '+(s.position+1),async()=>{await api('/journeys/'+j.id+'/stops/'+s.position+'/complete','POST',{version:j.version});await refresh();}));if(s.outcome)row.append(node('p','Outcome: '+s.outcome.outcome));else if(s.status==='COMPLETED'&&['customer','admin'].includes(user.role)){const of=form('Record property outcome',d=>api('/viewing-requests/'+s.request_id+'/outcome','POST',d));select(of,'Outcome','outcome',[['INTERESTED','Interested'],['NOT_INTERESTED','Not interested'],['FOLLOW_UP','Follow up']]);field(of,'Outcome notes','notes');row.append(of);}card.append(row);}
+
+ // Customer decision hub: never mutate driver-controlled transport state from a customer action.
+ if(user.role==='customer'&&j.status==='IN_PROGRESS'){
+  const completed=j.stops.filter(s=>s.status==='COMPLETED');
+  const next=j.stops.find(s=>s.status!=='COMPLETED');
+  if(completed.length){
+   const current=completed[completed.length-1],hub=node('section',null,'app-card viewing-decision');
+   hub.append(node('h3','Viewing completed — what next?'),node('p',current.listing.title+' · Viewing '+completed.length+' of '+j.stops.length));
+   if(next){
+    hub.append(button('Continue to next house',async()=>{
+     status('Next scheduled property: '+next.listing.title+' at '+new Date(next.startAt).toLocaleString()+'. Your assigned driver confirms arrival and completion.');
+    }));
+   }else hub.append(node('p','All scheduled property stops have been visited.'));
+   if(!current.outcome){
+    hub.append(button("I'm interested in this house",async()=>{
+     await api('/viewing-requests/'+current.request_id+'/outcome','POST',{outcome:'INTERESTED',notes:''});
+     status('Interest recorded. Your transport journey remains active.');
+     await refresh();
+    }));
+   }else hub.append(node('p','Property response recorded: '+current.outcome.outcome));
+   hub.append(button('Return with Ride2Go',async()=>{
+    const section=$('mobility-workspace');
+    if(section){section.hidden=false;section.scrollIntoView({behavior:'smooth'});}
+    status(j.plan.returnJourney?'Your viewing package includes a return option. Confirm its coverage with operations before requesting another fare.':'Review a separate Ride2Go quote before confirming any additional transport.');
+   }));
+   hub.append(button('End my journey',async()=>{
+    status('Your driver or operations must complete the active journey after the scheduled stops and any included return. Contact support for an early finish or route change; no extra charge has been initiated.');
+   }));
+   hub.append(node('p','Transport stays active until the authorized driver or operations completes it. No fare, refund or dispatch status is changed by these guidance actions.'));
+   card.append(hub);
+  }
+ }
  if(!j.stops.length)j.plan.stops.forEach((s,i)=>card.append(node('p',`Planned stop ${i+1}: ${s.listingId}`)));
  if(j.quote){const q=j.quote;card.append(node('p',`Quoted total KES ${q.totalKES} · policy ${q.policyVersion}: ${q.policy.label}`),node('p',`Base KES ${q.baseKES} · inter-property distance KES ${(q.distanceMinor/100).toFixed(2)} · return KES ${(q.returnMinor/100).toFixed(2)} · waiting KES ${(q.waitingMinor/100).toFixed(2)} · rounding KES ${(q.roundingMinor/100).toFixed(2)}`),node('p',q.policy.cancellation),node('p',q.policy.routeMode),node('p',q.policy.taxMode));if(j.status==='QUOTED')card.append(node('p','Quote expires '+new Date(j.quote_expires_at).toLocaleString()));}
  if(user.role==='admin'&&['DRAFT','QUOTED'].includes(j.status))quoteForm(j,card);
