@@ -16,7 +16,7 @@ test('customer viewing decision hub exposes four actions without direct transpor
  assert.match(section,/outcome:'INTERESTED'/);
  assert.doesNotMatch(section,/api\('\/journeys\/.*\/(finish|start|cancel|stops)/);
  assert.doesNotMatch(section,/api\('\/ride2go\/trips'.*'POST'/);
- assert.match(section,/returnJourney/);
+ assert.match(section,/decision.returnIncluded/);
 });
 
 test('decision panel retains the original Ride2View Pro theme and accessible focus',()=>{
@@ -36,5 +36,12 @@ test('active customer sees one interest control and safe missing-request fallbac
  assert.match(source,/await refresh\(\)/);
  const block=source.split('// Customer decision hub:')[1].split('if(!j.stops.length)')[0];
  assert.doesNotMatch(block,/\/journeys\/.*\/finish/);
- assert.match(block,/j\.plan\.returnJourney/);
+ assert.match(block,/decision.returnIncluded/);
+});
+
+test('active decision actions are gated by server projection',()=>{
+ assert.match(source,/await api\('\/journeys\/'.*'\/decision'\)/);
+ assert.match(source,/decision\.actions\.continue/);
+ assert.match(source,/decision\.actions\.interested/);
+ assert.match(source,/decision\.actions\.returnReview/);
 });
