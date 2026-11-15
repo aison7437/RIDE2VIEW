@@ -22,3 +22,23 @@ test('decision projection enforces customer role, includes return entitlement, a
  assert.match(projection,/transportCompletionAuthority:'driver_or_admin'/);
  assert.doesNotMatch(projection,/db\.prepare|dispatch\.transition|tx\(/);
 });
+
+test('customer change request is routed to the authority without direct transport transition',()=>{
+ let calls=0,output;
+ const route=createJourneyRoutes({journeys:{requestChange(user,id,body){calls++;assert.equal(user.role,'customer');assert.equal(id,'j-1');assert.equal(body.kind,'EARLY_END');return {status:'PENDING',duplicate:false};}}});
+ assert.equal(route({path:'/api/journeys/j-1/change-requests',method:'POST',user:{role:'customer'},body:{kind:'EARLY_END'},send(code,result){output={code,result}}}),true);
+ assert.equal(calls,1);assert.equal(output.code,201);assert.equal(output.result.status,'PENDING');
+});
+test('journey change requests are transactional, idempotent and do not directly close trips',()=>{
+ const authority=fs.readFileSync(path.join(__dirname,'../server/journeys/authority.js'),'utf8');
+ const block=authority.split(' function requestChange(a,id,data){')[1].split(' function decision(a,id)')[0];
+ assert.match(block,/role\(a,'customer'\)/);
+ assert.match(block,/return tx\(\(\)=>\{/);
+ assert.match(block,/idempotency_key/);
+ assert.match(block,/status='PENDING'/);
+ assert.match(block,/CHANGE_REQUESTED/);
+ assert.doesNotMatch(block,/dispatch\.transition|UPDATE viewing_journeys SET status|UPDATE payments SET/);
+ const schema=fs.readFileSync(path.join(__dirname,'../server/journeys/schema.js'),'utf8');
+ assert.match(schema,/CREATE TABLE journey_change_requests/);
+ assert.match(schema,/UNIQUE\(customer_id,idempotency_key\)/);
+});
