@@ -61,6 +61,27 @@
    card.append(hub);
   }
  }
+ if(['customer','admin'].includes(user.role)){
+  const changes=(await api('/journeys/'+encodeURIComponent(j.id)+'/change-requests')).requests;
+  if(changes.length){
+   const details=node('details');details.append(node('summary','Journey change requests'));
+   for(const r of changes){
+    const item=node('div',null,'app-card');
+    item.append(node('p',r.kind.replaceAll('_',' ')+' · '+r.status),node('p','Reason: '+r.reason));
+    if(r.reviewNote)item.append(node('p','Operations note: '+r.reviewNote));
+    if(user.role==='admin'&&r.status==='PENDING'){
+     const review=form('Submit operations review',async d=>{
+      await api('/journeys/'+encodeURIComponent(j.id)+'/change-requests/'+encodeURIComponent(r.id)+'/review','POST',{decision:d.decision,note:d.note});
+     });
+     select(review,'Decision','decision',[['REVIEWED','Reviewed — execution remains separate'],['REJECTED','Reject request']]);
+     field(review,'Operations review note','note').required=true;
+     item.append(review);
+    }
+    details.append(item);
+   }
+   card.append(details);
+  }
+ }
  if(!j.stops.length)j.plan.stops.forEach((s,i)=>card.append(node('p',`Planned stop ${i+1}: ${s.listingId}`)));
  if(j.quote){const q=j.quote;card.append(node('p',`Quoted total KES ${q.totalKES} · policy ${q.policyVersion}: ${q.policy.label}`),node('p',`Base KES ${q.baseKES} · inter-property distance KES ${(q.distanceMinor/100).toFixed(2)} · return KES ${(q.returnMinor/100).toFixed(2)} · waiting KES ${(q.waitingMinor/100).toFixed(2)} · rounding KES ${(q.roundingMinor/100).toFixed(2)}`),node('p',q.policy.cancellation),node('p',q.policy.routeMode),node('p',q.policy.taxMode));if(j.status==='QUOTED')card.append(node('p','Quote expires '+new Date(j.quote_expires_at).toLocaleString()));}
  if(user.role==='admin'&&['DRAFT','QUOTED'].includes(j.status))quoteForm(j,card);
