@@ -28,3 +28,13 @@ test('decision panel retains the original Ride2View Pro theme and accessible foc
  assert.match(css,/\.viewing-decision button:focus-visible/);
  assert.match(css,/prefers-reduced-motion:reduce/);
 });
+
+test('active customer sees one interest control and safe missing-request fallback',()=>{
+ assert.match(source,/user\.role==='customer'&&j\.status!=='IN_PROGRESS'/);
+ assert.match(source,/if\(!current\.request_id\)/);
+ assert.match(source,/encodeURIComponent\(current\.request_id\)/);
+ assert.match(source,/await refresh\(\)/);
+ const block=source.split('// Customer decision hub:')[1].split('if(!j.stops.length)')[0];
+ assert.doesNotMatch(block,/\/journeys\/.*\/finish/);
+ assert.match(block,/j\.plan\.returnJourney/);
+});
