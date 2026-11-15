@@ -18,3 +18,13 @@ test('customer viewing decision hub exposes four actions without direct transpor
  assert.doesNotMatch(section,/api\('\/ride2go\/trips'.*'POST'/);
  assert.match(section,/returnJourney/);
 });
+
+test('decision panel retains the original Ride2View Pro theme and accessible focus',()=>{
+ const css=fs.readFileSync(require('node:path').join(__dirname,'../css/app.css'),'utf8');
+ assert.match(css,/\.viewing-decision\{/);
+ assert.match(css,/#faf7ec/i);
+ assert.match(css,/#25180f/i);
+ assert.match(css,/#865d0c/i);
+ assert.match(css,/\.viewing-decision button:focus-visible/);
+ assert.match(css,/prefers-reduced-motion:reduce/);
+});
