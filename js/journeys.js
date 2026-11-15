@@ -46,9 +46,17 @@
     if(section){section.hidden=false;section.scrollIntoView({behavior:'smooth'});}
     status('Return transport is not included in this package. Review and accept a separate Ride2Go quote before booking; no charge has been initiated.');
    }));
-   if(decision.actions.endGuidance)hub.append(button('End my journey',async()=>{
-    status('Journey closure requires driver or operations confirmation. For early termination, contact support for an itinerary and fare review. No stop, fare, or trip status has been changed.');
-   }));
+   if(decision.actions.endGuidance){
+    const endForm=form('Request early journey end',async d=>{
+     const reason=String(d.reason||'').trim();
+     if(!reason)throw new Error('Please explain why you need to end your journey early.');
+     const result=await api('/journeys/'+encodeURIComponent(j.id)+'/change-requests','POST',{kind:'EARLY_END',reason,idempotencyKey:endForm.dataset.requestKey});
+     status('Early-end request '+result.status.toLowerCase()+'. Operations must review remaining stops and fare adjustments before the driver can finish.');
+    });
+    endForm.dataset.requestKey=crypto.randomUUID();
+    field(endForm,'Reason for ending early','reason').required=true;
+    hub.append(endForm);
+   }
    hub.append(node('p','Transport stays active until the authorized driver or operations completes it. No fare, refund or dispatch status is changed by these guidance actions.'));
    card.append(hub);
   }
