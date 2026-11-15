@@ -82,3 +82,8 @@ test('early-end requests require an unvisited stop and preserve normal completio
  const projection=authority.split(' function decision(a,id){')[1].split(' function list(a)')[0];
  assert.match(projection,/endGuidance:active&&!pending&&stops\(db,id\)\.some/);
 });
+
+test('database guarantees at most one pending change request per journey',()=>{
+ const schema=fs.readFileSync(path.join(__dirname,'../server/journeys/schema.js'),'utf8');
+ assert.match(schema,/CREATE UNIQUE INDEX journey_change_one_pending_per_journey ON journey_change_requests\(journey_id\) WHERE status='PENDING'/);
+});
