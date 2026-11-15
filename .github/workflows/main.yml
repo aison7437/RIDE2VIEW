@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: 24
       - run: npm ci
+      - name: Validate API-01 OpenAPI contract
+        run: npm run check:api
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: V10-B local operational acceptance gate
