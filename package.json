@@ -9,6 +9,7 @@
     "start": "node server/index.js",
     "test": "node --test tests/*.test.js tests/*.test.cjs",
     "check": "node scripts/check.js",
+    "check:api": "node scripts/check-api-contract.js",
     "check:integrations": "node scripts/check-integrations.js",
     "test:agent": "node ai/user/lifestyle-agent/test.js && node ai/user/lifestyle-agent/scenario-test.js",
     "test:browser": "node tests/browser.cjs && node tests/property-services-browser.cjs && node tests/operations-v5-browser.cjs && node tests/agents-browser.cjs && node tests/analytics-browser.cjs && node tests/quality-browser.cjs && node tests/memory-browser.cjs && node tests/intelligence-browser.cjs && node tests/shopping-dashboard-browser.cjs",
