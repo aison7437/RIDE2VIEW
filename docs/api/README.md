@@ -43,3 +43,7 @@ API-02 adds [`typed-coverage.json`](typed-coverage.json) and a source-linked typ
 **Correctly distinct shapes:** public `PropertyListing` includes live verification and marketing metadata; embedded `PropertyListingSnapshot` does not. These two representations must not be silently conflated by client SDK generators. `AccountIdentity.verified` reflects the current integer database representation. All monetary amounts in protected payment verification use integer KES values.
 
 **Contract boundary:** The typed coverage manifest is selective. It is not a claim that all routes have exhaustive JSON Schemas or that every payload property is required. `additionalProperties: true` preserves server-compatible extensions, while live authority still owns policy checks, entitlement, state transitions, concurrency and atomic side effects. Future schema tightening must be preceded by live fixtures and a separate compatibility review. No runtime endpoint, SQL migration or production provider activation is part of API-02.
+
+## API-03 advisory contract monitoring
+
+An optional, non-enforcing, metadata-only shadow monitor is documented in [`observability.md`](observability.md). It is **disabled by default**; enable only in a reviewed staging environment with `R2V_API_CONTRACT_OBSERVE=shadow`. No public metrics endpoint is introduced, and this does not authorize production payment/provider integrations.
