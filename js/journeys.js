@@ -31,11 +31,9 @@
    if(!current.outcome){
     hub.append(button("I'm interested in this house",async()=>{
      if(!current.request_id){status('Viewing request unavailable. Contact support to record your interest.');return;}
-     await perform(async()=>{
-      await api('/viewing-requests/'+encodeURIComponent(current.request_id)+'/outcome','POST',{outcome:'INTERESTED',notes:''});
-      status('Interest recorded. Your transport journey remains active.');
-      await refresh();
-     });
+     await api('/viewing-requests/'+encodeURIComponent(current.request_id)+'/outcome','POST',{outcome:'INTERESTED',notes:''});
+     status('Interest recorded. Your transport journey remains active.');
+     await refresh();
     }));
    }else hub.append(node('p','Property response recorded: '+current.outcome.outcome));
    hub.append(button('Return with Ride2Go',async()=>{
