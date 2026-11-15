@@ -90,6 +90,9 @@ CI checks all JavaScript, the two existing 10-scenario suites, authorization and
 
 ## API
 
+The source-anchored [OpenAPI 3.1 contract and route inventory](docs/api/README.md) documents the current HTTP API without changing existing endpoints. Run `npm run check:api` to validate the documented routes and security boundaries against the server dispatch code. This documentation includes permissive payload placeholders for authority-specific shapes; see the limitations in `docs/api/README.md`.
+
+
 - Public: `GET /api/health`, `GET /api/config`, `GET /api/listings`, `POST /api/search`.
 - Accounts: `/api/auth/register`, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`.
 - Agent/admin: `POST /api/listings`, `PATCH /api/listings/:id`, `GET /api/listings?mine=true`.
