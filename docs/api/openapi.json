@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Ride2View HTTP API",
-    "version": "0.2.0-api-01",
-    "description": "Source-anchored documentation of the current Ride2View Node.js API. This contract is non-invasive: no routes are renamed or version-prefixed. Some payloads remain intentionally opaque until validated against authority schemas. External services are not implicitly activated."
+    "version": "0.2.0-api-02",
+    "description": "Source-anchored documentation of the current Ride2View Node.js API. This contract is non-invasive: no routes are renamed or version-prefixed. Some payloads remain intentionally opaque until validated against authority schemas. External services are not implicitly activated. API-02 adds verified core typed schemas and live HTTP fixture checks without changing operational authority."
   },
   "servers": [
     {
@@ -2397,7 +2397,7 @@
           "auth"
         ],
         "summary": "POST auth / challenges / verify",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Verify single-use OTP and create session; recovery/link/registration share the session-identity response.",
         "operationId": "post_auth_challenges_verify",
         "x-r2v-route-sources": [
           {
@@ -2411,7 +2411,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/AccountIdentity"
                 }
               }
             }
@@ -2446,7 +2446,9 @@
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/auth/email/challenges": {
@@ -2455,7 +2457,7 @@
           "auth"
         ],
         "summary": "POST auth / email / challenges",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Email verification challenge. Existing contacts require only email; new registrations additionally require name and password. No OTP is returned.",
         "operationId": "post_auth_email_challenges",
         "x-r2v-route-sources": [
           {
@@ -2469,7 +2471,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/AuthChallengeResponse"
                 }
               }
             }
@@ -2495,16 +2497,18 @@
         },
         "security": [],
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/AuthChallengeRequestEmail"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/auth/email/link/challenges": {
@@ -2513,7 +2517,7 @@
           "auth"
         ],
         "summary": "POST auth / email / link / challenges",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Authenticated email-contact link challenge; no link is established before OTP verification.",
         "operationId": "post_auth_email_link_challenges",
         "x-r2v-route-sources": [
           {
@@ -2527,7 +2531,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/AuthChallengeResponse"
                 }
               }
             }
@@ -2552,16 +2556,18 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/AuthEmailLinkRequest"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/auth/email/recovery/challenges": {
@@ -2570,7 +2576,7 @@
           "auth"
         ],
         "summary": "POST auth / email / recovery / challenges",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Email recovery challenge; recovery evidence is required before changing credentials.",
         "operationId": "post_auth_email_recovery_challenges",
         "x-r2v-route-sources": [
           {
@@ -2584,7 +2590,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/AuthChallengeResponse"
                 }
               }
             }
@@ -2610,16 +2616,18 @@
         },
         "security": [],
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/AuthRecoveryRequest"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/auth/login": {
@@ -2628,7 +2636,7 @@
           "auth"
         ],
         "summary": "POST auth / login",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Session login. In production, credentials require a previously verified contact.",
         "operationId": "post_auth_login",
         "x-r2v-route-sources": [
           {
@@ -2642,7 +2650,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/AccountIdentity"
                 }
               }
             }
@@ -2677,7 +2685,9 @@
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/auth/logout": {
@@ -2686,7 +2696,7 @@
           "auth"
         ],
         "summary": "POST auth / logout",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Clear the server session and expire the cookie; returns success.",
         "operationId": "post_auth_logout",
         "x-r2v-route-sources": [
           {
@@ -2700,7 +2710,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/LogoutResponse"
                 }
               }
             }
@@ -2735,7 +2745,9 @@
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/auth/me": {
@@ -2744,7 +2756,7 @@
           "auth"
         ],
         "summary": "GET auth / me",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Read current authenticated session identity, without exposing password hashes or OTPs.",
         "operationId": "get_auth_me",
         "x-r2v-route-sources": [
           {
@@ -2758,7 +2770,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/AccountIdentity"
                 }
               }
             }
@@ -2781,7 +2793,9 @@
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/auth/phone/challenges": {
@@ -2790,7 +2804,7 @@
           "auth"
         ],
         "summary": "POST auth / phone / challenges",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Kenyan phone verification challenge; returns a challenge reference, not the OTP.",
         "operationId": "post_auth_phone_challenges",
         "x-r2v-route-sources": [
           {
@@ -2804,7 +2818,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/AuthChallengeResponse"
                 }
               }
             }
@@ -2830,16 +2844,18 @@
         },
         "security": [],
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/AuthChallengeRequestPhone"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/auth/phone/link/challenges": {
@@ -2848,7 +2864,7 @@
           "auth"
         ],
         "summary": "POST auth / phone / link / challenges",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Authenticated phone-contact link challenge; no link is established before OTP verification.",
         "operationId": "post_auth_phone_link_challenges",
         "x-r2v-route-sources": [
           {
@@ -2862,7 +2878,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/AuthChallengeResponse"
                 }
               }
             }
@@ -2887,16 +2903,18 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/AuthPhoneLinkRequest"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/auth/register": {
@@ -2963,7 +2981,7 @@
           "bookings"
         ],
         "summary": "GET bookings",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Account-scoped existing bookings; the legacy POST /api/bookings remains disabled.",
         "operationId": "get_bookings",
         "x-r2v-route-sources": [
           {
@@ -3000,7 +3018,9 @@
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       },
       "post": {
         "tags": [
@@ -3325,7 +3345,7 @@
           "customer"
         ],
         "summary": "GET customer / profile",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Read customer property preferences.",
         "operationId": "get_customer_profile",
         "x-r2v-route-sources": [
           {
@@ -3339,7 +3359,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/CustomerPreferencesResponse"
                 }
               }
             }
@@ -3362,14 +3382,16 @@
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       },
       "put": {
         "tags": [
           "customer"
         ],
         "summary": "PUT customer / profile",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Replace saved customer property preferences; validated on the server.",
         "operationId": "put_customer_profile",
         "x-r2v-route-sources": [
           {
@@ -3383,7 +3405,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/CustomerPreferencesResponse"
                 }
               }
             }
@@ -3408,16 +3430,18 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/CustomerPreferencesUpdate"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/customer/saved-properties": {
@@ -3653,7 +3677,7 @@
           "dispatch"
         ],
         "summary": "POST dispatch / :id / :action",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation. Action names are restricted by the route expression or authority logic; not every action is available in every state.",
+        "description": "Driver responds to assignment offer. Action must be accept or reject; authority enforces eligibility and valid transition.",
         "operationId": "post_dispatch_By_id_By_action",
         "x-r2v-route-sources": [
           {
@@ -3667,7 +3691,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/DispatchActionResponse"
                 }
               }
             }
@@ -3701,7 +3725,9 @@
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/driver/availability": {
@@ -4101,7 +4127,7 @@
           "journeys"
         ],
         "summary": "GET journeys",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Role-scoped viewing journeys, redacted for property agents.",
         "operationId": "get_journeys",
         "x-r2v-route-sources": [
           {
@@ -4115,7 +4141,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/ViewingJourneysResponse"
                 }
               }
             }
@@ -4138,14 +4164,16 @@
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       },
       "post": {
         "tags": [
           "journeys"
         ],
         "summary": "POST journeys",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Create a customer multi-property viewing journey draft; idempotent replay returns HTTP 200, with duplicate flag.",
         "operationId": "post_journeys",
         "x-r2v-route-sources": [
           {
@@ -4154,12 +4182,22 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Exact idempotent replay of an existing operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewingJourney"
+                }
+              }
+            }
+          },
           "201": {
             "description": "Documented success response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/ViewingJourney"
                 }
               }
             }
@@ -4184,16 +4222,18 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/JourneyCreateRequest"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/journeys/{id}": {
@@ -4213,7 +4253,7 @@
           "journeys"
         ],
         "summary": "GET journeys / :id",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Read a viewing journey according to role; agent view redacts financial and contact fields.",
         "operationId": "get_journeys_By_id",
         "x-r2v-route-sources": [
           {
@@ -4227,7 +4267,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/ViewingJourney"
                 }
               }
             }
@@ -4250,7 +4290,9 @@
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/journeys/{id}/{action}": {
@@ -4534,7 +4576,7 @@
           "listings"
         ],
         "summary": "GET listings",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Lists publicly published verified properties by default; mine=true returns authorized agent properties.",
         "operationId": "get_listings",
         "x-r2v-route-sources": [
           {
@@ -4583,14 +4625,16 @@
               "type": "boolean"
             }
           }
-        ]
+        ],
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       },
       "post": {
         "tags": [
           "listings"
         ],
         "summary": "POST listings",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Agent/admin creates a private draft property. Publication and proof reviews are separate.",
         "operationId": "post_listings",
         "x-r2v-route-sources": [
           {
@@ -4604,7 +4648,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/PropertyListing"
                 }
               }
             }
@@ -4629,16 +4673,18 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/ListingCreateRequest"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/listings/{id}": {
@@ -4658,7 +4704,7 @@
           "listings"
         ],
         "summary": "PATCH listings / :id",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Partial listing update; modification of approval status is prohibited.",
         "operationId": "patch_listings_By_id",
         "x-r2v-route-sources": [
           {
@@ -4672,7 +4718,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/PropertyListing"
                 }
               }
             }
@@ -4697,16 +4743,18 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/ListingPatchRequest"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/logistics/courier-assignments/{id}/deliver": {
@@ -7024,7 +7072,7 @@
           "payments"
         ],
         "summary": "POST payments / :id / verify",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Administrator verifies an actual received payment. Exact amount, reference claim, state transition and reservation confirmation remain atomic in the authority.",
         "operationId": "post_payments_By_id_verify",
         "x-r2v-route-sources": [
           {
@@ -7038,7 +7086,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/ManualPaymentVerificationResponse"
                 }
               }
             }
@@ -7072,7 +7120,9 @@
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/properties/{id}/media": {
@@ -7226,7 +7276,7 @@
           "properties"
         ],
         "summary": "GET properties / :id / slots",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Read upcoming availability slots; restricted visibility for unpublished listings.",
         "operationId": "get_properties_By_id_slots",
         "x-r2v-route-sources": [
           {
@@ -7240,7 +7290,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/PropertySlotsResponse"
                 }
               }
             }
@@ -7263,14 +7313,16 @@
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       },
       "post": {
         "tags": [
           "properties"
         ],
         "summary": "POST properties / :id / slots",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Create a property viewing slot with explicit-offset start and end times.",
         "operationId": "post_properties_By_id_slots",
         "x-r2v-route-sources": [
           {
@@ -7285,6 +7337,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/OpaqueJsonObject"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Current HTTP 201 response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertySlotCreated"
                 }
               }
             }
@@ -7309,16 +7371,18 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/PropertySlotCreateRequest"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/properties/{id}/slots/{itemId}": {
@@ -9903,7 +9967,7 @@
           "viewing-requests"
         ],
         "summary": "GET viewing-requests",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Account-scoped viewing requests with qualified listing projection.",
         "operationId": "get_viewing_requests",
         "x-r2v-route-sources": [
           {
@@ -9940,14 +10004,16 @@
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       },
       "post": {
         "tags": [
           "viewing-requests"
         ],
         "summary": "POST viewing-requests",
-        "description": "Existing Ride2View API operation. Contract documents the current route; opaque payload portions require schema refinement before strict payload validation.",
+        "description": "Customer requests a published slot; a qualified request does not automatically authorize payment or driver assignment. Exact idempotent replay returns 200.",
         "operationId": "post_viewing_requests",
         "x-r2v-route-sources": [
           {
@@ -9956,12 +10022,22 @@
           }
         ],
         "responses": {
+          "200": {
+            "description": "Exact idempotent replay of an existing operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewingRequestRecord"
+                }
+              }
+            }
+          },
           "201": {
             "description": "Documented success response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OpaqueJsonObject"
+                  "$ref": "#/components/schemas/ViewingRequestRecord"
                 }
               }
             }
@@ -9986,16 +10062,18 @@
           }
         },
         "requestBody": {
-          "required": false,
+          "required": true,
           "description": "JSON object; operation-specific constraints are enforced by the existing server authority.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpaqueJsonObject"
+                "$ref": "#/components/schemas/ViewingRequestCreateRequest"
               }
             }
           }
-        }
+        },
+        "x-r2v-contract-level": "typed-core-v2",
+        "x-r2v-authority": "existing-node-authority"
       }
     },
     "/api/viewing-requests/{id}/{action}": {
@@ -10175,7 +10253,7 @@
       "OpaqueJsonObject": {
         "type": "object",
         "additionalProperties": true,
-        "description": "Payload shape is authority-defined. API-01 inventories routes without guessing business fields."
+        "description": "Legacy/domain payload not yet fully typed; consult the authoritative server module. Do not use as blanket runtime validation."
       },
       "ApiError": {
         "type": "object",
@@ -10278,45 +10356,48 @@
       },
       "ListingsResponse": {
         "type": "object",
-        "required": [
-          "listings"
-        ],
         "properties": {
           "listings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/OpaqueJsonObject"
+              "$ref": "#/components/schemas/PropertyListing"
             }
           }
-        }
+        },
+        "required": [
+          "listings"
+        ],
+        "additionalProperties": true
       },
       "BookingsResponse": {
         "type": "object",
-        "required": [
-          "bookings"
-        ],
         "properties": {
           "bookings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/OpaqueJsonObject"
+              "$ref": "#/components/schemas/BookingRecord"
             }
           }
-        }
+        },
+        "required": [
+          "bookings"
+        ],
+        "additionalProperties": true
       },
       "ViewingRequestsResponse": {
         "type": "object",
-        "required": [
-          "viewings"
-        ],
         "properties": {
           "viewings": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/OpaqueJsonObject"
+              "$ref": "#/components/schemas/ViewingRequestDetail"
             }
           }
-        }
+        },
+        "required": [
+          "viewings"
+        ],
+        "additionalProperties": true
       },
       "LoginRequest": {
         "type": "object",
@@ -10394,21 +10475,24 @@
       },
       "ManualPaymentVerificationRequest": {
         "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{6,80}$",
+            "minLength": 6,
+            "maxLength": 80
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
         "required": [
           "reference",
           "amount"
         ],
-        "properties": {
-          "reference": {
-            "type": "string",
-            "minLength": 1
-          },
-          "amount": {
-            "type": "number"
-          }
-        },
         "additionalProperties": true,
-        "description": "Administrator-only; payment authority validates exact amount, unique references, payable state and reservation confirmation."
+        "description": "Admin-only; payment amount must be an exact integer KES amount and match the payable record; reference uniqueness and atomic reservation confirmation remain server-enforced."
       },
       "VerifyChallengeRequest": {
         "type": "object",
@@ -10427,6 +10511,1338 @@
           }
         },
         "additionalProperties": false
+      },
+      "AuthChallengeRequestEmail": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 256
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "agent",
+              "driver"
+            ]
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "additionalProperties": true,
+        "description": "Existing email contacts only require email; first-time registration also requires name and password. Enforcement is conditional in server/auth/onboarding.js."
+      },
+      "AuthChallengeRequestPhone": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "agent",
+              "driver"
+            ]
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "additionalProperties": true,
+        "description": "Kenyan phone number is normalized by the OTP module. Name and role are optional for existing contacts."
+      },
+      "AuthRecoveryRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": true
+      },
+      "AuthEmailLinkRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": true
+      },
+      "AuthPhoneLinkRequest": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "additionalProperties": true
+      },
+      "AuthChallengeResponse": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "sms"
+            ]
+          }
+        },
+        "required": [
+          "challengeId",
+          "expiresAt",
+          "channel"
+        ],
+        "additionalProperties": true,
+        "description": "The six-digit code is never returned in this response."
+      },
+      "AccountIdentity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email",
+                "maxLength": 254
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "customer",
+              "agent",
+              "driver",
+              "admin"
+            ]
+          },
+          "verified": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "phone",
+          "role",
+          "verified"
+        ],
+        "additionalProperties": true,
+        "description": "Session identity. verified is the current SQLite integer flag (0 or 1), not a boolean."
+      },
+      "LogoutResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "additionalProperties": true
+      },
+      "PropertyLocation": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "minLength": 1
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -90,
+            "maximum": 90,
+            "description": "Absent coordinates are normalized by the opportunity model to null; a supplied coordinate pair is validated by server/validation.js."
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": -180,
+            "maximum": 180,
+            "description": "Absent coordinates are normalized by the opportunity model to null; a supplied coordinate pair is validated by server/validation.js."
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The canonical opportunity model uses null when a location source is unavailable; supplied coordinates are marked agent-supplied."
+          }
+        },
+        "required": [
+          "city"
+        ],
+        "additionalProperties": true
+      },
+      "PropertyDetails": {
+        "type": "object",
+        "properties": {
+          "bedrooms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "area": {
+            "anyOf": [
+              {
+                "type": [
+                  "number",
+                  "string"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "bedrooms"
+        ],
+        "additionalProperties": true
+      },
+      "ListingCreateRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "price": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Server coerces price with Number() and requires a positive safe-integer KES amount."
+          },
+          "location": {
+            "type": "object",
+            "properties": {
+              "city": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "latitude": {
+                "type": [
+                  "number",
+                  "string"
+                ]
+              },
+              "longitude": {
+                "type": [
+                  "number",
+                  "string"
+                ]
+              }
+            },
+            "required": [
+              "city"
+            ],
+            "additionalProperties": true
+          },
+          "property": {
+            "type": "object",
+            "properties": {
+              "bedrooms": {
+                "type": [
+                  "integer",
+                  "string"
+                ],
+                "description": "Server coerces bedroom values using Number()."
+              },
+              "area": {
+                "type": [
+                  "number",
+                  "string"
+                ]
+              }
+            },
+            "additionalProperties": true
+          },
+          "bedrooms": {
+            "type": [
+              "integer",
+              "string"
+            ],
+            "description": "Legacy top-level bedroom alternative, supported by the server."
+          },
+          "transactionType": {
+            "type": "string",
+            "enum": [
+              "rent",
+              "sale"
+            ]
+          },
+          "timing": {
+            "type": "object",
+            "properties": {
+              "duration": {
+                "type": [
+                  "number",
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "title",
+          "price",
+          "location"
+        ],
+        "additionalProperties": true,
+        "anyOf": [
+          {
+            "required": [
+              "property"
+            ]
+          },
+          {
+            "required": [
+              "bedrooms"
+            ]
+          }
+        ],
+        "description": "Property.bedrooms or top-level bedrooms is required. Server normalizes numeric strings and validates coordinates, price and duration; this schema documents canonical fields without changing those coercion rules."
+      },
+      "ListingPatchRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": [
+              "integer",
+              "string"
+            ]
+          },
+          "location": {
+            "$ref": "#/components/schemas/PropertyLocation"
+          },
+          "property": {
+            "$ref": "#/components/schemas/PropertyDetails"
+          },
+          "timing": {
+            "type": "object",
+            "properties": {
+              "duration": {
+                "type": [
+                  "number",
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "transactionType": {
+            "type": "string",
+            "enum": [
+              "rent",
+              "sale"
+            ]
+          },
+          "available": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": true,
+        "description": "Partial listing update. `approved` cannot be set through this endpoint; publication review is separate."
+      },
+      "PropertyVerification": {
+        "type": "object",
+        "properties": {
+          "agentIdentity": {
+            "type": "boolean"
+          },
+          "agency": {
+            "type": "boolean"
+          },
+          "marketingAuthority": {
+            "type": "boolean"
+          },
+          "ownershipEvidenceReviewed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agentIdentity",
+          "agency",
+          "marketingAuthority",
+          "ownershipEvidenceReviewed"
+        ],
+        "additionalProperties": true
+      },
+      "PropertyMedia": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "photo",
+              "video",
+              "tour360"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "caption": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "url"
+        ],
+        "additionalProperties": true
+      },
+      "PropertyListing": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "price": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "KES"
+            ]
+          },
+          "transactionType": {
+            "type": "string",
+            "enum": [
+              "rent",
+              "sale"
+            ]
+          },
+          "location": {
+            "$ref": "#/components/schemas/PropertyLocation"
+          },
+          "property": {
+            "$ref": "#/components/schemas/PropertyDetails"
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "verification": {
+            "$ref": "#/components/schemas/PropertyVerification"
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PropertyMedia"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "price",
+          "location",
+          "property",
+          "approved",
+          "available",
+          "verification",
+          "media"
+        ],
+        "additionalProperties": true
+      },
+      "PropertySlotCreateRequest": {
+        "type": "object",
+        "properties": {
+          "startAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "startAt",
+          "endAt"
+        ],
+        "additionalProperties": true,
+        "description": "Both times must be in the future, have explicit UTC offsets, and define a positive slot of at most 24 hours; overlaps return 409."
+      },
+      "PropertySlotCreated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "start_at",
+          "end_at"
+        ],
+        "additionalProperties": true
+      },
+      "PropertySlotRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "listing_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "enabled": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "occupied": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "id",
+          "listing_id",
+          "start_at",
+          "end_at",
+          "occupied"
+        ],
+        "additionalProperties": true
+      },
+      "PropertySlotsResponse": {
+        "type": "object",
+        "properties": {
+          "slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PropertySlotRecord"
+            }
+          }
+        },
+        "required": [
+          "slots"
+        ],
+        "additionalProperties": true
+      },
+      "ViewingRequestCreateRequest": {
+        "type": "object",
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slotId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "general",
+              "women",
+              "students",
+              "vip"
+            ]
+          }
+        },
+        "required": [
+          "listingId",
+          "slotId",
+          "idempotencyKey"
+        ],
+        "additionalProperties": true,
+        "description": "Tier defaults to general. Requires signed-in customer, published verified listing, qualifying preferences and available slot. Idempotent same-key replay returns HTTP 200."
+      },
+      "ViewingRequestRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "listing_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slot_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customer_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "general",
+              "women",
+              "students",
+              "vip"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "booking_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "duplicate": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "listing_id",
+          "slot_id",
+          "tier",
+          "status"
+        ],
+        "additionalProperties": true,
+        "description": "Raw request row from creation; a replay may add duplicate=true. Payload and linked booking details are intentionally not asserted."
+      },
+      "ViewingRequestDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "listing_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slot_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "general",
+              "women",
+              "students",
+              "vip"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "listing": {
+            "$ref": "#/components/schemas/PropertyListingSnapshot"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "created_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "qualification": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "listingPrice": {
+                "type": "integer"
+              },
+              "listingTransactionType": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "listing_id",
+          "slot_id",
+          "status",
+          "listing"
+        ],
+        "additionalProperties": true
+      },
+      "BookingRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string"
+          },
+          "listing": {
+            "$ref": "#/components/schemas/PropertyListingSnapshot"
+          },
+          "payment_status": {
+            "type": "string"
+          },
+          "payment_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "payment_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "journey_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "listing",
+          "payment_status",
+          "payment_id"
+        ],
+        "additionalProperties": true
+      },
+      "CustomerPreferences": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "budget": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "bedrooms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "goal": {
+            "type": "string",
+            "enum": [
+              "rent",
+              "buy"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "CustomerPreferencesUpdate": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "budget": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "bedrooms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 30
+          },
+          "goal": {
+            "type": "string",
+            "enum": [
+              "rent",
+              "buy"
+            ]
+          }
+        },
+        "additionalProperties": true,
+        "description": "PUT replaces the provided preference fields (not a merge with previously saved preferences), matching the existing implementation."
+      },
+      "CustomerPreferencesResponse": {
+        "type": "object",
+        "properties": {
+          "preferences": {
+            "$ref": "#/components/schemas/CustomerPreferences"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "preferences"
+        ],
+        "additionalProperties": true
+      },
+      "ViewingJourneyStopInput": {
+        "type": "object",
+        "properties": {
+          "listingId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "slotId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "listingId",
+          "slotId"
+        ],
+        "additionalProperties": true
+      },
+      "ViewingParticipant": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "relationship": {
+            "type": "string",
+            "maxLength": 50
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": true
+      },
+      "JourneyCreateRequest": {
+        "type": "object",
+        "properties": {
+          "stops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ViewingJourneyStopInput"
+            },
+            "minItems": 1,
+            "maxItems": 3
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "general",
+              "women",
+              "students",
+              "vip"
+            ]
+          },
+          "returnJourney": {
+            "type": "boolean"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ViewingParticipant"
+            },
+            "minItems": 1,
+            "maxItems": 4
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "stops",
+          "tier",
+          "returnJourney",
+          "participants",
+          "idempotencyKey"
+        ],
+        "additionalProperties": true,
+        "description": "The server requires qualifying property slots, customer details, route feasibility and participant eligibility. maxStops/maxParticipants also depend on active administrative policy."
+      },
+      "JourneyPlan": {
+        "type": "object",
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": [
+              "general",
+              "women",
+              "students",
+              "vip"
+            ]
+          },
+          "stops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ViewingJourneyStopInput"
+            }
+          },
+          "returnJourney": {
+            "type": "boolean"
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ViewingParticipant"
+            }
+          },
+          "contact": {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string"
+              },
+              "pickup": {
+                "type": "string"
+              },
+              "preferredContact": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "tier",
+          "stops"
+        ],
+        "additionalProperties": true,
+        "description": "Agents receive a redacted plan without participants/contact information."
+      },
+      "JourneyPayment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "status"
+        ],
+        "additionalProperties": true
+      },
+      "ViewingJourney": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "plan": {
+            "$ref": "#/components/schemas/JourneyPlan"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "totalKES": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": true
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JourneyPayment"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stops": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "position": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "listing": {
+                  "$ref": "#/components/schemas/PropertyListingSnapshot"
+                },
+                "outcome": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "outcome": {
+                          "type": "string"
+                        },
+                        "notes": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": true
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "duplicate": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "plan",
+          "stops"
+        ],
+        "additionalProperties": true,
+        "description": "Response projection differs by role. Agent responses redact plan contact/participants and payment/quote information. Lifecycle fields are intentionally open for state-machine compatibility."
+      },
+      "ViewingJourneysResponse": {
+        "type": "object",
+        "properties": {
+          "journeys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ViewingJourney"
+            }
+          }
+        },
+        "required": [
+          "journeys"
+        ],
+        "additionalProperties": true
+      },
+      "ManualPaymentVerificationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true
+          },
+          "status": {
+            "type": "string",
+            "const": "confirmed"
+          },
+          "verification": {
+            "type": "string",
+            "const": "manual"
+          },
+          "duplicate": {
+            "type": "boolean"
+          },
+          "reservationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reservationStatus": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "success",
+          "status",
+          "verification",
+          "duplicate",
+          "reservationId",
+          "reservationStatus"
+        ],
+        "additionalProperties": true
+      },
+      "DispatchActionResponse": {
+        "type": "object",
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string"
+          },
+          "duplicate": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "assignmentId",
+          "status",
+          "duplicate"
+        ],
+        "additionalProperties": true
+      },
+      "PropertyListingSnapshot": {
+        "type": "object",
+        "description": "Stored listing payload snapshot embedded in viewings, bookings and journey stops. Unlike a public listing projection, it does not include live verification, media or publication flags.",
+        "required": [
+          "id",
+          "title",
+          "price",
+          "location",
+          "property"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "price": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "location": {
+            "$ref": "#/components/schemas/PropertyLocation"
+          },
+          "property": {
+            "$ref": "#/components/schemas/PropertyDetails"
+          },
+          "transactionType": {
+            "type": "string",
+            "enum": [
+              "rent",
+              "sale"
+            ]
+          }
+        },
+        "additionalProperties": true
       }
     },
     "responses": {
@@ -10492,5 +11908,5 @@
       }
     }
   },
-  "x-r2v-contract-stage": "API-01 / source-inventory, non-breaking"
+  "x-r2v-contract-stage": "API-02 / typed core, source inventory remains API-01"
 }

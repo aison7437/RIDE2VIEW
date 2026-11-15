@@ -35,3 +35,11 @@ External payment or messaging adapters, deployment ingress, production credentia
 ## Maintenance procedure
 
 When changing HTTP dispatch code, update the corresponding source marker and method/path mapping in `route-inventory.json`, revise OpenAPI parameters, security and responses, then run `npm run check:api` and the complete test suite. CI fails closed when it detects a new or altered route marker missing from the reviewed inventory.
+
+## API-02 typed core contracts
+
+API-02 adds [`typed-coverage.json`](typed-coverage.json) and a source-linked typed slice for verified registration, login, property CRUD/availability, viewing requests, bookings, multi-property journey drafts and manual payment verification. Run `npm run check:api` for route drift plus typed coverage/invariant validation. `npm test` includes synthetic HTTP fixture assertions in `tests/api-typed-contract.test.js`, exercising idempotent replay, cookie sessions, OTP challenge responses, booking guards, draft-journey role gating and payment confirmation (while existing viewing-package regression tests verify authorized agent redaction) without invoking live providers.
+
+**Correctly distinct shapes:** public `PropertyListing` includes live verification and marketing metadata; embedded `PropertyListingSnapshot` does not. These two representations must not be silently conflated by client SDK generators. `AccountIdentity.verified` reflects the current integer database representation. All monetary amounts in protected payment verification use integer KES values.
+
+**Contract boundary:** The typed coverage manifest is selective. It is not a claim that all routes have exhaustive JSON Schemas or that every payload property is required. `additionalProperties: true` preserves server-compatible extensions, while live authority still owns policy checks, entitlement, state transitions, concurrency and atomic side effects. Future schema tightening must be preceded by live fixtures and a separate compatibility review. No runtime endpoint, SQL migration or production provider activation is part of API-02.
