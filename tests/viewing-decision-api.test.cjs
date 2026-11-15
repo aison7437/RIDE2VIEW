@@ -65,3 +65,11 @@ test('operations review is audited and does not mutate booking, fare or transpor
  assert.match(block,/NOT_EXECUTED/);
  assert.doesNotMatch(block,/dispatch\.transition|UPDATE payments SET|UPDATE viewing_journeys SET|UPDATE bookings SET/);
 });
+
+test('return coordination requires package entitlement at the authority boundary',()=>{
+ const authority=fs.readFileSync(path.join(__dirname,'../server/journeys/authority.js'),'utf8');
+ const block=authority.split(' function requestChange(a,id,data){')[1].split(' function changeRequests(a,id)')[0];
+ assert.match(block,/data\.kind==='RETURN_REVIEW'&&plan\.returnJourney!==true/);
+ assert.match(block,/does not include return transport/);
+ assert.match(block,/JSON\.parse\(j\.plan\)/);
+});
