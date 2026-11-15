@@ -18,6 +18,13 @@ test('luxury homepage preview is isolated from existing booking workflows',async
   assert.doesNotMatch(html,/type="file"/);
   const js=await(await fetch(base+'/js/luxury-home.js')).text();
   assert.doesNotMatch(js,/fetch\s*\(/);
-  const mobile=await(await fetch(base+'/luxury-mobile-search')).text();assert.match(mobile,/Featured Properties/);assert.match(mobile,/aria-live/);const voice=await(await fetch(base+'/js/luxury-mobile-search.js')).text();assert.match(voice,/SpeechRecognition/);assert.match(voice,/not-allowed/);assert.doesNotMatch(voice,/fetch\\s*\\(/);\n  const core=await fetch(base+'/');assert.equal(core.status,200);assert.match(await core.text(),/id="screen-home"/);
+  const mobile=await(await fetch(base+'/luxury-mobile-search')).text();
+  assert.match(mobile,/Featured Properties/);
+  assert.match(mobile,/aria-live/);
+  const voice=await(await fetch(base+'/js/luxury-mobile-search.js')).text();
+  assert.match(voice,/SpeechRecognition/);
+  assert.match(voice,/not-allowed/);
+  assert.doesNotMatch(voice,/fetch\\s*\\(/);
+  const core=await fetch(base+'/');assert.equal(core.status,200);assert.match(await core.text(),/id="screen-home"/);
  }finally{await app.close();}
 });
