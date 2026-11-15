@@ -29,6 +29,7 @@ const {createJourneyRoutes}=require('./journeys/routes');
 const {packageForBooking}=require('./journeys/hooks');
 const http = require('node:http');
 const {createRateLimiter,logRequestError,productionConfig}=require('./security');
+const {createApiContractObserver}=require('./observability/api-contract');
 const { randomUUID, randomBytes, scryptSync, timingSafeEqual, createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
@@ -55,6 +56,9 @@ function createApp(options={}) {
   const secure=options.secureCookies ?? environment.COOKIE_SECURE==='true';
   const requireVerifiedAuth=options.requireVerifiedAuth ?? environment.NODE_ENV==='production';
   const root=join(__dirname,'..');
+  // Disabled by default. Opt in only to advisory shadow diagnostics; never enforce schemas here.
+  const apiContractObserver=(options.apiContractObserve ?? environment.R2V_API_CONTRACT_OBSERVE==='shadow')
+    ?createApiContractObserver({logger:options.apiContractLogger||console}):null;
   const bootEmail=options.adminEmail || process.env.ADMIN_EMAIL;
   const bootPassword=options.adminPassword || process.env.ADMIN_PASSWORD;
   let paymentAuthority,paymentIntentAuthority,providerBoundary,dispatchAuthority,safetyAuthority,reservationAuthority,sideEffectRuntime,paymentInitiationRuntime,providerCallbackRuntime;
@@ -132,9 +136,22 @@ function createApp(options={}) {
     res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('X-Frame-Options','DENY');
     res.setHeader('Cache-Control','no-store');
     const requestId=randomUUID();res.setHeader('X-Request-ID',requestId);
-    const send=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify(data));};
+    const startedAt=apiContractObserver?process.hrtime.bigint():null;
+    let observedPath, observedBody;
+    const send=(status,data)=>{
+      if(apiContractObserver&&observedPath){
+        apiContractObserver.observe({
+          method:req.method,path:observedPath,status,requestId,
+          requestBody:observedBody,responseBody:data,
+          durationMs:Number(process.hrtime.bigint()-startedAt)/1000000
+        });
+      }
+      res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});
+      res.end(JSON.stringify(data));
+    };
     try {
       const url=new URL(req.url,'http://localhost');const path=url.pathname;const method=req.method;
+      observedPath=path;
       if(method!=='GET' && method!=='HEAD') {
         if(req.headers['sec-fetch-site']==='cross-site')fail(403,'Cross-site request denied');
         if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin);}catch{fail(403,'Invalid origin');}if(origin.host!==req.headers.host)fail(403,'Cross-site request denied');}
@@ -180,6 +197,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      observedBody=body;
       if(await authOnboarding.routes({path,method,user,body,send,res}))return;
       if(path==='/api/maps/config'&&method==='GET'){const key=options.mapsBrowserKey ?? process.env.GOOGLE_MAPS_BROWSER_KEY ?? '';return send(200,{enabled:Boolean(key),browserKey:key||null,features:{maps2d:Boolean(key),maps3d:Boolean(key)}});}
       if(path==='/api/dashboard'&&method==='GET')return send(200,dashboard.get(user));
@@ -312,6 +330,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,dashboard,shopping,intelligence,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,authOnboarding,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,apiContractObserver,dashboard,shopping,intelligence,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,authOnboarding,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};
