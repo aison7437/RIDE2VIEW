@@ -69,3 +69,10 @@ test('pending journey changes disable new review requests at the authority layer
  assert.match(block,/returnReview:active&&!pending/);
  assert.match(block,/endGuidance:active&&!pending/);
 });
+
+test('customer can express interest in previously completed stops without changing transport',()=>{
+ assert.match(source,/Interested in '\+s\.listing\.title/);
+ assert.match(source,/s\.position!==Math\.max/);
+ assert.match(source,/encodeURIComponent\(s\.request_id\)/);
+ assert.match(source,/outcome:'INTERESTED',notes:''/);
+});
