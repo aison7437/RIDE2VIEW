@@ -54,7 +54,18 @@ test('unrecorded property outcomes do not dereference null',()=>{
 test('included return journeys do not navigate to a duplicate paid booking',()=>{
  const block=source.split('// Customer decision hub:')[1].split('if(!j.stops.length)')[0];
  assert.match(block,/if\(decision\.returnIncluded\)\{/);
- assert.match(block,/do not book a duplicate paid ride/);
+ assert.match(block,/kind:'RETURN_REVIEW'/);
+ assert.match(block,/no new fare has been charged/);
+ assert.match(block,/decision.pendingChange/);
  assert.match(block,/if\(decision\.actions\.returnReview\)/);
  assert.match(block,/if\(decision\.actions\.endGuidance\)/);
+});
+
+test('pending journey changes disable new review requests at the authority layer',()=>{
+ const authority=fs.readFileSync(require('node:path').join(__dirname,'../server/journeys/authority.js'),'utf8');
+ const block=authority.split(' function decision(a,id){')[1].split(' function list(a)')[0];
+ assert.match(block,/status='PENDING'/);
+ assert.match(block,/pendingChange:pending/);
+ assert.match(block,/returnReview:active&&!pending/);
+ assert.match(block,/endGuidance:active&&!pending/);
 });
