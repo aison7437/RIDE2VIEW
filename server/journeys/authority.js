@@ -58,11 +58,34 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
  function get(a,id){const j=access(a,id),ss=stops(db,id),plan=JSON.parse(j.plan),q=j.quote?JSON.parse(j.quote):null;const p=j.master_booking_id?db.prepare('SELECT id,amount,status,reference FROM payments WHERE booking_id=?').get(j.master_booking_id):null;const data={...j,plan,quote:q,payment:p,refund:db.prepare('SELECT amount,status,reference FROM journey_refunds WHERE journey_id=?').get(id)||null,stops:ss.map(s=>{const v=db.prepare('SELECT v.*,l.owner_id,l.payload,ps.start_at,ps.end_at FROM viewing_requests v JOIN listings l ON l.id=v.listing_id JOIN property_slots ps ON ps.id=v.slot_id WHERE v.id=?').get(s.request_id);return {...s,listing:JSON.parse(v.payload),ownerId:v.owner_id,startAt:v.start_at,endAt:v.end_at,outcome:db.prepare('SELECT outcome,notes FROM viewing_outcomes WHERE request_id=?').get(s.request_id)||null};}),events:db.prepare('SELECT event,details,created_at FROM journey_events WHERE journey_id=? ORDER BY created_at').all(id).map(e=>({...e,details:JSON.parse(e.details)}))};if(a.role==='agent'){// An agent receives only their own stops and no customer's contact/participant or payment data.
  data.stops=data.stops.filter(s=>s.ownerId===a.id);data.plan={tier:plan.tier,stops:plan.stops.filter(s=>data.stops.some(t=>t.listing_id===s.listingId))};delete data.quote;delete data.payment;delete data.refund;delete data.credit_amount;delete data.events;delete data.idempotency_key;
  }return data;}
+ function decision(a,id){
+  role(a,'customer');
+  const j=get(a,id);
+  const completed=j.stops.filter(s=>s.status==='COMPLETED');
+  const current=completed.at(-1)||null;
+  const next=j.stops.find(s=>s.status!=='COMPLETED')||null;
+  const active=j.status==='IN_PROGRESS'&&Boolean(current);
+  return {
+   journeyId:j.id,version:j.version,status:j.status,
+   completedCount:completed.length,totalStops:j.stops.length,
+   current:current?{position:current.position,requestId:current.request_id,title:current.listing.title,outcome:current.outcome?.outcome||null}:null,
+   next:next?{position:next.position,title:next.listing.title,startAt:next.startAt}:null,
+   returnIncluded:Boolean(j.plan.returnJourney),
+   actions:{
+    continue:active&&Boolean(next),
+    interested:active&&Boolean(current.request_id)&&!current.outcome,
+    returnReview:active,
+    endGuidance:active
+   },
+   transportCompletionAuthority:'driver_or_admin',
+   returnQuoteRequired:active&&!j.plan.returnJourney
+  };
+ }
  function list(a){role(a,'customer','agent','admin','driver');tx(expireInside);const ids=db.prepare('SELECT id FROM viewing_journeys ORDER BY created_at DESC').all();return ids.flatMap(({id})=>{try{return [get(a,id)];}catch(e){if(e.status===403)return [];throw e;}});}
  function wallet(a){role(a,'customer');return {currency:'KES',balanceKES:balance(a.id),entries:db.prepare('SELECT journey_id,amount,event_key,created_at FROM customer_credit_entries WHERE customer_id=? ORDER BY created_at DESC').all(a.id)};}
  function guardBooking(id){if(packageForBooking(db,id))fail(409,'Manage the whole viewing package through its journey');}
  function guardRequest(id){if(db.prepare('SELECT 1 FROM journey_stops WHERE request_id=?').get(id))fail(409,'Manage this stop through its whole viewing package');}
  function read(a,id){tx(expireInside);return get(a,id);}
- return {create,quote,accept,agentConfirm,cancel,reschedule,transport,stopComplete,settleRefund,get:read,list,policy,details,wallet,guardBooking,guardRequest};
+ return {create,quote,accept,agentConfirm,cancel,reschedule,transport,stopComplete,settleRefund,get:read,decision,list,policy,details,wallet,guardBooking,guardRequest};
 }
 module.exports={createJourneyAuthority};
