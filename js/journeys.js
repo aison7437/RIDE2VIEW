@@ -18,17 +18,18 @@
 
  // Customer decision hub: never mutate driver-controlled transport state from a customer action.
  if(user.role==='customer'&&j.status==='IN_PROGRESS'){
+  const decision=await api('/journeys/'+encodeURIComponent(j.id)+'/decision');
   const completed=j.stops.filter(s=>s.status==='COMPLETED');
-  const next=j.stops.find(s=>s.status!=='COMPLETED');
-  if(completed.length){
+  const next=j.stops.find(s=>s.position===decision.next?.position);
+  if(decision.actions.continue||decision.actions.interested||decision.actions.returnReview){
    const current=completed[completed.length-1],hub=node('section',null,'app-card viewing-decision');
    hub.append(node('h3','Viewing completed — what next?'),node('p',current.listing.title+' · Viewing '+completed.length+' of '+j.stops.length));
-   if(next){
+   if(decision.actions.continue&&next){
     hub.append(button('Continue to next house',async()=>{
      status('Next scheduled property: '+next.listing.title+' at '+new Date(next.startAt).toLocaleString()+'. Your assigned driver confirms arrival and completion.');
     }));
    }else hub.append(node('p','All scheduled property stops have been visited.'));
-   if(!current.outcome){
+   if(decision.actions.interested){
     hub.append(button("I'm interested in this house",async()=>{
      if(!current.request_id){status('Viewing request unavailable. Contact support to record your interest.');return;}
      await api('/viewing-requests/'+encodeURIComponent(current.request_id)+'/outcome','POST',{outcome:'INTERESTED',notes:''});
@@ -39,7 +40,7 @@
    hub.append(button('Return with Ride2Go',async()=>{
     const section=$('mobility-workspace');
     if(section){section.hidden=false;section.scrollIntoView({behavior:'smooth'});}
-    status(j.plan.returnJourney?'Your viewing package includes a return option. Confirm its coverage with operations before requesting another fare.':'Review a separate Ride2Go quote before confirming any additional transport.');
+    status(decision.returnIncluded?'Your viewing package includes a return option. Confirm its coverage with operations before requesting another fare.':'Review a separate Ride2Go quote before confirming any additional transport.');
    }));
    hub.append(button('End my journey',async()=>{
     status('Your driver or operations must complete the active journey after the scheduled stops and any included return. Contact support for an early finish or route change; no extra charge has been initiated.');
