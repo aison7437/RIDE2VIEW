@@ -47,7 +47,7 @@
     status('Return transport is not included in this package. Review and accept a separate Ride2Go quote before booking; no charge has been initiated.');
    }));
    if(decision.actions.endGuidance){
-    const endForm=form('Request early journey end',async d=>{
+    const endForm=form('End my journey — request review',async d=>{
      const reason=String(d.reason||'').trim();
      if(!reason)throw new Error('Please explain why you need to end your journey early.');
      const result=await api('/journeys/'+encodeURIComponent(j.id)+'/change-requests','POST',{kind:'EARLY_END',reason,idempotencyKey:endForm.dataset.requestKey});
