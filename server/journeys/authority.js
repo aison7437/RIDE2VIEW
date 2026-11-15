@@ -72,6 +72,8 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
    }
    const completed=stops(db,id).some(s=>s.status==='COMPLETED');
    if(j.status!=='IN_PROGRESS'||!completed)fail(409,'A completed property stop in an active journey is required');
+   const plan=JSON.parse(j.plan);
+   if(data.kind==='RETURN_REVIEW'&&plan.returnJourney!==true)fail(409,'This viewing package does not include return transport; request a separate quote');
    const pending=db.prepare("SELECT id,kind FROM journey_change_requests WHERE journey_id=? AND status='PENDING'").get(id);
    if(pending)fail(409,'A journey change request is already awaiting review');
    const requestId=randomUUID(),time=now();
