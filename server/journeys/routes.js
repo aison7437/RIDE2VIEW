@@ -4,6 +4,7 @@ function createJourneyRoutes({journeys}){return ({path,method,user,body,send})=>
  if(path==='/api/journeys/pricing'&&['GET','POST'].includes(method)){send(method==='POST'?201:200,journeys.policy(user,method==='POST'?body:undefined));return true;}
  if(path==='/api/journeys'&&['GET','POST'].includes(method)){const r=method==='POST'?journeys.create(user,body):{journeys:journeys.list(user)};send(method==='POST'&&!r.duplicate?201:200,r);return true;}
  let m=path.match(/^\/api\/journeys\/([^/]+)$/);if(m&&method==='GET'){send(200,journeys.get(user,m[1]));return true;}
+ m=path.match(/^\/api\/journeys\/([^/]+)\/change-requests\/([^/]+)\/execution-readiness$/);if(m&&method==='GET'){send(200,journeys.changeExecutionReadiness(user,m[1],m[2]));return true;}
  m=path.match(/^\/api\/journeys\/([^/]+)\/change-requests\/([^/]+)\/review$/);if(m&&method==='POST'){send(200,journeys.reviewChange(user,m[1],m[2],body));return true;}
  m=path.match(/^\/api\/journeys\/([^/]+)\/change-requests$/);if(m&&method==='GET'){send(200,{requests:journeys.changeRequests(user,m[1])});return true;}
  m=path.match(/^\/api\/journeys\/([^/]+)\/change-requests$/);if(m&&method==='POST'){const result=journeys.requestChange(user,m[1],body);send(result.duplicate?200:201,result);return true;}
