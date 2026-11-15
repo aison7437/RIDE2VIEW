@@ -87,3 +87,20 @@ test('database guarantees at most one pending change request per journey',()=>{
  const schema=fs.readFileSync(path.join(__dirname,'../server/journeys/schema.js'),'utf8');
  assert.match(schema,/CREATE UNIQUE INDEX journey_change_one_pending_per_journey ON journey_change_requests\(journey_id\) WHERE status='PENDING'/);
 });
+
+test('execution readiness is read-only, admin-gated and explicitly non-executable',()=>{
+ const authority=fs.readFileSync(path.join(__dirname,'../server/journeys/authority.js'),'utf8');
+ const block=authority.split(' function changeExecutionReadiness(a,id,requestId){')[1].split(' function decision(a,id)')[0];
+ assert.match(block,/role\(a,'admin'\)/);
+ assert.match(block,/UNVISITED_STOPS_REQUIRE_RECONCILIATION/);
+ assert.match(block,/DRIVER_TRANSPORT_RECONCILIATION_REQUIRED/);
+ assert.match(block,/PAYMENT_SETTLEMENT_REVIEW_REQUIRED/);
+ assert.match(block,/canExecute:false,readOnly:true/);
+ assert.doesNotMatch(block,/UPDATE |INSERT |DELETE |dispatch\.transition|ledger\.recordInsideTransaction/);
+});
+test('execution readiness route delegates to the journey authority',()=>{
+ let response;
+ const route=createJourneyRoutes({journeys:{changeExecutionReadiness(user,id,requestId){assert.equal(user.role,'admin');assert.equal(id,'j1');assert.equal(requestId,'r1');return {canExecute:false,readOnly:true}}}});
+ assert.equal(route({path:'/api/journeys/j1/change-requests/r1/execution-readiness',method:'GET',user:{role:'admin'},send(code,result){response={code,result}}}),true);
+ assert.equal(response.code,200);assert.equal(response.result.canExecute,false);
+});
