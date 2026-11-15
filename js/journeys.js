@@ -21,7 +21,7 @@
   const decision=await api('/journeys/'+encodeURIComponent(j.id)+'/decision');
   const completed=j.stops.filter(s=>s.status==='COMPLETED');
   const next=j.stops.find(s=>s.position===decision.next?.position);
-  if(decision.actions.continue||decision.actions.interested||decision.actions.returnReview){
+  if(completed.length){
    const current=completed[completed.length-1],hub=node('section',null,'app-card viewing-decision');
    hub.append(node('h3','Viewing completed — what next?'),node('p',current.listing.title+' · Viewing '+completed.length+' of '+j.stops.length));
    if(decision.actions.continue&&next){
@@ -37,15 +37,25 @@
      await refresh();
     }));
    }else if(decision.current?.outcome) hub.append(node('p','Property response recorded: '+decision.current.outcome));
-   if(decision.actions.returnReview)hub.append(button('Return with Ride2Go',async()=>{
+   if(decision.pendingChange)hub.append(node('p','An operations review is pending ('+decision.pendingChange.kind.replaceAll('_',' ')+'). Additional change requests are unavailable until it is reviewed.'));
+   if(decision.actions.returnReview){
     if(decision.returnIncluded){
-     status('Return transport is included in your viewing package. Confirm the authorized return with your assigned driver or operations; do not book a duplicate paid ride.');
-     return;
-    }
-    const section=$('mobility-workspace');
-    if(section){section.hidden=false;section.scrollIntoView({behavior:'smooth'});}
-    status('Return transport is not included in this package. Review and accept a separate Ride2Go quote before booking; no charge has been initiated.');
-   }));
+     const returnForm=form('Return with Ride2Go — request coordination',async d=>{
+      const reason=String(d.reason||'').trim();
+      if(!reason)throw new Error('Please provide return pickup instructions.');
+      const result=await api('/journeys/'+encodeURIComponent(j.id)+'/change-requests','POST',{kind:'RETURN_REVIEW',reason,idempotencyKey:returnForm.dataset.requestKey});
+      status('Return coordination request '+result.status.toLowerCase()+'. Operations will review your included return; no new fare has been charged.');
+      await refresh();
+     });
+     returnForm.dataset.requestKey=crypto.randomUUID();
+     field(returnForm,'Return pickup instructions','reason').required=true;
+     hub.append(returnForm);
+    }else hub.append(button('Return with Ride2Go',async()=>{
+     const section=$('mobility-workspace');
+     if(section){section.hidden=false;section.scrollIntoView({behavior:'smooth'});}
+     status('Return transport is not included. Review a separate Ride2Go quote before booking; no charge has been initiated.');
+    }));
+   }
    if(decision.actions.endGuidance){
     const endForm=form('End my journey — request review',async d=>{
      const reason=String(d.reason||'').trim();
