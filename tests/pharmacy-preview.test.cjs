@@ -20,6 +20,11 @@ test('pharmacy preview serves only informational assets and does not expose tran
   assert.match(html,/No prescription uploads, payments, medicine orders or delivery requests/);
   assert.match(html,/id="search-input"/);
   assert.match(html,/id="category-grid"/);
+  assert.match(html,/id="result-count"[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.doesNotMatch(html,/<input[^>]*type="file"/i);
+  const script=await (await fetch(base+'/js/pharmacy.js')).text();
+  assert.match(script,/replacement\?\.focus/);
+  assert.doesNotMatch(script,/fetch\s*\(/);
   const response=await fetch(base+'/api/pharmacy/orders',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
   assert.notEqual(response.status,200);
   assert.notEqual(response.status,201);
