@@ -45,3 +45,16 @@ test('active decision actions are gated by server projection',()=>{
  assert.match(source,/decision\.actions\.interested/);
  assert.match(source,/decision\.actions\.returnReview/);
 });
+
+test('unrecorded property outcomes do not dereference null',()=>{
+ const block=source.split('// Customer decision hub:')[1].split('if(!j.stops.length)')[0];
+ assert.doesNotMatch(block,/current\.outcome\.outcome/);
+ assert.match(block,/decision\.current\?\.outcome/);
+});
+test('included return journeys do not navigate to a duplicate paid booking',()=>{
+ const block=source.split('// Customer decision hub:')[1].split('if(!j.stops.length)')[0];
+ assert.match(block,/if\(decision\.returnIncluded\)\{/);
+ assert.match(block,/do not book a duplicate paid ride/);
+ assert.match(block,/if\(decision\.actions\.returnReview\)/);
+ assert.match(block,/if\(decision\.actions\.endGuidance\)/);
+});
