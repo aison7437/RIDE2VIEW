@@ -58,6 +58,29 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
  function get(a,id){const j=access(a,id),ss=stops(db,id),plan=JSON.parse(j.plan),q=j.quote?JSON.parse(j.quote):null;const p=j.master_booking_id?db.prepare('SELECT id,amount,status,reference FROM payments WHERE booking_id=?').get(j.master_booking_id):null;const data={...j,plan,quote:q,payment:p,refund:db.prepare('SELECT amount,status,reference FROM journey_refunds WHERE journey_id=?').get(id)||null,stops:ss.map(s=>{const v=db.prepare('SELECT v.*,l.owner_id,l.payload,ps.start_at,ps.end_at FROM viewing_requests v JOIN listings l ON l.id=v.listing_id JOIN property_slots ps ON ps.id=v.slot_id WHERE v.id=?').get(s.request_id);return {...s,listing:JSON.parse(v.payload),ownerId:v.owner_id,startAt:v.start_at,endAt:v.end_at,outcome:db.prepare('SELECT outcome,notes FROM viewing_outcomes WHERE request_id=?').get(s.request_id)||null};}),events:db.prepare('SELECT event,details,created_at FROM journey_events WHERE journey_id=? ORDER BY created_at').all(id).map(e=>({...e,details:JSON.parse(e.details)}))};if(a.role==='agent'){// An agent receives only their own stops and no customer's contact/participant or payment data.
  data.stops=data.stops.filter(s=>s.ownerId===a.id);data.plan={tier:plan.tier,stops:plan.stops.filter(s=>data.stops.some(t=>t.listing_id===s.listingId))};delete data.quote;delete data.payment;delete data.refund;delete data.credit_amount;delete data.events;delete data.idempotency_key;
  }return data;}
+ function requestChange(a,id,data){
+  role(a,'customer');
+  if(!data||!['EARLY_END','RETURN_REVIEW'].includes(data.kind))fail(400,'Choose a supported journey change');
+  const key=text(data.idempotencyKey,'Idempotency key',128);
+  const reason=text(data.reason,'Reason',500);
+  return tx(()=>{
+   const j=access(a,id);
+   const existing=db.prepare('SELECT * FROM journey_change_requests WHERE customer_id=? AND idempotency_key=?').get(a.id,key);
+   if(existing){
+    if(existing.journey_id!==id||existing.kind!==data.kind||existing.reason!==reason)fail(409,'Idempotency key belongs to another request');
+    return {id:existing.id,journeyId:id,kind:existing.kind,status:existing.status,duplicate:true};
+   }
+   const completed=stops(db,id).some(s=>s.status==='COMPLETED');
+   if(j.status!=='IN_PROGRESS'||!completed)fail(409,'A completed property stop in an active journey is required');
+   const pending=db.prepare("SELECT id,kind FROM journey_change_requests WHERE journey_id=? AND status='PENDING'").get(id);
+   if(pending)fail(409,'A journey change request is already awaiting review');
+   const requestId=randomUUID(),time=now();
+   db.prepare("INSERT INTO journey_change_requests(id,journey_id,customer_id,kind,status,reason,idempotency_key,created_at,updated_at) VALUES(?,?,?,?,'PENDING',?,?,?,?)").run(requestId,id,a.id,data.kind,reason,key,time,time);
+   event(a,id,'CHANGE_REQUESTED',{requestId,kind:data.kind});
+   notify(j.customer_id,'Your journey change request has been recorded for operations review.');
+   return {id:requestId,journeyId:id,kind:data.kind,status:'PENDING',duplicate:false};
+  });
+ }
  function decision(a,id){
   role(a,'customer');
   const j=get(a,id);
@@ -86,6 +109,6 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
  function guardBooking(id){if(packageForBooking(db,id))fail(409,'Manage the whole viewing package through its journey');}
  function guardRequest(id){if(db.prepare('SELECT 1 FROM journey_stops WHERE request_id=?').get(id))fail(409,'Manage this stop through its whole viewing package');}
  function read(a,id){tx(expireInside);return get(a,id);}
- return {create,quote,accept,agentConfirm,cancel,reschedule,transport,stopComplete,settleRefund,get:read,decision,list,policy,details,wallet,guardBooking,guardRequest};
+ return {create,quote,accept,agentConfirm,cancel,reschedule,transport,stopComplete,settleRefund,get:read,decision,requestChange,list,policy,details,wallet,guardBooking,guardRequest};
 }
 module.exports={createJourneyAuthority};
