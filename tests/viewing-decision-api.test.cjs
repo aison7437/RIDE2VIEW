@@ -42,3 +42,26 @@ test('journey change requests are transactional, idempotent and do not directly 
  assert.match(schema,/CREATE TABLE journey_change_requests/);
  assert.match(schema,/UNIQUE\(customer_id,idempotency_key\)/);
 });
+
+test('operations review and history routes use explicit authority methods',()=>{
+ const calls=[];
+ const route=createJourneyRoutes({journeys:{
+  changeRequests(user,id){calls.push(['list',user.role,id]);return [{id:'r1',status:'PENDING'}]},
+  reviewChange(user,id,requestId,data){calls.push(['review',user.role,id,requestId,data.decision]);return {id:requestId,status:'REVIEWED',executionStatus:'NOT_EXECUTED'}}
+ }});
+ let listed,reviewed;
+ assert.equal(route({path:'/api/journeys/j1/change-requests',method:'GET',user:{role:'customer'},send(code,value){listed={code,value}}}),true);
+ assert.equal(route({path:'/api/journeys/j1/change-requests/r1/review',method:'POST',user:{role:'admin'},body:{decision:'REVIEWED',note:'Review only'},send(code,value){reviewed={code,value}}}),true);
+ assert.equal(listed.value.requests[0].status,'PENDING');
+ assert.equal(reviewed.value.executionStatus,'NOT_EXECUTED');
+ assert.deepEqual(calls,[['list','customer','j1'],['review','admin','j1','r1','REVIEWED']]);
+});
+test('operations review is audited and does not mutate booking, fare or transport',()=>{
+ const authority=fs.readFileSync(path.join(__dirname,'../server/journeys/authority.js'),'utf8');
+ const block=authority.split(' function reviewChange(a,id,requestId,data){')[1].split(' function decision(a,id)')[0];
+ assert.match(block,/role\(a,'admin'\)/);
+ assert.match(block,/CHANGE_REVIEWED/);
+ assert.match(block,/reviewer_id/);
+ assert.match(block,/NOT_EXECUTED/);
+ assert.doesNotMatch(block,/dispatch\.transition|UPDATE payments SET|UPDATE viewing_journeys SET|UPDATE bookings SET/);
+});
