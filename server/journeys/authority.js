@@ -81,6 +81,31 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
    return {id:requestId,journeyId:id,kind:data.kind,status:'PENDING',duplicate:false};
   });
  }
+ function changeRequests(a,id){
+  role(a,'customer','admin');
+  access(a,id);
+  return db.prepare("SELECT id,journey_id AS journeyId,kind,status,reason,review_note AS reviewNote,created_at AS createdAt,reviewed_at AS reviewedAt FROM journey_change_requests WHERE journey_id=? ORDER BY created_at DESC").all(id);
+ }
+ function reviewChange(a,id,requestId,data){
+  role(a,'admin');
+  if(!data||!['REVIEWED','REJECTED'].includes(data.decision))fail(400,'Choose a valid review decision');
+  const note=text(data.note,'Review note',1000);
+  return tx(()=>{
+   const j=access(a,id);
+   const r=db.prepare('SELECT * FROM journey_change_requests WHERE id=? AND journey_id=?').get(requestId,id);
+   if(!r)fail(404,'Journey change request not found');
+   if(r.status!=='PENDING'){
+    if(r.status===data.decision&&r.review_note===note)return {id:r.id,journeyId:id,status:r.status,duplicate:true};
+    fail(409,'Request was already reviewed');
+   }
+   if(j.status!=='IN_PROGRESS'&&data.decision==='REVIEWED')fail(409,'Journey is no longer active; reject or reconcile the request');
+   const time=now();
+   db.prepare('UPDATE journey_change_requests SET status=?,reviewer_id=?,review_note=?,reviewed_at=?,updated_at=? WHERE id=?').run(data.decision,a.id,note,time,time,requestId);
+   event(a,id,'CHANGE_REVIEWED',{requestId,kind:r.kind,decision:data.decision});
+   notify(r.customer_id,'Your journey change request has been reviewed. Check your journey for the operations note.');
+   return {id:r.id,journeyId:id,status:data.decision,duplicate:false,executionStatus:'NOT_EXECUTED'};
+  });
+ }
  function decision(a,id){
   role(a,'customer');
   const j=get(a,id);
@@ -109,6 +134,6 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
  function guardBooking(id){if(packageForBooking(db,id))fail(409,'Manage the whole viewing package through its journey');}
  function guardRequest(id){if(db.prepare('SELECT 1 FROM journey_stops WHERE request_id=?').get(id))fail(409,'Manage this stop through its whole viewing package');}
  function read(a,id){tx(expireInside);return get(a,id);}
- return {create,quote,accept,agentConfirm,cancel,reschedule,transport,stopComplete,settleRefund,get:read,decision,requestChange,list,policy,details,wallet,guardBooking,guardRequest};
+ return {create,quote,accept,agentConfirm,cancel,reschedule,transport,stopComplete,settleRefund,get:read,decision,requestChange,changeRequests,reviewChange,list,policy,details,wallet,guardBooking,guardRequest};
 }
 module.exports={createJourneyAuthority};
