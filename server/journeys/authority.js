@@ -110,6 +110,24 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
    return {id:r.id,journeyId:id,status:data.decision,duplicate:false,executionStatus:'NOT_EXECUTED'};
   });
  }
+ function changeExecutionReadiness(a,id,requestId){
+  role(a,'admin');
+  const j=access(a,id);
+  const request=db.prepare('SELECT id,kind,status,reviewed_at FROM journey_change_requests WHERE id=? AND journey_id=?').get(requestId,id);
+  if(!request)fail(404,'Journey change request not found');
+  const ss=stops(db,id);
+  const unvisited=ss.filter(s=>s.status!=='COMPLETED').map(s=>({position:s.position,requestId:s.request_id,bookingId:s.booking_id,status:s.status}));
+  const assignment=j.master_booking_id?db.prepare('SELECT status,driver_id FROM dispatch_assignments WHERE booking_id=? ORDER BY rowid DESC LIMIT 1').get(j.master_booking_id):null;
+  const payment=j.master_booking_id?db.prepare('SELECT status,amount FROM payments WHERE booking_id=?').get(j.master_booking_id):null;
+  const blockers=[];
+  if(request.status!=='REVIEWED')blockers.push('OPERATIONS_REVIEW_REQUIRED');
+  if(j.status!=='IN_PROGRESS')blockers.push('JOURNEY_NOT_ACTIVE');
+  if(unvisited.length)blockers.push('UNVISITED_STOPS_REQUIRE_RECONCILIATION');
+  if(assignment&&assignment.status!=='TRIP_COMPLETED')blockers.push('DRIVER_TRANSPORT_RECONCILIATION_REQUIRED');
+  if(payment&&['paid','captured','succeeded','completed'].includes(String(payment.status).toLowerCase()))blockers.push('PAYMENT_SETTLEMENT_REVIEW_REQUIRED');
+  blockers.push('NO_AUTOMATED_EXECUTION_AUTHORITY');
+  return {requestId:request.id,journeyId:id,kind:request.kind,reviewStatus:request.status,journeyStatus:j.status,journeyVersion:j.version,unvisitedStops:unvisited,driverAssignment:assignment?{status:assignment.status,assigned:Boolean(assignment.driver_id)}:null,payment:payment?{status:payment.status,amount:payment.amount}:null,blockers,canExecute:false,readOnly:true};
+ }
  function decision(a,id){
   role(a,'customer');
   const j=get(a,id);
@@ -139,6 +157,6 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
  function guardBooking(id){if(packageForBooking(db,id))fail(409,'Manage the whole viewing package through its journey');}
  function guardRequest(id){if(db.prepare('SELECT 1 FROM journey_stops WHERE request_id=?').get(id))fail(409,'Manage this stop through its whole viewing package');}
  function read(a,id){tx(expireInside);return get(a,id);}
- return {create,quote,accept,agentConfirm,cancel,reschedule,transport,stopComplete,settleRefund,get:read,decision,requestChange,changeRequests,reviewChange,list,policy,details,wallet,guardBooking,guardRequest};
+ return {create,quote,accept,agentConfirm,cancel,reschedule,transport,stopComplete,settleRefund,get:read,decision,requestChange,changeRequests,reviewChange,changeExecutionReadiness,list,policy,details,wallet,guardBooking,guardRequest};
 }
 module.exports={createJourneyAuthority};
