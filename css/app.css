@@ -102,3 +102,14 @@
 .r2v-map-spatial .r2v-map-fallback a{color:#adf8c5}
 @media(max-width:480px){.r2v-map-stage,.r2v-map-stage .r2v-map-frame{min-height:270px}.r2v-spatial-live{display:none}.r2v-spatial-caption strong{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.r2v-map-spatial *, .r2v-map-spatial *::before,.r2v-map-spatial *::after{animation:none!important;transition:none!important}}
+
+/* P0 customer post-viewing decision panel: Ride2View Pro visual language. */
+.viewing-decision{background:#faf7ec;border:1px solid #e6d8bb;border-radius:22px;padding:clamp(16px,3vw,28px);box-shadow:0 10px 28px rgba(37,24,15,.08);color:#25180f}
+.viewing-decision h3{font-family:"Playfair Display",Georgia,serif;font-size:clamp(1.35rem,3vw,1.85rem);line-height:1.2;margin:0 0 10px;color:#25180f}
+.viewing-decision p{color:#68563e;line-height:1.55;margin:8px 0 16px}
+.viewing-decision button{display:flex;align-items:center;justify-content:space-between;text-align:left;width:100%;min-height:56px;padding:14px 16px;margin:10px 0;border:1px solid #e6d8bb;border-radius:14px;background:#fff;color:#25180f;font-weight:650;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.viewing-decision button:first-of-type{background:#865d0c;color:#fff;border-color:#865d0c}
+.viewing-decision button:hover{background:#f2eadb;border-color:#a67b28}
+.viewing-decision button:first-of-type:hover{background:#704d0a}
+.viewing-decision button:focus-visible{outline:3px solid #278f68;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.viewing-decision button{transition:none}}
