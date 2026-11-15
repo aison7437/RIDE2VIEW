@@ -1,0 +1,224 @@
+{
+  "formatVersion": 1,
+  "description": "Selected operation/HTTP-status pairs with source-backed request and response schemas, validated by the typed fixture test suite. Other operations remain at API-01 baseline.",
+  "operations": [
+    {
+      "method": "POST",
+      "path": "/api/auth/email/challenges",
+      "requestSchema": "AuthChallengeRequestEmail",
+      "responseSchema": "AuthChallengeResponse",
+      "successStatus": "202",
+      "source": "server/auth/onboarding.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/phone/challenges",
+      "requestSchema": "AuthChallengeRequestPhone",
+      "responseSchema": "AuthChallengeResponse",
+      "successStatus": "202",
+      "source": "server/auth/onboarding.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/email/recovery/challenges",
+      "requestSchema": "AuthRecoveryRequest",
+      "responseSchema": "AuthChallengeResponse",
+      "successStatus": "202",
+      "source": "server/auth/onboarding.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/email/link/challenges",
+      "requestSchema": "AuthEmailLinkRequest",
+      "responseSchema": "AuthChallengeResponse",
+      "successStatus": "202",
+      "source": "server/auth/onboarding.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/phone/link/challenges",
+      "requestSchema": "AuthPhoneLinkRequest",
+      "responseSchema": "AuthChallengeResponse",
+      "successStatus": "202",
+      "source": "server/auth/onboarding.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/challenges/verify",
+      "requestSchema": "VerifyChallengeRequest",
+      "responseSchema": "AccountIdentity",
+      "successStatus": "200",
+      "source": "server/auth/onboarding.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "requestSchema": "LoginRequest",
+      "responseSchema": "AccountIdentity",
+      "successStatus": "200",
+      "source": "server/app.js",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "requestSchema": null,
+      "responseSchema": "AccountIdentity",
+      "successStatus": "200",
+      "source": "server/app.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/logout",
+      "requestSchema": null,
+      "responseSchema": "LogoutResponse",
+      "successStatus": "200",
+      "source": "server/app.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/listings",
+      "requestSchema": "ListingCreateRequest",
+      "responseSchema": "PropertyListing",
+      "successStatus": "201",
+      "source": "server/app.js",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/listings",
+      "requestSchema": null,
+      "responseSchema": "ListingsResponse",
+      "successStatus": "200",
+      "source": "server/app.js",
+      "notes": ""
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/listings/{id}",
+      "requestSchema": "ListingPatchRequest",
+      "responseSchema": "PropertyListing",
+      "successStatus": "200",
+      "source": "server/app.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/properties/{id}/slots",
+      "requestSchema": "PropertySlotCreateRequest",
+      "responseSchema": "PropertySlotCreated",
+      "successStatus": "201",
+      "source": "server/property/routes.js",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/properties/{id}/slots",
+      "requestSchema": null,
+      "responseSchema": "PropertySlotsResponse",
+      "successStatus": "200",
+      "source": "server/property/routes.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/viewing-requests",
+      "requestSchema": "ViewingRequestCreateRequest",
+      "responseSchema": "ViewingRequestRecord",
+      "successStatus": "201",
+      "source": "server/property/routes.js",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/viewing-requests",
+      "requestSchema": null,
+      "responseSchema": "ViewingRequestsResponse",
+      "successStatus": "200",
+      "source": "server/property/routes.js",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/bookings",
+      "requestSchema": null,
+      "responseSchema": "BookingsResponse",
+      "successStatus": "200",
+      "source": "server/app.js",
+      "notes": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/customer/profile",
+      "requestSchema": "CustomerPreferencesUpdate",
+      "responseSchema": "CustomerPreferencesResponse",
+      "successStatus": "200",
+      "source": "server/property/routes.js",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/customer/profile",
+      "requestSchema": null,
+      "responseSchema": "CustomerPreferencesResponse",
+      "successStatus": "200",
+      "source": "server/property/routes.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/journeys",
+      "requestSchema": "JourneyCreateRequest",
+      "responseSchema": "ViewingJourney",
+      "successStatus": "201",
+      "source": "server/journeys/routes.js",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/journeys",
+      "requestSchema": null,
+      "responseSchema": "ViewingJourneysResponse",
+      "successStatus": "200",
+      "source": "server/journeys/routes.js",
+      "notes": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/journeys/{id}",
+      "requestSchema": null,
+      "responseSchema": "ViewingJourney",
+      "successStatus": "200",
+      "source": "server/journeys/routes.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/{id}/verify",
+      "requestSchema": "ManualPaymentVerificationRequest",
+      "responseSchema": "ManualPaymentVerificationResponse",
+      "successStatus": "200",
+      "source": "server/app.js",
+      "notes": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/dispatch/{id}/{action}",
+      "requestSchema": null,
+      "responseSchema": "DispatchActionResponse",
+      "successStatus": "200",
+      "source": "server/app.js",
+      "notes": ""
+    }
+  ],
+  "kind": "documentation-only",
+  "runtimeRoutesChanged": false
+}
