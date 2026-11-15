@@ -36,14 +36,18 @@
      status('Interest recorded. Your transport journey remains active.');
      await refresh();
     }));
-   }else hub.append(node('p','Property response recorded: '+current.outcome.outcome));
-   hub.append(button('Return with Ride2Go',async()=>{
+   }else if(decision.current?.outcome) hub.append(node('p','Property response recorded: '+decision.current.outcome));
+   if(decision.actions.returnReview)hub.append(button('Return with Ride2Go',async()=>{
+    if(decision.returnIncluded){
+     status('Return transport is included in your viewing package. Confirm the authorized return with your assigned driver or operations; do not book a duplicate paid ride.');
+     return;
+    }
     const section=$('mobility-workspace');
     if(section){section.hidden=false;section.scrollIntoView({behavior:'smooth'});}
-    status(decision.returnIncluded?'Your viewing package includes a return option. Confirm its coverage with operations before requesting another fare.':'Review a separate Ride2Go quote before confirming any additional transport.');
+    status('Return transport is not included in this package. Review and accept a separate Ride2Go quote before booking; no charge has been initiated.');
    }));
-   hub.append(button('End my journey',async()=>{
-    status('Your driver or operations must complete the active journey after the scheduled stops and any included return. Contact support for an early finish or route change; no extra charge has been initiated.');
+   if(decision.actions.endGuidance)hub.append(button('End my journey',async()=>{
+    status('Journey closure requires driver or operations confirmation. For early termination, contact support for an itinerary and fare review. No stop, fare, or trip status has been changed.');
    }));
    hub.append(node('p','Transport stays active until the authorized driver or operations completes it. No fare, refund or dispatch status is changed by these guidance actions.'));
    card.append(hub);
