@@ -113,17 +113,18 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
   const current=completed.at(-1)||null;
   const next=j.stops.find(s=>s.status!=='COMPLETED')||null;
   const active=j.status==='IN_PROGRESS'&&Boolean(current);
+  const pending=db.prepare("SELECT id,kind FROM journey_change_requests WHERE journey_id=? AND status='PENDING' ORDER BY created_at DESC LIMIT 1").get(id)||null;
   return {
    journeyId:j.id,version:j.version,status:j.status,
    completedCount:completed.length,totalStops:j.stops.length,
    current:current?{position:current.position,requestId:current.request_id,title:current.listing.title,outcome:current.outcome?.outcome||null}:null,
    next:next?{position:next.position,title:next.listing.title,startAt:next.startAt}:null,
-   returnIncluded:Boolean(j.plan.returnJourney),
+   returnIncluded:Boolean(j.plan.returnJourney),pendingChange:pending,
    actions:{
     continue:active&&Boolean(next),
     interested:active&&Boolean(current.request_id)&&!current.outcome,
-    returnReview:active,
-    endGuidance:active
+    returnReview:active&&!pending,
+    endGuidance:active&&!pending
    },
    transportCompletionAuthority:'driver_or_admin',
    returnQuoteRequired:active&&!j.plan.returnJourney
