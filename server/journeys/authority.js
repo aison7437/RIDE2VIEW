@@ -70,8 +70,10 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
     if(existing.journey_id!==id||existing.kind!==data.kind||existing.reason!==reason)fail(409,'Idempotency key belongs to another request');
     return {id:existing.id,journeyId:id,kind:existing.kind,status:existing.status,duplicate:true};
    }
-   const completed=stops(db,id).some(s=>s.status==='COMPLETED');
+   const journeyStops=stops(db,id);
+   const completed=journeyStops.some(s=>s.status==='COMPLETED');
    if(j.status!=='IN_PROGRESS'||!completed)fail(409,'A completed property stop in an active journey is required');
+   if(data.kind==='EARLY_END'&&!journeyStops.some(s=>s.status!=='COMPLETED'))fail(409,'All property stops are complete; use normal journey completion');
    const plan=JSON.parse(j.plan);
    if(data.kind==='RETURN_REVIEW'&&plan.returnJourney!==true)fail(409,'This viewing package does not include return transport; request a separate quote');
    const pending=db.prepare("SELECT id,kind FROM journey_change_requests WHERE journey_id=? AND status='PENDING'").get(id);
@@ -126,7 +128,7 @@ function createJourneyAuthority({db,supply,audit=()=>{},notify=()=>{},dispatch})
     continue:active&&Boolean(next),
     interested:active&&Boolean(current.request_id)&&!current.outcome,
     returnReview:active&&!pending,
-    endGuidance:active&&!pending
+    endGuidance:active&&!pending&&stops(db,id).some(s=>s.status!=='COMPLETED')
    },
    transportCompletionAuthority:'driver_or_admin',
    returnQuoteRequired:active&&!j.plan.returnJourney
