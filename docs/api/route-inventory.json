@@ -1,0 +1,2686 @@
+{
+  "formatVersion": 1,
+  "description": "Every recognized API path declaration in the 17 dispatch handler files. Paths are normalized for OpenAPI; security telemetry expressions are excluded explicitly.",
+  "sourceFiles": [
+    "server/app.js",
+    "server/auth/onboarding.js",
+    "server/intelligence/authority.js",
+    "server/memory/authority.js",
+    "server/quality/authority.js",
+    "server/analytics/authority.js",
+    "server/agents/runtime.js",
+    "server/operations/index.js",
+    "server/marketplace/routes.js",
+    "server/growth/routes.js",
+    "server/shopping/authority.js",
+    "server/marketplace-expansion/routes.js",
+    "server/property-services/routes.js",
+    "server/mobility/routes.js",
+    "server/mobility/ride2go/routes-feedback.js",
+    "server/journeys/routes.js",
+    "server/property/routes.js"
+  ],
+  "excluded": [
+    {
+      "file": "server/intelligence/authority.js",
+      "marker": "path==='/api/auth/login'",
+      "reason": "Security telemetry compares this path; it does not dispatch a route."
+    }
+  ],
+  "routeMarkers": [
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/health/live'",
+      "operations": [
+        {
+          "path": "/api/health/live",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/health'",
+      "operations": [
+        {
+          "path": "/api/health",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/health/ready'",
+      "operations": [
+        {
+          "path": "/api/health/ready",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/config'",
+      "operations": [
+        {
+          "path": "/api/config",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path.match(/^\\/api\\/provider-callbacks\\/([a-z0-9_-]+)$/i)",
+      "operations": [
+        {
+          "path": "/api/provider-callbacks/{provider}",
+          "parameters": [
+            {
+              "name": "provider",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "pattern": "^[a-z0-9_-]+$"
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/maps/config'",
+      "operations": [
+        {
+          "path": "/api/maps/config",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/dashboard'",
+      "operations": [
+        {
+          "path": "/api/dashboard",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/auth/register'",
+      "operations": [
+        {
+          "path": "/api/auth/register",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/auth/login'",
+      "operations": [
+        {
+          "path": "/api/auth/login",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/auth/me'",
+      "operations": [
+        {
+          "path": "/api/auth/me",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/auth/logout'",
+      "operations": [
+        {
+          "path": "/api/auth/logout",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/listings'",
+      "operations": [
+        {
+          "path": "/api/listings",
+          "parameters": [],
+          "method": "GET"
+        },
+        {
+          "path": "/api/listings",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path.match(/^\\/api\\/listings\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/listings/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "PATCH"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/search'",
+      "operations": [
+        {
+          "path": "/api/search",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/bookings'",
+      "operations": [
+        {
+          "path": "/api/bookings",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/bookings",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path.match(/^\\/api\\/payments\\/([^/]+)\\/verify$/)",
+      "operations": [
+        {
+          "path": "/api/payments/{id}/verify",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path.match(/^\\/api\\/dispatch\\/([^/]+)\\/(accept|reject)$/)",
+      "operations": [
+        {
+          "path": "/api/dispatch/{id}/{action}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "action",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "accept",
+                  "reject"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path.match(/^\\/api\\/bookings\\/([^/]+)\\/(assign|complete|cancel)$/)",
+      "operations": [
+        {
+          "path": "/api/bookings/{id}/{action}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "action",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "assign",
+                  "complete",
+                  "cancel"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/admin/users'",
+      "operations": [
+        {
+          "path": "/api/admin/users",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path.match(/^\\/api\\/admin\\/users\\/([^/]+)\\/approve$/)",
+      "operations": [
+        {
+          "path": "/api/admin/users/{id}/approve",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path.match(/^\\/api\\/admin\\/payment-operations\\/callbacks\\/([^/]+)\\/retry$/)",
+      "operations": [
+        {
+          "path": "/api/admin/payment-operations/callbacks/{id}/retry",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path.match(/^\\/api\\/admin\\/payment-operations\\/initiations\\/([^/]+)\\/retry$/)",
+      "operations": [
+        {
+          "path": "/api/admin/payment-operations/initiations/{id}/retry",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/admin/payment-operations'",
+      "operations": [
+        {
+          "path": "/api/admin/payment-operations",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/admin/audit'",
+      "operations": [
+        {
+          "path": "/api/admin/audit",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/app.js",
+      "marker": "path==='/api/notifications'",
+      "operations": [
+        {
+          "path": "/api/notifications",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/auth/onboarding.js",
+      "marker": "path==='/api/auth/email/challenges'",
+      "operations": [
+        {
+          "path": "/api/auth/email/challenges",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/auth/onboarding.js",
+      "marker": "path==='/api/auth/email/recovery/challenges'",
+      "operations": [
+        {
+          "path": "/api/auth/email/recovery/challenges",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/auth/onboarding.js",
+      "marker": "path==='/api/auth/phone/challenges'",
+      "operations": [
+        {
+          "path": "/api/auth/phone/challenges",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/auth/onboarding.js",
+      "marker": "path==='/api/auth/email/link/challenges'",
+      "operations": [
+        {
+          "path": "/api/auth/email/link/challenges",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/auth/onboarding.js",
+      "marker": "path==='/api/auth/phone/link/challenges'",
+      "operations": [
+        {
+          "path": "/api/auth/phone/link/challenges",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/auth/onboarding.js",
+      "marker": "path==='/api/auth/challenges/verify'",
+      "operations": [
+        {
+          "path": "/api/auth/challenges/verify",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/intelligence/authority.js",
+      "marker": "path.match(/^\\/api\\/intelligence\\/(security|market|sales)\\/evidence$/)",
+      "operations": [
+        {
+          "path": "/api/intelligence/{domain}/evidence",
+          "parameters": [
+            {
+              "name": "domain",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "security",
+                  "market",
+                  "sales"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/memory/authority.js",
+      "marker": "path==='/api/agents/memory'",
+      "operations": [
+        {
+          "path": "/api/agents/memory",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/memory/authority.js",
+      "marker": "path==='/api/agents/memory/settings'",
+      "operations": [
+        {
+          "path": "/api/agents/memory/settings",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/memory/authority.js",
+      "marker": "path==='/api/agents/memory/entries'",
+      "operations": [
+        {
+          "path": "/api/agents/memory/entries",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/memory/authority.js",
+      "marker": "path==='/api/agents/memory/clear'",
+      "operations": [
+        {
+          "path": "/api/agents/memory/clear",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/memory/authority.js",
+      "marker": "path.match(/^\\/api\\/agents\\/memory\\/entries\\/([^/]+)\\/forget$/)",
+      "operations": [
+        {
+          "path": "/api/agents/memory/entries/{id}/forget",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/quality/authority.js",
+      "marker": "path==='/api/admin/quality/evidence'",
+      "operations": [
+        {
+          "path": "/api/admin/quality/evidence",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/analytics/authority.js",
+      "marker": "path==='/api/admin/analytics/evidence'",
+      "operations": [
+        {
+          "path": "/api/admin/analytics/evidence",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/analytics/authority.js",
+      "marker": "path==='/api/analytics/selection'",
+      "operations": [
+        {
+          "path": "/api/analytics/selection",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/agents/runtime.js",
+      "marker": "path==='/api/agents/choices'",
+      "operations": [
+        {
+          "path": "/api/agents/choices",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/agents/runtime.js",
+      "marker": "path==='/api/agents/capabilities'",
+      "operations": [
+        {
+          "path": "/api/agents/capabilities",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/agents/runtime.js",
+      "marker": "path==='/api/agents/workflows'",
+      "operations": [
+        {
+          "path": "/api/agents/workflows",
+          "parameters": [],
+          "method": "GET"
+        },
+        {
+          "path": "/api/agents/workflows",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/agents/runtime.js",
+      "marker": "path.match(/^\\/api\\/agents\\/workflows\\/([^/]+)(?:\\/(resume|review))?$/)",
+      "operations": [
+        {
+          "path": "/api/agents/workflows/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        },
+        {
+          "path": "/api/agents/workflows/{id}/{action}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "action",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "resume",
+                  "review"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/capabilities'",
+      "operations": [
+        {
+          "path": "/api/operations/capabilities",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/payment-events'",
+      "operations": [
+        {
+          "path": "/api/operations/payment-events",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/operations/payment-events",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/collections'",
+      "operations": [
+        {
+          "path": "/api/operations/collections",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/operations/collections",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path.match(/^\\/api\\/operations\\/collections\\/([^/]+)\\/refund$/)",
+      "operations": [
+        {
+          "path": "/api/operations/collections/{id}/refund",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path.match(/^\\/api\\/operations\\/payment-events\\/([^/]+)\\/retry$/)",
+      "operations": [
+        {
+          "path": "/api/operations/payment-events/{id}/retry",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/communications'",
+      "operations": [
+        {
+          "path": "/api/operations/communications",
+          "parameters": [],
+          "method": "PUT"
+        },
+        {
+          "path": "/api/operations/communications",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/communications/verify'",
+      "operations": [
+        {
+          "path": "/api/operations/communications/verify",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path.match(/^\\/api\\/operations\\/refunds\\/([^/]+)\\/retry$/)",
+      "operations": [
+        {
+          "path": "/api/operations/refunds/{id}/retry",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/refunds'",
+      "operations": [
+        {
+          "path": "/api/operations/refunds",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path.match(/^\\/api\\/operations\\/refunds\\/(booking|ride2go|service)\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/operations/refunds/{kind}/{id}",
+          "parameters": [
+            {
+              "name": "kind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "booking",
+                  "ride2go",
+                  "service"
+                ]
+              }
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/receipts'",
+      "operations": [
+        {
+          "path": "/api/operations/receipts",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path.match(/^\\/api\\/operations\\/receipts\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/operations/receipts/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path.match(/^\\/api\\/operations\\/receipts\\/([^/]+)\\/fiscal$/)",
+      "operations": [
+        {
+          "path": "/api/operations/receipts/{id}/fiscal",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/reconciliations'",
+      "operations": [
+        {
+          "path": "/api/operations/reconciliations",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path.match(/^\\/api\\/operations\\/reconciliations\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/operations/reconciliations/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/fiscal-policy'",
+      "operations": [
+        {
+          "path": "/api/operations/fiscal-policy",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/operations/fiscal-policy",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/jobs'",
+      "operations": [
+        {
+          "path": "/api/operations/jobs",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path.match(/^\\/api\\/operations\\/jobs\\/([^/]+)\\/reconcile$/)",
+      "operations": [
+        {
+          "path": "/api/operations/jobs/{id}/reconcile",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/geocode'",
+      "operations": [
+        {
+          "path": "/api/operations/geocode",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path==='/api/operations/trips'",
+      "operations": [
+        {
+          "path": "/api/operations/trips",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/operations/index.js",
+      "marker": "path.match(/^\\/api\\/operations\\/trips\\/(booking|ride2go)\\/([^/]+)(?:\\/(route|location|eta|progress))?$/)",
+      "operations": [
+        {
+          "path": "/api/operations/trips/{kind}/{id}",
+          "method": "GET",
+          "parameters": [
+            {
+              "name": "kind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "booking",
+                  "ride2go"
+                ]
+              }
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        {
+          "path": "/api/operations/trips/{kind}/{id}/route",
+          "method": "PUT",
+          "parameters": [
+            {
+              "name": "kind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "booking",
+                  "ride2go"
+                ]
+              }
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        {
+          "path": "/api/operations/trips/{kind}/{id}/location",
+          "method": "PUT",
+          "parameters": [
+            {
+              "name": "kind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "booking",
+                  "ride2go"
+                ]
+              }
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        {
+          "path": "/api/operations/trips/{kind}/{id}/location",
+          "method": "DELETE",
+          "parameters": [
+            {
+              "name": "kind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "booking",
+                  "ride2go"
+                ]
+              }
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        {
+          "path": "/api/operations/trips/{kind}/{id}/eta",
+          "method": "POST",
+          "parameters": [
+            {
+              "name": "kind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "booking",
+                  "ride2go"
+                ]
+              }
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        {
+          "path": "/api/operations/trips/{kind}/{id}/progress",
+          "method": "POST",
+          "parameters": [
+            {
+              "name": "kind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "booking",
+                  "ride2go"
+                ]
+              }
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace/routes.js",
+      "marker": "path==='/api/marketplace/earnings'",
+      "operations": [
+        {
+          "path": "/api/marketplace/earnings",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace/routes.js",
+      "marker": "path==='/api/admin/marketplace/earnings'",
+      "operations": [
+        {
+          "path": "/api/admin/marketplace/earnings",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace/routes.js",
+      "marker": "path.match(/^\\/api\\/admin\\/marketplace\\/earnings\\/([^/]+)\\/payout$/)",
+      "operations": [
+        {
+          "path": "/api/admin/marketplace/earnings/{id}/payout",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace/routes.js",
+      "marker": "path==='/api/subscriptions/plans'",
+      "operations": [
+        {
+          "path": "/api/subscriptions/plans",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace/routes.js",
+      "marker": "path==='/api/admin/subscriptions/plans'",
+      "operations": [
+        {
+          "path": "/api/admin/subscriptions/plans",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace/routes.js",
+      "marker": "path==='/api/subscriptions'",
+      "operations": [
+        {
+          "path": "/api/subscriptions",
+          "parameters": [],
+          "method": "GET"
+        },
+        {
+          "path": "/api/subscriptions",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace/routes.js",
+      "marker": "path.match(/^\\/api\\/admin\\/subscriptions\\/([^/]+)\\/activate$/)",
+      "operations": [
+        {
+          "path": "/api/admin/subscriptions/{id}/activate",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/growth/routes.js",
+      "marker": "path==='/api/student-pools'",
+      "operations": [
+        {
+          "path": "/api/student-pools",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/growth/routes.js",
+      "marker": "path.match(/^\\/api\\/student-pools\\/([^/]+)\\/join$/)",
+      "operations": [
+        {
+          "path": "/api/student-pools/{id}/join",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/growth/routes.js",
+      "marker": "path==='/api/reputation/reviews'",
+      "operations": [
+        {
+          "path": "/api/reputation/reviews",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/growth/routes.js",
+      "marker": "path==='/api/safety/incidents'",
+      "operations": [
+        {
+          "path": "/api/safety/incidents",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/growth/routes.js",
+      "marker": "path==='/api/subscriptions/consume'",
+      "operations": [
+        {
+          "path": "/api/subscriptions/consume",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/growth/routes.js",
+      "marker": "path.match(/^\\/api\\/admin\\/remote-viewings\\/([^/]+)\\/ai-summary$/)",
+      "operations": [
+        {
+          "path": "/api/admin/remote-viewings/{id}/ai-summary",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/shopping/authority.js",
+      "marker": "path==='/api/rideplate/cart'",
+      "operations": [
+        {
+          "path": "/api/rideplate/cart",
+          "parameters": [],
+          "method": "GET"
+        },
+        {
+          "path": "/api/rideplate/cart",
+          "parameters": [],
+          "method": "PUT"
+        }
+      ]
+    },
+    {
+      "file": "server/shopping/authority.js",
+      "marker": "path==='/api/rideplate/cart/review'",
+      "operations": [
+        {
+          "path": "/api/rideplate/cart/review",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/shopping/authority.js",
+      "marker": "path==='/api/rideplate/cart/checkout'",
+      "operations": [
+        {
+          "path": "/api/rideplate/cart/checkout",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/shopping/authority.js",
+      "marker": "path==='/api/rideplate/checkouts'",
+      "operations": [
+        {
+          "path": "/api/rideplate/checkouts",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/shopping/authority.js",
+      "marker": "path.match(/^\\/api\\/rideplate\\/checkouts\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/rideplate/checkouts/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/shopping/authority.js",
+      "marker": "path==='/api/rideplate/merchant-orders'",
+      "operations": [
+        {
+          "path": "/api/rideplate/merchant-orders",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/shopping/authority.js",
+      "marker": "path.match(/^\\/api\\/rideplate\\/merchant-orders\\/([^/]+)\\/(prepare|verify)$/)",
+      "operations": [
+        {
+          "path": "/api/rideplate/merchant-orders/{id}/{action}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "action",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "prepare",
+                  "verify"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace-expansion/routes.js",
+      "marker": "path==='/api/rideplate/merchants'",
+      "operations": [
+        {
+          "path": "/api/rideplate/merchants",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace-expansion/routes.js",
+      "marker": "path.match(/^\\/api\\/admin\\/rideplate\\/merchants\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/admin/rideplate/merchants/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace-expansion/routes.js",
+      "marker": "path==='/api/rideplate/catalog'",
+      "operations": [
+        {
+          "path": "/api/rideplate/catalog",
+          "parameters": [],
+          "method": "GET"
+        },
+        {
+          "path": "/api/rideplate/catalog",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace-expansion/routes.js",
+      "marker": "path==='/api/rideplate/checkouts'",
+      "operations": [
+        {
+          "path": "/api/rideplate/checkouts",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace-expansion/routes.js",
+      "marker": "path.match(/^\\/api\\/admin\\/logistics\\/shipments\\/([^/]+)\\/courier$/)",
+      "operations": [
+        {
+          "path": "/api/admin/logistics/shipments/{id}/courier",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace-expansion/routes.js",
+      "marker": "path.match(/^\\/api\\/logistics\\/courier-assignments\\/([^/]+)\\/respond$/)",
+      "operations": [
+        {
+          "path": "/api/logistics/courier-assignments/{id}/respond",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace-expansion/routes.js",
+      "marker": "path.match(/^\\/api\\/logistics\\/courier-assignments\\/([^/]+)\\/deliver$/)",
+      "operations": [
+        {
+          "path": "/api/logistics/courier-assignments/{id}/deliver",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/marketplace-expansion/routes.js",
+      "marker": "path==='/api/admin/rideplate/settlements'",
+      "operations": [
+        {
+          "path": "/api/admin/rideplate/settlements",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property-services/routes.js",
+      "marker": "path==='/api/property-services/config'",
+      "operations": [
+        {
+          "path": "/api/property-services/config",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/property-services/config",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property-services/routes.js",
+      "marker": "path==='/api/property-services'",
+      "operations": [
+        {
+          "path": "/api/property-services",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/property-services",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property-services/routes.js",
+      "marker": "path==='/api/property-services/documents'",
+      "operations": [
+        {
+          "path": "/api/property-services/documents",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property-services/routes.js",
+      "marker": "path.match(/^\\/api\\/property-services\\/documents\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/property-services/documents/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property-services/routes.js",
+      "marker": "path.match(/^\\/api\\/property-services\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/property-services/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property-services/routes.js",
+      "marker": "path.match(/^\\/api\\/property-services\\/([^/]+)\\/(room|recording)\\/access$/)",
+      "operations": [
+        {
+          "path": "/api/property-services/{id}/{linkKind}/access",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "linkKind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "room",
+                  "recording"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property-services/routes.js",
+      "marker": "path.match(/^\\/api\\/property-services\\/([^/]+)\\/([a-z]+)$/)",
+      "operations": [
+        {
+          "path": "/api/property-services/{id}/{action}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "action",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "pattern": "^[a-z]+$"
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path==='/api/mobility/dashboard'",
+      "operations": [
+        {
+          "path": "/api/mobility/dashboard",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path==='/api/driver/profile'",
+      "operations": [
+        {
+          "path": "/api/driver/profile",
+          "parameters": [],
+          "method": "PUT"
+        },
+        {
+          "path": "/api/driver/profile",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path==='/api/driver/availability'",
+      "operations": [
+        {
+          "path": "/api/driver/availability",
+          "parameters": [],
+          "method": "PUT"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path==='/api/mobility/documents'",
+      "operations": [
+        {
+          "path": "/api/mobility/documents",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path.match(/^\\/api\\/mobility\\/documents\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/mobility/documents/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path.match(/^\\/api\\/mobility\\/checks\\/(driver|women_driver|women_rider|student)\\/submit$/)",
+      "operations": [
+        {
+          "path": "/api/mobility/checks/{eligibilityKind}/submit",
+          "parameters": [
+            {
+              "name": "eligibilityKind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "driver",
+                  "women_driver",
+                  "women_rider",
+                  "student"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path.match(/^\\/api\\/admin\\/mobility-reviews\\/([^/]+)\\/(driver|women_driver|women_rider|student)$/)",
+      "operations": [
+        {
+          "path": "/api/admin/mobility-reviews/{id}/{eligibilityKind}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "eligibilityKind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "driver",
+                  "women_driver",
+                  "women_rider",
+                  "student"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path==='/api/ride2go/pricing'",
+      "operations": [
+        {
+          "path": "/api/ride2go/pricing",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/ride2go/pricing",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path==='/api/ride2go/trips'",
+      "operations": [
+        {
+          "path": "/api/ride2go/trips",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/ride2go/trips",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path.match(/^\\/api\\/ride2go\\/trips\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/ride2go/trips/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path.match(/^\\/api\\/ride2go\\/trips\\/([^/]+)\\/(quote|accept|verify|offer|cancel|refund|resetCode|arrive|start|complete)$/)",
+      "operations": [
+        {
+          "path": "/api/ride2go/trips/{id}/{action}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "action",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "quote",
+                  "accept",
+                  "verify",
+                  "offer",
+                  "cancel",
+                  "refund",
+                  "resetCode",
+                  "arrive",
+                  "start",
+                  "complete"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/routes.js",
+      "marker": "path.match(/^\\/api\\/ride2go\\/assignments\\/([^/]+)\\/respond$/)",
+      "operations": [
+        {
+          "path": "/api/ride2go/assignments/{id}/respond",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/mobility/ride2go/routes-feedback.js",
+      "marker": "path.match(/^\\/api\\/ride2go\\/trips\\/([^/]+)\\/feedback$/)",
+      "operations": [
+        {
+          "path": "/api/ride2go/trips/{id}/feedback",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        },
+        {
+          "path": "/api/ride2go/trips/{id}/feedback",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/journeys/routes.js",
+      "marker": "path==='/api/customer/details'",
+      "operations": [
+        {
+          "path": "/api/customer/details",
+          "parameters": [],
+          "method": "PUT"
+        },
+        {
+          "path": "/api/customer/details",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/journeys/routes.js",
+      "marker": "path==='/api/customer/credits'",
+      "operations": [
+        {
+          "path": "/api/customer/credits",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/journeys/routes.js",
+      "marker": "path==='/api/journeys/pricing'",
+      "operations": [
+        {
+          "path": "/api/journeys/pricing",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/journeys/pricing",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/journeys/routes.js",
+      "marker": "path==='/api/journeys'",
+      "operations": [
+        {
+          "path": "/api/journeys",
+          "parameters": [],
+          "method": "POST"
+        },
+        {
+          "path": "/api/journeys",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/journeys/routes.js",
+      "marker": "path.match(/^\\/api\\/journeys\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/journeys/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/journeys/routes.js",
+      "marker": "path.match(/^\\/api\\/journeys\\/([^/]+)\\/(quote|accept|cancel|reschedule|start|finish|refund)$/)",
+      "operations": [
+        {
+          "path": "/api/journeys/{id}/{action}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "action",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "quote",
+                  "accept",
+                  "cancel",
+                  "reschedule",
+                  "start",
+                  "finish",
+                  "refund"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/journeys/routes.js",
+      "marker": "path.match(/^\\/api\\/journeys\\/([^/]+)\\/stops\\/(\\d+)\\/(confirm|complete)$/)",
+      "operations": [
+        {
+          "path": "/api/journeys/{id}/stops/{stopIndex}/{action}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "stopIndex",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            {
+              "name": "action",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "confirm",
+                  "complete"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path==='/api/agent/dashboard'",
+      "operations": [
+        {
+          "path": "/api/agent/dashboard",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path==='/api/agent/profile'",
+      "operations": [
+        {
+          "path": "/api/agent/profile",
+          "parameters": [],
+          "method": "PUT"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path==='/api/supply/documents'",
+      "operations": [
+        {
+          "path": "/api/supply/documents",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/supply\\/documents\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/supply/documents/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/supply\\/checks\\/(identity|agency|marketing|ownership|publication)\\/([^/]+)\\/submit$/)",
+      "operations": [
+        {
+          "path": "/api/supply/checks/{checkKind}/{id}/submit",
+          "parameters": [
+            {
+              "name": "checkKind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "identity",
+                  "agency",
+                  "marketing",
+                  "ownership",
+                  "publication"
+                ]
+              }
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path==='/api/admin/supply-reviews'",
+      "operations": [
+        {
+          "path": "/api/admin/supply-reviews",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/admin\\/supply-reviews\\/(identity|agency|marketing|ownership|publication)\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/admin/supply-reviews/{checkKind}/{id}",
+          "parameters": [
+            {
+              "name": "checkKind",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "identity",
+                  "agency",
+                  "marketing",
+                  "ownership",
+                  "publication"
+                ]
+              }
+            },
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/properties\\/([^/]+)\\/(media|slots)$/)",
+      "operations": [
+        {
+          "path": "/api/properties/{id}/media",
+          "method": "POST",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        {
+          "path": "/api/properties/{id}/slots",
+          "method": "GET",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        {
+          "path": "/api/properties/{id}/slots",
+          "method": "POST",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/properties\\/([^/]+)\\/(media|slots)\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/properties/{id}/media/{itemId}",
+          "method": "DELETE",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "itemId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        },
+        {
+          "path": "/api/properties/{id}/slots/{itemId}",
+          "method": "DELETE",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "itemId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path==='/api/viewing-requests'",
+      "operations": [
+        {
+          "path": "/api/viewing-requests",
+          "parameters": [],
+          "method": "GET"
+        },
+        {
+          "path": "/api/viewing-requests",
+          "parameters": [],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/viewing-requests\\/([^/]+)\\/(accept|decline|reschedule|cancel|outcome)$/)",
+      "operations": [
+        {
+          "path": "/api/viewing-requests/{id}/{action}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            {
+              "name": "action",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "accept",
+                  "decline",
+                  "reschedule",
+                  "cancel",
+                  "outcome"
+                ]
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path==='/api/agent/leads'",
+      "operations": [
+        {
+          "path": "/api/agent/leads",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/viewing-requests\\/([^/]+)\\/review$/)",
+      "operations": [
+        {
+          "path": "/api/viewing-requests/{id}/review",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path==='/api/agent/commissions'",
+      "operations": [
+        {
+          "path": "/api/agent/commissions",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/admin\\/commissions\\/requests\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/admin/commissions/requests/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "POST"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/admin\\/commissions\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/admin/commissions/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "PATCH"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/agent\\/leads\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/agent/leads/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "PATCH"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path==='/api/customer/profile'",
+      "operations": [
+        {
+          "path": "/api/customer/profile",
+          "parameters": [],
+          "method": "PUT"
+        },
+        {
+          "path": "/api/customer/profile",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path==='/api/customer/saved-properties'",
+      "operations": [
+        {
+          "path": "/api/customer/saved-properties",
+          "parameters": [],
+          "method": "GET"
+        }
+      ]
+    },
+    {
+      "file": "server/property/routes.js",
+      "marker": "path.match(/^\\/api\\/customer\\/saved-properties\\/([^/]+)$/)",
+      "operations": [
+        {
+          "path": "/api/customer/saved-properties/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "PUT"
+        },
+        {
+          "path": "/api/customer/saved-properties/{id}",
+          "parameters": [
+            {
+              "name": "id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          ],
+          "method": "DELETE"
+        }
+      ]
+    }
+  ]
+}
