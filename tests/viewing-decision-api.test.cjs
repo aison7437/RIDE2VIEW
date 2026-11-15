@@ -73,3 +73,12 @@ test('return coordination requires package entitlement at the authority boundary
  assert.match(block,/does not include return transport/);
  assert.match(block,/JSON\.parse\(j\.plan\)/);
 });
+
+test('early-end requests require an unvisited stop and preserve normal completion',()=>{
+ const authority=fs.readFileSync(path.join(__dirname,'../server/journeys/authority.js'),'utf8');
+ const request=authority.split(' function requestChange(a,id,data){')[1].split(' function changeRequests(a,id)')[0];
+ assert.match(request,/data\.kind==='EARLY_END'&&!journeyStops\.some\(s=>s\.status!=='COMPLETED'\)/);
+ assert.match(request,/All property stops are complete/);
+ const projection=authority.split(' function decision(a,id){')[1].split(' function list(a)')[0];
+ assert.match(projection,/endGuidance:active&&!pending&&stops\(db,id\)\.some/);
+});
