@@ -66,8 +66,15 @@ function createApp(options={}) {
   function audit(user,action,id,details={}) {db.prepare('INSERT INTO audit(actor_id,action,entity_id,details,created_at) VALUES(?,?,?,?,?)').run(user?.id || null,action,id,JSON.stringify(details),new Date().toISOString());}
   function notify(id,message) {db.prepare('INSERT INTO notifications VALUES(?,?,?,?)').run(randomUUID(),id,message,new Date().toISOString());}
   const sideEffects=createPaymentSideEffectOutbox({db,handlers:{
-    BOOKING_PAYMENT_VERIFIED:payload=>notify(payload.customerId,'Payment verified. Viewing confirmed; driver assignment pending.'),
     COMMERCE_PAYMENT_VERIFIED:()=>{}
+  },transactionalHandlers:{
+    // Notification and outbox completion commit together. The stable notification
+    // key also deduplicates recoveries of an already-applied local effect.
+    BOOKING_PAYMENT_VERIFIED:(payload,event)=>{
+      db.prepare('INSERT OR IGNORE INTO notifications(id,user_id,message,created_at) VALUES(?,?,?,?)')
+        .run('payment-effect:'+event.id,payload.customerId,
+          'Payment verified. Viewing confirmed; driver assignment pending.',new Date().toISOString());
+    }
   }});
   paymentAuthority=createPaymentAuthority({db,audit,notify,sideEffects,ledger:createLedgerAuthority({db,audit})});
   const paymentProviders=Object.freeze({...options.paymentProviders});
