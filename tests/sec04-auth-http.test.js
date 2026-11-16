@@ -60,3 +60,18 @@ test('SEC-04 is disabled by default and does not create observer tables',async()
     assert.equal(row.count,0);
   }finally {await app.close();}
 });
+
+
+test('optional quota instrumentation does not prevent boot without a quota secret',async()=>{
+  const app=createApp({
+    environment:{NODE_ENV:'test'},dbPath:':memory:',
+    observeAuthQuotas:true,
+    startOperationsRuntime:false,startSideEffectRuntime:false,
+    startProviderCallbackRuntime:false,startPaymentInitiationRuntime:false
+  });
+  try{
+    assert.equal(app.db.prepare(
+      "SELECT COUNT(*) AS count FROM sqlite_master WHERE name='security_auth_quota_windows'"
+    ).get().count,0);
+  }finally{await app.close();}
+});
