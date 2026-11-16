@@ -1,4 +1,5 @@
 'use strict';
+const {signProxyAttestation}=require('../lib/proxy-attestation');
 
 const ALLOWED = new Set([
   'config', 'auth/login', 'auth/logout', 'auth/me', 'auth/register',
@@ -59,6 +60,20 @@ function createProxy({ env = process.env, fetchFn = fetch } = {}) {
       const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
       if (Buffer.byteLength(body) > 16000) { res.status(413).json({ error: 'Request is too large' }); return; }
       options.body = body;
+    }
+    if (env.R2V_PROXY_ATTESTATION_SIGN==='true') {
+      try {
+        const proof=signProxyAttestation({
+          secret:env.R2V_PROXY_ATTESTATION_SECRET,
+          method:req.method,path:'/api/'+path,
+          body:options.body || ''
+        });
+        Object.assign(options.headers,proof);
+      } catch {
+        // An explicitly enabled signer must not silently send unsigned requests.
+        res.status(503).json({error:'Authentication proxy security is not configured'});
+        return;
+      }
     }
     try {
       const response = await fetchFn(new URL(`/api/${path}`, upstream), options);

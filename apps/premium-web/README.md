@@ -20,6 +20,10 @@ Before enabling account registration on this static project, deploy the Ride2Vie
 
 The API host must separately configure `AT_USERNAME`, `AT_API_KEY`, optional `AT_SENDER_ID`, `RESEND_API_KEY`, `R2V_AUTH_EMAIL_FROM`, and `R2V_AUTH_OTP_SECRET`. Configure the sender ID with Africa's Talking and verify the email sender domain with Resend before real sends. The Vercel proxy being deployed does not prove that the upstream API or SMS/email providers are active; complete the staging message-delivery and sign-in checks before announcing registration as live.
 
+## SEC-05 proxy attestation (optional)
+
+A server-only HMAC proof may be added to allowlisted authentication proxy calls with `R2V_PROXY_ATTESTATION_SIGN=true` and `R2V_PROXY_ATTESTATION_SECRET` (a shared 32+ byte random secret also held by the Node API). When the signing flag is enabled without the secret, the premium proxy returns HTTP 503 rather than forwarding unsigned requests. The backend's separate `R2V_PROXY_ATTESTATION_OBSERVE=true` switch only measures whether proofs verify; no authentication or rate-limit decision is altered. Do not put these secrets in browser JavaScript, assume trusted client IPs, or use signed proofs as authorization. The mechanism is not replay-proof. See [SEC-05 protocol and deployment gates](../../docs/security-sec05-proxy-attestation.md).
+
 ## Release acceptance checklist
 
 - [ ] Premium page responds with HTTP 200; correct document title and asset loading
