@@ -29,6 +29,7 @@ const {createJourneyRoutes}=require('./journeys/routes');
 const {packageForBooking}=require('./journeys/hooks');
 const http = require('node:http');
 const {createRateLimiter,logRequestError,productionConfig}=require('./security');
+const {verifyProxyAttestation}=require('../apps/premium-web/lib/proxy-attestation');
 const { randomUUID, randomBytes, scryptSync, timingSafeEqual, createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
@@ -127,6 +128,22 @@ function createApp(options={}) {
   async function readBody(req) {let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>(['/api/supply/documents','/api/mobility/documents','/api/property-services/documents'].includes(req.url)?3000000:65536))fail(413,'Request is too large');chunks.push(c);}try{req.rawBody=Buffer.concat(chunks).toString() || '{}';return JSON.parse(req.rawBody);}catch{fail(400,'Invalid JSON body');}}
   const apiLimiter=createRateLimiter({limit:options.apiRateLimit ?? 120,windowMs:options.apiRateWindowMs ?? 60000});
   const attempts=new Map();
+  const proxyProofObserve=options.observeProxyAttestation===true || environment.R2V_PROXY_ATTESTATION_OBSERVE==='true';
+  const proxyProofStats={VERIFIED:0,INVALID:0,EXPIRED:0,ABSENT:0};
+  function observeProxyProof(req,path,method,body) {
+    if (!proxyProofObserve || !path.startsWith('/api/auth/')) return;
+    const verdict=verifyProxyAttestation({
+      secret:options.proxyAttestationSecret ?? environment.R2V_PROXY_ATTESTATION_SECRET,
+      headers:req.headers,method,path,body
+    });
+    proxyProofStats[verdict.status]++;
+    if (typeof options.onProxyAttestationEvent==='function') {
+      try {options.onProxyAttestationEvent({
+        event:'proxy_attestation_observed',routeGroup:'authentication',
+        status:verdict.status,verified:verdict.verified
+      });}catch { /* telemetry cannot impact customers */ }
+    }
+  }
   function rateLimit(req) {const key=req.socket.remoteAddress;const now=Date.now();let bucket=attempts.get(key);if(!bucket || bucket.until<now){bucket={count:0,until:now+60000};attempts.set(key,bucket);}if(++bucket.count>30)fail(429,'Too many sign-in attempts; try again in a minute');if(attempts.size>10000)for(const [k,v] of attempts)if(v.until<now)attempts.delete(k);}
   const server=http.createServer(async(req,res)=>{
     res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','same-origin');res.setHeader('X-Frame-Options','DENY');
@@ -180,6 +197,7 @@ function createApp(options={}) {
       const user=getUser(req);
       const body=method==='GET'?{}:await readBody(req);
       if(!body||typeof body!=='object'||Array.isArray(body))fail(400,'JSON object required');
+      observeProxyProof(req,path,method,method==='GET'?'':req.rawBody);
       if(await authOnboarding.routes({path,method,user,body,send,res}))return;
       if(path==='/api/maps/config'&&method==='GET'){const key=options.mapsBrowserKey ?? process.env.GOOGLE_MAPS_BROWSER_KEY ?? '';return send(200,{enabled:Boolean(key),browserKey:key||null,features:{maps2d:Boolean(key),maps3d:Boolean(key)}});}
       if(path==='/api/dashboard'&&method==='GET')return send(200,dashboard.get(user));
@@ -312,6 +330,6 @@ function createApp(options={}) {
       if(!res.headersSent)send(status,{error:status===500?'Internal server error':error.message});else res.end();
     }
   });
-  return {server,db,dashboard,shopping,intelligence,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,authOnboarding,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
+  return {server,db,proxyProofStats,dashboard,shopping,intelligence,memory,quality,analytics,agentWorkflows,operations,marketplace,growth,expansion,commerceOrders,commerceInventory,fulfillment,services,journeys,onboarding,rides,supply,paymentAuthority,paymentIntentAuthority,providerBoundary,paymentInitiationRuntime,providerCallbackRuntime,sideEffects,sideEffectRuntime,authOnboarding,close:async()=>{await agentWorkflows.stop();await operations.stop();providerCallbackRuntime?.stop();paymentInitiationRuntime?.stop();sideEffectRuntime?.stop();if(server.listening)await new Promise(resolve=>server.close(resolve));db.close();}};
 }
 module.exports={createApp,TIERS};
