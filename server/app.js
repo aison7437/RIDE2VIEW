@@ -29,6 +29,7 @@ const {createJourneyRoutes}=require('./journeys/routes');
 const {packageForBooking}=require('./journeys/hooks');
 const http = require('node:http');
 const {createRateLimiter,logRequestError,productionConfig}=require('./security');
+const {createTrafficMonitor}=require('./traffic-risk');
 const { randomUUID, randomBytes, scryptSync, timingSafeEqual, createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
@@ -126,6 +127,9 @@ function createApp(options={}) {
   function bookingFor(id,user) {const b=db.prepare('SELECT b.*,l.payload AS listing FROM bookings b JOIN listings l ON l.id=b.listing_id WHERE b.id=?').get(id);if(!b)fail(404,'Booking not found');if(user.role!=='admin' && b.customer_id!==user.id && b.driver_id!==user.id)fail(403,'Booking belongs to another account');return b;}
   async function readBody(req) {let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>(['/api/supply/documents','/api/mobility/documents','/api/property-services/documents'].includes(req.url)?3000000:65536))fail(413,'Request is too large');chunks.push(c);}try{req.rawBody=Buffer.concat(chunks).toString() || '{}';return JSON.parse(req.rawBody);}catch{fail(400,'Invalid JSON body');}}
   const apiLimiter=createRateLimiter({limit:options.apiRateLimit ?? 120,windowMs:options.apiRateWindowMs ?? 60000});
+  const trafficRiskMonitor=(options.observeTrafficRisk===true || environment.R2V_TRAFFIC_RISK_OBSERVE==='true')
+    ? createTrafficMonitor({emit:options.onTrafficRiskEvent || (event=>console.warn(JSON.stringify(event))),thresholds:options.trafficRiskThresholds})
+    : null;
   const attempts=new Map();
   function rateLimit(req) {const key=req.socket.remoteAddress;const now=Date.now();let bucket=attempts.get(key);if(!bucket || bucket.until<now){bucket={count:0,until:now+60000};attempts.set(key,bucket);}if(++bucket.count>30)fail(429,'Too many sign-in attempts; try again in a minute');if(attempts.size>10000)for(const [k,v] of attempts)if(v.until<now)attempts.delete(k);}
   const server=http.createServer(async(req,res)=>{
@@ -140,6 +144,7 @@ function createApp(options={}) {
         if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin);}catch{fail(403,'Invalid origin');}if(origin.host!==req.headers.host)fail(403,'Cross-site request denied');}
         if(!String(req.headers['content-type']||'').startsWith('application/json'))fail(415,'Use application/json');
       }
+      if(trafficRiskMonitor) trafficRiskMonitor({remoteAddress:req.socket.remoteAddress,method,path,requestId});
       if(path.startsWith('/api/') && !path.startsWith('/api/health')) {const quota=apiLimiter(req.socket.remoteAddress || 'unknown');if(!quota.allowed){res.setHeader('Retry-After',String(quota.retryAfter));fail(429,'API rate limit exceeded');}}
       if(path==='/api/health/live' && method==='GET') return send(200,{status:'ok'});
       if((path==='/api/health'||path==='/api/health/ready') && method==='GET') {
