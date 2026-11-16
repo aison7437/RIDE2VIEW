@@ -10,7 +10,7 @@ function createPaymentSideEffectOutbox({
 }) {
   if (!Number.isSafeInteger(maxAttempts) || maxAttempts < 1 ||
       !Number.isSafeInteger(leaseMs) || leaseMs < 1 ||
-      !Number.isSafeInteger(retryMs) || retryMs < 1) {
+      !Number.isSafeInteger(retryMs) || retryMs < 0) {
     throw new Error('INVALID_SIDE_EFFECT_WORKER_CONFIG');
   }
 
