@@ -125,12 +125,19 @@ function createApp(options={}) {
   const authProvider=options.authVerificationProvider || authVerificationProviders(environment,options.fetchFn||fetch);
   // Independent, opt-in shadow accounting. Existing rate limits remain authoritative.
   const observeAuthQuotas=options.observeAuthQuotas===true || environment.R2V_AUTH_QUOTA_OBSERVE==='true';
-  const authQuotaObserver=options.authQuotaObserver ||
-    (observeAuthQuotas ? createAtomicAuthQuotaObserver({
-      db,secret:options.authQuotaSecret ?? environment.R2V_AUTH_QUOTA_SECRET ?? options.otpSecret ?? environment.R2V_AUTH_OTP_SECRET,
-      clock:options.authClock || Date.now,
-      emit:options.onAuthQuotaEvent || (event=>console.warn(JSON.stringify(event)))
-    }) : null);
+  let authQuotaObserver=options.authQuotaObserver || null;
+  if (!authQuotaObserver && observeAuthQuotas) {
+    try {
+      authQuotaObserver=createAtomicAuthQuotaObserver({
+        db,secret:options.authQuotaSecret ?? environment.R2V_AUTH_QUOTA_SECRET ?? options.otpSecret ?? environment.R2V_AUTH_OTP_SECRET,
+        clock:options.authClock || Date.now,
+        emit:options.onAuthQuotaEvent || (event=>console.warn(JSON.stringify(event)))
+      });
+    } catch {
+      // Optional telemetry must not make the authentication API fail to boot.
+      console.warn(JSON.stringify({event:'auth_quota_observer_unavailable',action:'OBSERVE_ONLY'}));
+    }
+  }
   const authOnboarding=createAuthOnboarding({
     db,audit,otpSecret:options.otpSecret ?? environment.R2V_AUTH_OTP_SECRET,
     verificationProvider:authProvider,passwordHash,digest,setSession,
