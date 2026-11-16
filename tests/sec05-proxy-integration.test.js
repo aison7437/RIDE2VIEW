@@ -77,7 +77,7 @@ test('backend shadow validation separates signed, tampered and absent proof with
       const status=response.status;await response.text();return status;
     };
     assert.equal(await send(originalBody,proof),400);
-    assert.equal(await send('{"password":"wrong"}',proof),400);
+    assert.equal(await send('{"password":"wrong"}',proof),401);
     assert.equal(await send(originalBody,{}),400);
     assert.equal(app.proxyProofStats.VERIFIED,1);
     assert.equal(app.proxyProofStats.INVALID,1);
