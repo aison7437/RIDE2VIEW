@@ -5,7 +5,7 @@ const assert=require('node:assert/strict');
 const {createApp}=require('../server/app');
 
 test('opt-in SEC-04 HTTP quota counts normalized phone challenges without changing existing 429 policy',async()=>{
-  let now=Date.now();
+  let now=Math.floor(Date.now()/3600000)*3600000+60000;
   const events=[];
   const sent=[];
   const provider={channels:{phone:true,email:true},async send(msg){sent.push(msg);return {messageId:'fake'};}};
