@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ride2View | Your account</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#142c25;background:#f5f7f3}*{box-sizing:border-box}main{max-width:440px;margin:7vh auto;padding:28px;background:white;border-radius:20px;box-shadow:0 14px 45px #102b1b12}h1{margin:0 0 8px}p{color:#51655c}label{display:block;font-weight:600;margin:15px 0 5px}input,button{font:inherit;width:100%;padding:13px;border-radius:10px}input{border:1px solid #a9b9ae}button{cursor:pointer;background:#194d35;color:white;border:0;margin-top:18px;font-weight:700}button:disabled{opacity:.55;cursor:not-allowed}.tabs{display:flex;gap:8px}.tabs button{margin:0;background:#e6f0e9;color:#194d35}.tabs button[aria-selected=true]{background:#194d35;color:white}.note{font-size:13px}#status{min-height:25px}a{color:#194d35} [hidden]{display:none!important}
+</style></head><body><main>
+<a href="./index.html">← Ride2View</a><h1>Welcome to Ride2View</h1><p>Create your account or sign in to continue.</p>
+<div class="tabs" role="tablist" aria-label="Account method"><button id="email-tab" type="button" aria-selected="true">Email + password</button><button id="phone-tab" type="button" aria-selected="false">Phone + OTP</button></div>
+<section id="email-panel"><form id="account-form">
+<label for="mode">Action</label><select id="mode" style="width:100%;padding:12px;border-radius:10px"><option value="register">Create account</option><option value="login">Sign in</option></select>
+<div id="name-row"><label for="name">Full name</label><input id="name" autocomplete="name" minlength="2" maxlength="100" required></div>
+<label for="email">Email</label><input id="email" type="email" autocomplete="email" maxlength="254" required>
+<label for="password">Password</label><input id="password" type="password" minlength="12" maxlength="256" autocomplete="new-password" required>
+<button id="submit" type="submit">Create account</button></form>
+<p class="note">Use a password of at least 12 characters. Registration requires a connected Ride2View API.</p></section>
+<section id="phone-panel" hidden><label for="phone">Kenyan phone number</label><input id="phone" type="tel" autocomplete="tel" placeholder="+254712345678" disabled><button disabled>Send OTP</button><p class="note">Phone verification is not active yet. SMS provider integration, expiry limits and abuse prevention are required before launch.</p></section>
+<p id="status" role="status" aria-live="polite"></p></main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const apiBase=window.R2V_API_ORIGIN||location.origin;
+function tab(phone){$('phone-panel').hidden=!phone;$('email-panel').hidden=phone;$('phone-tab').setAttribute('aria-selected',String(phone));$('email-tab').setAttribute('aria-selected',String(!phone));}
+$('phone-tab').addEventListener('click',()=>tab(true));$('email-tab').addEventListener('click',()=>tab(false));
+$('mode').addEventListener('change',()=>{const register=$('mode').value==='register';$('name-row').hidden=!register;$('name').required=register;$('password').autocomplete=register?'new-password':'current-password';$('submit').textContent=register?'Create account':'Sign in';$('status').textContent='';});
+$('account-form').addEventListener('submit',async e=>{e.preventDefault();const register=$('mode').value==='register';const btn=$('submit');btn.disabled=true;$('status').textContent='Please wait…';try{const body={email:$('email').value.trim(),password:$('password').value};if(register){body.name=$('name').value.trim();body.role='customer';}const response=await fetch(new URL(register?'/api/auth/register':'/api/auth/login',apiBase),{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body)});const result=await response.json();if(!response.ok)throw new Error(result.error||result.message||'Unable to continue');if(register){$('status').textContent='Account created. Please select Sign in to continue.';$('mode').value='login';$('mode').dispatchEvent(new Event('change'));}else{$('status').textContent='Signed in successfully.';location.assign('./index.html');}}catch(err){$('status').textContent=err instanceof TypeError?'Unable to reach the Ride2View API. Registration is not yet live on this deployment.':String(err.message||'Request failed');}finally{btn.disabled=false;}});
+</script></body></html>
