@@ -210,3 +210,49 @@ test('MSG-02: nontransactional handlers execute outside SQLite transactions', ()
     db.close();
   }
 });
+
+test('MSG-02: exhausted crashed-in-flight job is quarantined without a sixth attempt', () => {
+  const db = openStore(':memory:');
+  let deliveries = 0;
+  const outbox = createPaymentSideEffectOutbox({db, maxAttempts: 2,
+    handlers: {NOTICE() { deliveries++; }}
+  });
+  try {
+    const event = enqueue(outbox, 'expired-max-attempts');
+    db.prepare("UPDATE payment_side_effect_outbox SET status='PROCESSING',attempts=2,lease_owner='dead',lease_expires_at=? WHERE id=?")
+      .run('2000-01-01T00:00:00.000Z', event.id);
+    const result = outbox.processDue({workerId: 'survivor'});
+    assert.equal(result.length, 1);
+    assert.equal(result[0].status, 'QUARANTINED');
+    assert.equal(deliveries, 0);
+    const state = db.prepare('SELECT status,attempts FROM payment_side_effect_outbox WHERE id=?').get(event.id);
+    assert.equal(state.status, 'QUARANTINED');
+    assert.equal(state.attempts, 2);
+  } finally {
+    db.close();
+  }
+});
+
+test('MSG-02: accidentally async provider and local handlers are rejected without invocation', () => {
+  const db = openStore(':memory:');
+  let began = 0;
+  const outbox = createPaymentSideEffectOutbox({db,
+    handlers: {REMOTE: async () => {began++;}},
+    transactionalHandlers: {LOCAL: async () => {began++;}}
+  });
+  try {
+    const remote = enqueue(outbox, 'async-provider', 'REMOTE');
+    const local = enqueue(outbox, 'async-local', 'LOCAL');
+    const results = outbox.processDue();
+    assert.deepEqual(results.map(x => x.error), [
+      'SIDE_EFFECT_ASYNC_HANDLER_NOT_SUPPORTED',
+      'SIDE_EFFECT_ASYNC_TRANSACTION_HANDLER'
+    ]);
+    assert.equal(began, 0);
+    for (const e of [remote, local]) {
+      assert.equal(db.prepare('SELECT status FROM payment_side_effect_outbox WHERE id=?').get(e.id).status, 'QUARANTINED');
+    }
+  } finally {
+    db.close();
+  }
+});
