@@ -6,6 +6,33 @@ const ALLOWED = new Set([
   'auth/email/link/challenges', 'auth/phone/link/challenges', 'auth/challenges/verify'
 ]);
 
+// The proxy rewrites Origin for the backend's same-origin check. Validate the
+// *original* browser Origin first, otherwise the upstream never sees it.
+function hasSafeBrowserOrigin(req, env = {}) {
+  const headers = req.headers || {};
+  const fetchSite = headers['sec-fetch-site'];
+  if (fetchSite === 'cross-site') return false;
+  const originalOrigin = headers.origin;
+  // Preserve non-browser clients that have no Origin/Fetch Metadata headers.
+  // A same-site browser request without Origin cannot prove exact origin.
+  if (originalOrigin == null) return fetchSite !== 'same-site';
+  if (typeof originalOrigin !== 'string' || originalOrigin.length > 1024) return false;
+  const host = headers.host;
+  if (typeof host !== 'string' || host.length > 255 || !host ||
+      /[/@,\s]/.test(host)) return false;
+  try {
+    const origin = new URL(originalOrigin);
+    const requestHost = new URL('https://' + host);
+    const validScheme = origin.protocol === 'https:' ||
+      (env.VERCEL !== '1' && origin.protocol === 'http:');
+    return validScheme && !origin.username && !origin.password &&
+      origin.pathname === '/' && !origin.search && !origin.hash &&
+      origin.host === requestHost.host;
+  } catch {
+    return false;
+  }
+}
+
 function createProxy({ env = process.env, fetchFn = fetch } = {}) {
   return async function proxy(req, res) {
     res.setHeader('Cache-Control', 'no-store');
@@ -14,6 +41,9 @@ function createProxy({ env = process.env, fetchFn = fetch } = {}) {
     const path = pathParts.join('/');
     if (!ALLOWED.has(path)) { res.status(404).json({ error: 'Not found' }); return; }
     if (!['GET', 'POST'].includes(req.method)) { res.setHeader('Allow', 'GET, POST'); res.status(405).json({ error: 'Method not allowed' }); return; }
+    if (req.method === 'POST' && !hasSafeBrowserOrigin(req, env)) {
+      res.status(403).json({ error: 'Cross-site request denied' }); return;
+    }
     let upstream;
     try {
       upstream = new URL(env.R2V_API_ORIGIN || '');
@@ -49,3 +79,4 @@ function createProxy({ env = process.env, fetchFn = fetch } = {}) {
 
 module.exports = createProxy();
 module.exports.createProxy = createProxy;
+module.exports.hasSafeBrowserOrigin = hasSafeBrowserOrigin;
