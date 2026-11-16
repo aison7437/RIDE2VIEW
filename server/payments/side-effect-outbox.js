@@ -77,7 +77,10 @@ function createPaymentSideEffectOutbox({
       if (!current) throw error('SIDE_EFFECT_NOT_FOUND');
       if (current.status === 'DELIVERED') return {...current, duplicate: true};
       if (current.status === 'QUARANTINED') return {...current, quarantined: true};
-      if (current.status === 'FAILED' && current.attempts >= maxAttempts) {
+      if (['FAILED', 'PROCESSING'].includes(current.status) &&
+          current.attempts >= maxAttempts &&
+          (current.status !== 'PROCESSING' || !current.lease_expires_at ||
+            current.lease_expires_at <= nowIso)) {
         db.prepare("UPDATE payment_side_effect_outbox SET status='QUARANTINED',lease_owner=NULL,lease_expires_at=NULL,next_attempt_at=NULL,last_error=COALESCE(last_error,'SIDE_EFFECT_MAX_ATTEMPTS'),updated_at=? WHERE id=?")
           .run(nowIso, id);
         return {...get(id), quarantined: true};
@@ -101,11 +104,17 @@ function createPaymentSideEffectOutbox({
       if (Object.hasOwn(transactionalHandlers, row.effect_type)) {
         const handler = transactionalHandlers[row.effect_type];
         if (typeof handler !== 'function') throw error('SIDE_EFFECT_HANDLER_NOT_CONFIGURED');
+        if (handler.constructor?.name === 'AsyncFunction') {
+          throw error('SIDE_EFFECT_ASYNC_TRANSACTION_HANDLER');
+        }
         return complete(row, token, () => handler(payload, row));
       }
 
       const handler = Object.hasOwn(handlers, row.effect_type) ? handlers[row.effect_type] : null;
       if (typeof handler !== 'function') throw error('SIDE_EFFECT_HANDLER_NOT_CONFIGURED');
+      if (handler.constructor?.name === 'AsyncFunction') {
+        throw error('SIDE_EFFECT_ASYNC_HANDLER_NOT_SUPPORTED');
+      }
 
       // External effects are intentionally outside the database transaction:
       // they require their own idempotency and authoritative reconciliation.
