@@ -4,6 +4,11 @@ function createJourneyRoutes({journeys}){return ({path,method,user,body,send})=>
  if(path==='/api/journeys/pricing'&&['GET','POST'].includes(method)){send(method==='POST'?201:200,journeys.policy(user,method==='POST'?body:undefined));return true;}
  if(path==='/api/journeys'&&['GET','POST'].includes(method)){const r=method==='POST'?journeys.create(user,body):{journeys:journeys.list(user)};send(method==='POST'&&!r.duplicate?201:200,r);return true;}
  let m=path.match(/^\/api\/journeys\/([^/]+)$/);if(m&&method==='GET'){send(200,journeys.get(user,m[1]));return true;}
+ m=path.match(/^\/api\/journeys\/([^/]+)\/change-requests\/([^/]+)\/execution-readiness$/);if(m&&method==='GET'){send(200,journeys.changeExecutionReadiness(user,m[1],m[2]));return true;}
+ m=path.match(/^\/api\/journeys\/([^/]+)\/change-requests\/([^/]+)\/review$/);if(m&&method==='POST'){send(200,journeys.reviewChange(user,m[1],m[2],body));return true;}
+ m=path.match(/^\/api\/journeys\/([^/]+)\/change-requests$/);if(m&&method==='GET'){send(200,{requests:journeys.changeRequests(user,m[1])});return true;}
+ m=path.match(/^\/api\/journeys\/([^/]+)\/change-requests$/);if(m&&method==='POST'){const result=journeys.requestChange(user,m[1],body);send(result.duplicate?200:201,result);return true;}
+ m=path.match(/^\/api\/journeys\/([^/]+)\/decision$/);if(m&&method==='GET'){send(200,journeys.decision(user,m[1]));return true;}
  m=path.match(/^\/api\/journeys\/([^/]+)\/(quote|accept|cancel|reschedule|start|finish|refund)$/);if(m&&method==='POST'){const [id,action]=m.slice(1);const result=['start','finish'].includes(action)?journeys.transport(user,id,action):journeys[action==='refund'?'settleRefund':action](user,id,body);send(200,result);return true;}
  m=path.match(/^\/api\/journeys\/([^/]+)\/stops\/(\d+)\/(confirm|complete)$/);if(m&&method==='POST'){send(200,journeys[m[3]==='confirm'?'agentConfirm':'stopComplete'](user,m[1],Number(m[2]),body));return true;}
  return false;

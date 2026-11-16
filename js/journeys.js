@@ -14,7 +14,93 @@
  function quoteForm(j,card){const f=form('Publish reviewed quote',d=>api('/journeys/'+j.id+'/quote','POST',{version:j.version,route:{legs:j.plan.stops.slice(1).map((s,i)=>({distanceMetres:Math.round(Number(d['km'+i])*1000),minutes:Number(d['minutes'+i])})),waitingMinutes:Number(d.waitingMinutes),evidenceRef:d.evidenceRef}}));j.plan.stops.slice(1).forEach((s,i)=>{field(f,`Transfer ${i+1} distance (km)`,'km'+i,'number').step='0.001';field(f,`Transfer ${i+1} minutes`,'minutes'+i,'number').min='1';});field(f,'Estimated additional waiting minutes','waitingMinutes','number',0).min='0';field(f,'Route review evidence reference','evidenceRef').required=true;card.append(f);}
  async function rescheduleForm(j,card){const f=form('Reschedule whole package',d=>api('/journeys/'+j.id+'/reschedule','POST',{version:j.version,slotIds:j.plan.stops.map((s,i)=>d['slot'+i])}));for(let i=0;i<j.plan.stops.length;i++){const s=j.plan.stops[i],slots=(await api('/properties/'+s.listingId+'/slots')).slots;select(f,'New slot for property '+(i+1),'slot'+i,slots.map(v=>[v.id,new Date(v.start_at).toLocaleString()]));}card.append(f);}
  async function renderJourneys(rows,user){const target=$('journey-list');target.replaceChildren();if(!rows.length)target.append(node('p','No viewing packages yet.'));for(const j of rows){const card=node('article',null,'app-card');card.dataset.journeyId=j.id;card.append(node('h3','Viewing package · '+j.status),node('p','Package reference: '+j.id));if(j.plan.contact&&['customer','admin','driver'].includes(user.role))card.append(node('p','Pickup: '+j.plan.contact.pickup),node('p','Participants: '+j.plan.participants.map(p=>p.name).join(', ')));
- for(const s of j.stops){const row=node('div',null,'app-card');row.append(node('h4',`${s.position+1}. ${s.listing.title}`),node('p',`${new Date(s.startAt).toLocaleString()} · Agent ${s.request_status} · Stop ${s.status}`));if(['agent','admin'].includes(user.role)&&j.status==='PENDING_AGENTS'&&s.request_status==='REQUESTED'){row.append(button('Confirm package stop',async()=>{await api('/journeys/'+j.id+'/stops/'+s.position+'/confirm','POST',{version:j.version,decision:'ACCEPTED'});await refresh();}));const df=form('Decline whole package',d=>api('/journeys/'+j.id+'/stops/'+s.position+'/confirm','POST',{version:j.version,decision:'DECLINED',reason:d.reason}));field(df,'Decline reason','reason').required=true;row.append(df);}if(['driver','admin'].includes(user.role)&&j.status==='IN_PROGRESS'&&s.status!=='COMPLETED')row.append(button('Complete package stop '+(s.position+1),async()=>{await api('/journeys/'+j.id+'/stops/'+s.position+'/complete','POST',{version:j.version});await refresh();}));if(s.outcome)row.append(node('p','Outcome: '+s.outcome.outcome));else if(s.status==='COMPLETED'&&['customer','admin'].includes(user.role)){const of=form('Record property outcome',d=>api('/viewing-requests/'+s.request_id+'/outcome','POST',d));select(of,'Outcome','outcome',[['INTERESTED','Interested'],['NOT_INTERESTED','Not interested'],['FOLLOW_UP','Follow up']]);field(of,'Outcome notes','notes');row.append(of);}card.append(row);}
+ for(const s of j.stops){const row=node('div',null,'app-card');row.append(node('h4',`${s.position+1}. ${s.listing.title}`),node('p',`${new Date(s.startAt).toLocaleString()} · Agent ${s.request_status} · Stop ${s.status}`));if(['agent','admin'].includes(user.role)&&j.status==='PENDING_AGENTS'&&s.request_status==='REQUESTED'){row.append(button('Confirm package stop',async()=>{await api('/journeys/'+j.id+'/stops/'+s.position+'/confirm','POST',{version:j.version,decision:'ACCEPTED'});await refresh();}));const df=form('Decline whole package',d=>api('/journeys/'+j.id+'/stops/'+s.position+'/confirm','POST',{version:j.version,decision:'DECLINED',reason:d.reason}));field(df,'Decline reason','reason').required=true;row.append(df);}if(['driver','admin'].includes(user.role)&&j.status==='IN_PROGRESS'&&s.status!=='COMPLETED')row.append(button('Complete package stop '+(s.position+1),async()=>{await api('/journeys/'+j.id+'/stops/'+s.position+'/complete','POST',{version:j.version});await refresh();}));if(s.outcome)row.append(node('p','Outcome: '+s.outcome.outcome));
+ else if(user.role==='customer'&&j.status==='IN_PROGRESS'&&s.status==='COMPLETED'&&s.position!==Math.max(...j.stops.filter(t=>t.status==='COMPLETED').map(t=>t.position))){
+  row.append(button('Interested in '+s.listing.title,async()=>{
+   if(!s.request_id)throw new Error('Viewing request unavailable. Contact support.');
+   await api('/viewing-requests/'+encodeURIComponent(s.request_id)+'/outcome','POST',{outcome:'INTERESTED',notes:''});
+   status('Property interest recorded. Your transport remains active.');
+   await refresh();
+  }));
+ }
+ else if(s.status==='COMPLETED'&&(user.role==='admin'||(user.role==='customer'&&j.status!=='IN_PROGRESS'))){const of=form('Record property outcome',d=>api('/viewing-requests/'+s.request_id+'/outcome','POST',d));select(of,'Outcome','outcome',[['INTERESTED','Interested'],['NOT_INTERESTED','Not interested'],['FOLLOW_UP','Follow up']]);field(of,'Outcome notes','notes');row.append(of);}card.append(row);}
+
+ // Customer decision hub: never mutate driver-controlled transport state from a customer action.
+ if(user.role==='customer'&&j.status==='IN_PROGRESS'){
+  const decision=await api('/journeys/'+encodeURIComponent(j.id)+'/decision');
+  const completed=j.stops.filter(s=>s.status==='COMPLETED');
+  const next=j.stops.find(s=>s.position===decision.next?.position);
+  if(completed.length){
+   const current=completed[completed.length-1],hub=node('section',null,'app-card viewing-decision');
+   hub.append(node('h3','Viewing completed — what next?'),node('p',current.listing.title+' · Viewing '+completed.length+' of '+j.stops.length));
+   if(decision.actions.continue&&next){
+    hub.append(button('Continue to next house',async()=>{
+     status('Next scheduled property: '+next.listing.title+' at '+new Date(next.startAt).toLocaleString()+'. Your assigned driver confirms arrival and completion.');
+    }));
+   }else hub.append(node('p','All scheduled property stops have been visited.'));
+   if(decision.actions.interested){
+    hub.append(button("I'm interested in this house",async()=>{
+     if(!current.request_id){status('Viewing request unavailable. Contact support to record your interest.');return;}
+     await api('/viewing-requests/'+encodeURIComponent(current.request_id)+'/outcome','POST',{outcome:'INTERESTED',notes:''});
+     status('Interest recorded. Your transport journey remains active.');
+     await refresh();
+    }));
+   }else if(decision.current?.outcome) hub.append(node('p','Property response recorded: '+decision.current.outcome));
+   if(decision.pendingChange)hub.append(node('p','An operations review is pending ('+decision.pendingChange.kind.replaceAll('_',' ')+'). Additional change requests are unavailable until it is reviewed.'));
+   if(decision.actions.returnReview){
+    if(decision.returnIncluded){
+     const returnForm=form('Return with Ride2Go — request coordination',async d=>{
+      const reason=String(d.reason||'').trim();
+      if(!reason)throw new Error('Please provide return pickup instructions.');
+      const result=await api('/journeys/'+encodeURIComponent(j.id)+'/change-requests','POST',{kind:'RETURN_REVIEW',reason,idempotencyKey:returnForm.dataset.requestKey});
+      status('Return coordination request '+result.status.toLowerCase()+'. Operations will review your included return; no new fare has been charged.');
+      await refresh();
+     });
+     returnForm.dataset.requestKey=crypto.randomUUID();
+     field(returnForm,'Return pickup instructions','reason').required=true;
+     hub.append(returnForm);
+    }else hub.append(button('Return with Ride2Go',async()=>{
+     const section=$('mobility-workspace');
+     if(section){section.hidden=false;section.scrollIntoView({behavior:'smooth'});}
+     status('Return transport is not included. Review a separate Ride2Go quote before booking; no charge has been initiated.');
+    }));
+   }
+   if(decision.actions.endGuidance){
+    const endForm=form('End my journey — request review',async d=>{
+     const reason=String(d.reason||'').trim();
+     if(!reason)throw new Error('Please explain why you need to end your journey early.');
+     const result=await api('/journeys/'+encodeURIComponent(j.id)+'/change-requests','POST',{kind:'EARLY_END',reason,idempotencyKey:endForm.dataset.requestKey});
+     status('Early-end request '+result.status.toLowerCase()+'. Operations must review remaining stops and fare adjustments before the driver can finish.');
+    });
+    endForm.dataset.requestKey=crypto.randomUUID();
+    field(endForm,'Reason for ending early','reason').required=true;
+    hub.append(endForm);
+   }
+   hub.append(node('p','Transport stays active until the authorized driver or operations completes it. No fare, refund or dispatch status is changed by these guidance actions.'));
+   card.append(hub);
+  }
+ }
+ if(['customer','admin'].includes(user.role)){
+  const changes=(await api('/journeys/'+encodeURIComponent(j.id)+'/change-requests')).requests;
+  if(changes.length){
+   const details=node('details');details.append(node('summary','Journey change requests'));
+   for(const r of changes){
+    const item=node('div',null,'app-card');
+    item.append(node('p',r.kind.replaceAll('_',' ')+' · '+r.status),node('p','Reason: '+r.reason));
+    if(r.reviewNote)item.append(node('p','Operations note: '+r.reviewNote));
+    if(user.role==='admin'&&r.status==='PENDING'){
+     const review=form('Submit operations review',async d=>{
+      await api('/journeys/'+encodeURIComponent(j.id)+'/change-requests/'+encodeURIComponent(r.id)+'/review','POST',{decision:d.decision,note:d.note});
+     });
+     select(review,'Decision','decision',[['REVIEWED','Reviewed — execution remains separate'],['REJECTED','Reject request']]);
+     field(review,'Operations review note','note').required=true;
+     item.append(review);
+    }
+    details.append(item);
+   }
+   card.append(details);
+  }
+ }
  if(!j.stops.length)j.plan.stops.forEach((s,i)=>card.append(node('p',`Planned stop ${i+1}: ${s.listingId}`)));
  if(j.quote){const q=j.quote;card.append(node('p',`Quoted total KES ${q.totalKES} · policy ${q.policyVersion}: ${q.policy.label}`),node('p',`Base KES ${q.baseKES} · inter-property distance KES ${(q.distanceMinor/100).toFixed(2)} · return KES ${(q.returnMinor/100).toFixed(2)} · waiting KES ${(q.waitingMinor/100).toFixed(2)} · rounding KES ${(q.roundingMinor/100).toFixed(2)}`),node('p',q.policy.cancellation),node('p',q.policy.routeMode),node('p',q.policy.taxMode));if(j.status==='QUOTED')card.append(node('p','Quote expires '+new Date(j.quote_expires_at).toLocaleString()));}
  if(user.role==='admin'&&['DRAFT','QUOTED'].includes(j.status))quoteForm(j,card);
