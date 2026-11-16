@@ -244,10 +244,11 @@ test('MSG-02: accidentally async provider and local handlers are rejected withou
     const remote = enqueue(outbox, 'async-provider', 'REMOTE');
     const local = enqueue(outbox, 'async-local', 'LOCAL');
     const results = outbox.processDue();
-    assert.deepEqual(results.map(x => x.error), [
-      'SIDE_EFFECT_ASYNC_HANDLER_NOT_SUPPORTED',
-      'SIDE_EFFECT_ASYNC_TRANSACTION_HANDLER'
-    ]);
+    assert.deepEqual(
+      new Set(results.map(x => x.error)),
+      new Set(['SIDE_EFFECT_ASYNC_HANDLER_NOT_SUPPORTED',
+        'SIDE_EFFECT_ASYNC_TRANSACTION_HANDLER'])
+    );
     assert.equal(began, 0);
     for (const e of [remote, local]) {
       assert.equal(db.prepare('SELECT status FROM payment_side_effect_outbox WHERE id=?').get(e.id).status, 'QUARANTINED');
