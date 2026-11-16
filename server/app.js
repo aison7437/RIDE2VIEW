@@ -127,7 +127,7 @@ function createApp(options={}) {
   const observeAuthQuotas=options.observeAuthQuotas===true || environment.R2V_AUTH_QUOTA_OBSERVE==='true';
   const authQuotaObserver=options.authQuotaObserver ||
     (observeAuthQuotas ? createAtomicAuthQuotaObserver({
-      db,secret:options.authQuotaSecret ?? options.otpSecret ?? environment.R2V_AUTH_OTP_SECRET,
+      db,secret:options.authQuotaSecret ?? environment.R2V_AUTH_QUOTA_SECRET ?? options.otpSecret ?? environment.R2V_AUTH_OTP_SECRET,
       clock:options.authClock || Date.now,
       emit:options.onAuthQuotaEvent || (event=>console.warn(JSON.stringify(event)))
     }) : null);
