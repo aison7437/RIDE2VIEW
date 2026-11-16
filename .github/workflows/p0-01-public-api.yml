@@ -1,0 +1,23 @@
+name: P0-01 Public API Deployment Gate
+on:
+  workflow_dispatch:
+    inputs:
+      frontend_url:
+        description: 'Public customer-facing HTTPS origin (no path), e.g. https://app.example.com'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  public-origin-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Check customer frontend and same-origin API
+        env:
+          FRONTEND_URL: ${{ inputs.frontend_url }}
+        run: npm run check:frontend-api
