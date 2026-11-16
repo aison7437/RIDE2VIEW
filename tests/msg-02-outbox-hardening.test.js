@@ -171,3 +171,42 @@ test('MSG-02: corrupt payload is quarantined rather than silently converting to 
     db.close();
   }
 });
+
+test('MSG-02: recovery of a pre-applied local event cannot duplicate its stable notification', async () => {
+  const app = createApp({dbPath: ':memory:', startOperationsRuntime: false,
+    startSideEffectRuntime: false, startProviderCallbackRuntime: false,
+    startPaymentInitiationRuntime: false});
+  try {
+    const db = app.db;
+    db.prepare("INSERT INTO users(id,email,name,password,role,verified) VALUES('c','prior@msg02.test','Customer','x','customer',1)").run();
+    const event = enqueue(app.sideEffects, 'already-notified', 'BOOKING_PAYMENT_VERIFIED',
+      {customerId: 'c', paymentId: 'p'});
+    db.prepare('INSERT INTO notifications(id,user_id,message,created_at) VALUES(?,?,?,?)')
+      .run('payment-effect:' + event.id, 'c',
+        'Payment verified. Viewing confirmed; driver assignment pending.', new Date().toISOString());
+    db.prepare("UPDATE payment_side_effect_outbox SET status='PROCESSING',lease_owner='abandoned',lease_expires_at=? WHERE id=?")
+      .run('2000-01-01T00:00:00.000Z', event.id);
+    assert.equal(app.sideEffects.processDue({workerId: 'replay'})[0].status, 'DELIVERED');
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM notifications').get().n, 1);
+  } finally {
+    await app.close();
+  }
+});
+
+test('MSG-02: nontransactional handlers execute outside SQLite transactions', () => {
+  const db = openStore(':memory:');
+  let ran = 0;
+  const outbox = createPaymentSideEffectOutbox({db, handlers: {
+    NOTICE() {
+      assert.equal(db.isTransaction, false);
+      ran++;
+    }
+  }});
+  try {
+    const event = enqueue(outbox, 'external-boundary');
+    assert.equal(outbox.process({id: event.id}).status, 'DELIVERED');
+    assert.equal(ran, 1);
+  } finally {
+    db.close();
+  }
+});
