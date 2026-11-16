@@ -91,3 +91,20 @@ test('backend shadow validation separates signed, tampered and absent proof with
     }
   }finally {await app.close();}
 });
+
+
+test('disabled signing preserves the existing allowlisted proxy behavior',async()=>{
+  const sent=[];
+  const proxy=createProxy({
+    env:{VERCEL:'1',R2V_API_ORIGIN:'https://api.ride2view.example'},
+    fetchFn:async(url,options)=>{sent.push(options);return okResponse();}
+  });
+  const res=recorder();
+  await proxy({method:'POST',query:{path:['auth','login']},
+    headers:{host:'premium.ride2view.example',origin:'https://premium.ride2view.example',
+      'content-type':'application/json','x-r2v-proxy-timestamp':'forged'},
+    body:{email:'a@example.test'}},res);
+  assert.equal(res.statusCode,200);
+  assert.equal(sent.length,1);
+  for(const key of Object.values(HEADERS)) assert.equal(sent[0].headers[key],undefined);
+});
