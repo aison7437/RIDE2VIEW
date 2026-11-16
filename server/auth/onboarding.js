@@ -9,7 +9,7 @@ const OTP_TTL_MS = 5 * 60 * 1000;
 const RESEND_WINDOW_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
 
-function createAuthOnboarding({ db, audit, otpSecret, verificationProvider, passwordHash, digest, setSession, now = Date.now }) {
+function createAuthOnboarding({ db, audit, otpSecret, verificationProvider, passwordHash, digest, setSession, now = Date.now, quotaObserver = null }) {
   const configured = { phone: Boolean(verificationProvider?.channels?.phone), email: Boolean(verificationProvider?.channels?.email) };
   const hasOtpSecret = typeof otpSecret === 'string' && otpSecret.length >= 32;
   const enabled = Boolean(hasOtpSecret && (configured.phone || configured.email));
@@ -72,6 +72,14 @@ function createAuthOnboarding({ db, audit, otpSecret, verificationProvider, pass
   async function startChallenge({ kind, destination, userId = null, draft = {} }) {
     const channel = kind.startsWith('phone') ? 'phone' : 'email';
     ensureEnabled(channel);
+    // Optional shared SQLite observation, before the existing destination limiter.
+    // Fail-open by design; never change authentication or payment decisions.
+    if (quotaObserver) {
+      try { quotaObserver.observe({
+        scope:channel+'_challenge',subject:destination,
+        limit:3,windowMs:60*60*1000
+      }); } catch { /* observational infrastructure is not an auth dependency */ }
+    }
     rateDestination(kind, destination);
     const challengeId = randomUUID();
     const code = generateOtp();

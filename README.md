@@ -76,6 +76,10 @@ Authentication uses salted scrypt password hashes and HttpOnly SameSite cookies.
 
 **V12 account registration** adds Kenyan phone OTP and email/password registration, verified email/phone linking, expiring single-use challenges, attempt/resend limits, and HttpOnly session cookies. SMS is sent through Africa's Talking and email through Resend. Configure `AT_USERNAME`, `AT_API_KEY`, optional `AT_SENDER_ID`, `RESEND_API_KEY`, `R2V_AUTH_EMAIL_FROM`, and a random `R2V_AUTH_OTP_SECRET` of at least 32 characters in the server's secret store. Production domains/sender IDs must be approved by their providers. `/api/config` reports the active verification channels. The legacy unverified registration endpoint is rejected in production, and production password sign-in requires a verified contact. See [V12 setup and verification limits](docs/v12-auth-onboarding.md).
 
+## SEC-04 — Atomic authentication quota observations
+
+An optional, observation-only SQLite counter monitors normalized email/phone challenge velocity across processes that share the **same SQLite file**. It does not block requests, replace existing OTP restrictions, or provide cross-host distributed quotas. The default is off; see [SEC-04 architecture and rollout gates](docs/security-sec04-atomic-auth-quotas.md).
+
 ## Checks
 
 ```bash

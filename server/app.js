@@ -29,6 +29,7 @@ const {createJourneyRoutes}=require('./journeys/routes');
 const {packageForBooking}=require('./journeys/hooks');
 const http = require('node:http');
 const {createRateLimiter,logRequestError,productionConfig}=require('./security');
+const {createAtomicAuthQuotaObserver}=require('./atomic-auth-quota');
 const { randomUUID, randomBytes, scryptSync, timingSafeEqual, createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
@@ -122,7 +123,26 @@ function createApp(options={}) {
   function setSession(res,token) {res.setHeader('Set-Cookie',`r2v_session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${secure?'; Secure':''}`);}
   function getUser(req) {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(!token)return null;return db.prepare("SELECT u.id,u.name,CASE WHEN u.email LIKE '%@phone.ride2view.invalid' THEN NULL ELSE u.email END AS email,u.role,u.verified,(SELECT address FROM auth_contacts c WHERE c.user_id=u.id AND c.kind='phone' AND c.verified_at IS NOT NULL LIMIT 1) AS phone FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires>?").get(digest(token),Date.now()) || null;}
   const authProvider=options.authVerificationProvider || authVerificationProviders(environment,options.fetchFn||fetch);
-  const authOnboarding=createAuthOnboarding({db,audit,otpSecret:options.otpSecret ?? environment.R2V_AUTH_OTP_SECRET,verificationProvider:authProvider,passwordHash,digest,setSession,now:options.authClock});
+  // Independent, opt-in shadow accounting. Existing rate limits remain authoritative.
+  const observeAuthQuotas=options.observeAuthQuotas===true || environment.R2V_AUTH_QUOTA_OBSERVE==='true';
+  let authQuotaObserver=options.authQuotaObserver || null;
+  if (!authQuotaObserver && observeAuthQuotas) {
+    try {
+      authQuotaObserver=createAtomicAuthQuotaObserver({
+        db,secret:options.authQuotaSecret ?? environment.R2V_AUTH_QUOTA_SECRET ?? options.otpSecret ?? environment.R2V_AUTH_OTP_SECRET,
+        clock:options.authClock || Date.now,
+        emit:options.onAuthQuotaEvent || (event=>console.warn(JSON.stringify(event)))
+      });
+    } catch {
+      // Optional telemetry must not make the authentication API fail to boot.
+      console.warn(JSON.stringify({event:'auth_quota_observer_unavailable',action:'OBSERVE_ONLY'}));
+    }
+  }
+  const authOnboarding=createAuthOnboarding({
+    db,audit,otpSecret:options.otpSecret ?? environment.R2V_AUTH_OTP_SECRET,
+    verificationProvider:authProvider,passwordHash,digest,setSession,
+    now:options.authClock,quotaObserver:authQuotaObserver
+  });
   function bookingFor(id,user) {const b=db.prepare('SELECT b.*,l.payload AS listing FROM bookings b JOIN listings l ON l.id=b.listing_id WHERE b.id=?').get(id);if(!b)fail(404,'Booking not found');if(user.role!=='admin' && b.customer_id!==user.id && b.driver_id!==user.id)fail(403,'Booking belongs to another account');return b;}
   async function readBody(req) {let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>(['/api/supply/documents','/api/mobility/documents','/api/property-services/documents'].includes(req.url)?3000000:65536))fail(413,'Request is too large');chunks.push(c);}try{req.rawBody=Buffer.concat(chunks).toString() || '{}';return JSON.parse(req.rawBody);}catch{fail(400,'Invalid JSON body');}}
   const apiLimiter=createRateLimiter({limit:options.apiRateLimit ?? 120,windowMs:options.apiRateWindowMs ?? 60000});
