@@ -83,7 +83,7 @@ export default function Home() {
     else {setDetail(null);}
   }
   function beginSearch(event:React.FormEvent<HTMLFormElement>){setDemoMode(false);void search(event);}
-  const displayCards = demoMode ? visibleSamples : results.filter(item => activeCategory==='All'||activeCategory==='For Rent');
+  const displayCards = results;
   return <main className="market">
     <div className="market-notice"><strong>INTERACTIVE DESIGN PREVIEW</strong> · Example properties and illustrative images · No live inventory, payments, or confirmed bookings</div>
     <section className="market-hero" aria-label="Ride2View search">
