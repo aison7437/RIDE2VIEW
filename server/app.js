@@ -43,6 +43,7 @@ const { createSafetyAuthority } = require('./safety');
 const { createReservationAuthority } = require('./scheduling/reservations');
 const { createCancellationCoordinator } = require('./recovery/cancellation-coordinator');
 const { createAuthOnboarding } = require('./auth/onboarding');
+const { allowedWorkspaces } = require('./identity/workspaces');
 const { fromEnvironment: authVerificationProviders } = require('./auth/providers');
 const TIERS = Object.freeze({general:650, women:750, students:450, vip:2000});
 const passwordHash = password => { const salt=randomBytes(16).toString('hex'); return salt+':'+scryptSync(password,salt,64).toString('hex'); };
@@ -219,7 +220,7 @@ function createApp(options={}) {
         const phone=db.prepare("SELECT address FROM auth_contacts WHERE user_id=? AND kind='phone' AND verified_at IS NOT NULL LIMIT 1").get(account.id)?.address||null;
         return send(200,{id:account.id,name:account.name,email:publicEmail,phone,role:account.role,verified:account.verified});
       }
-      if(path==='/api/auth/me' && method==='GET') {if(!user)fail(401,'Sign in to continue');return send(200,user);}
+      if(path==='/api/auth/me' && method==='GET') {if(!user)fail(401,'Sign in to continue');return send(200,{...user,access:allowedWorkspaces(db,user)});}
       if(path==='/api/auth/logout' && method==='POST') {const token=req.headers.cookie?.match(/(?:^|;\s*)r2v_session=([^;]+)/)?.[1];if(token)db.prepare('DELETE FROM sessions WHERE token=?').run(digest(token));res.setHeader('Set-Cookie','r2v_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return send(200,{success:true});}
       if(path==='/api/listings' && method==='GET') {
         const mine=url.searchParams.get('mine')==='true';
