@@ -1,0 +1,30 @@
+name: Identity V1 regression
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/identity/**'
+      - 'server/app.js'
+      - 'server/auth/**'
+      - 'tests/identity-workspaces.test.js'
+      - 'tests/v12-registration.test.js'
+      - 'apps/web/app/account/**'
+      - '.github/workflows/identity-v1.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  identity-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify account and registration security
+        run: node --test tests/identity-workspaces.test.js tests/v12-registration.test.js tests/api-contract.test.js
+      - name: Verify API specification stays synchronized
+        run: npm run check:api
