@@ -27,7 +27,7 @@ test('V2 schema starts empty; never backfills or authorizes legacy identities',(
 });
 test('membership approval requires a reviewer and organization-scoped professional role',()=>{
  const db=dbFixture();org(db);
- assert.throws(()=>membership(db,'unreviewed','APPROVED'),/CHECK constraint/);
+ assert.throws(()=>db.prepare("INSERT INTO identity_memberships(id,user_id,organization_id,role,status,created_at,updated_at) VALUES('unreviewed','customer-1','org-1','PHARMACIST','APPROVED','2026-01-01','2026-01-01')").run(),/CHECK constraint/);
  assert.throws(()=>membership(db,'unscoped','PENDING','PHARMACIST',null),/CHECK constraint/);
  membership(db,'pending');
  assert.throws(()=>membership(db,'duplicate'),/UNIQUE constraint/);
