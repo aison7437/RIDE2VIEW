@@ -36,6 +36,7 @@ export default function AccountGateway() {
   const [view, setView] = useState<ViewState>('checking');
   const [account, setAccount] = useState<Identity | null>(null);
   const [method, setMethod] = useState<SignInMethod>('phone');
+  const [emailRegistration, setEmailRegistration] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -111,6 +112,26 @@ export default function AccountGateway() {
     finally{setBusy(false);}
   }
 
+  async function registerEmail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);setMessage('');
+    try {
+      const response = await fetch('/api/auth/email/challenges', {
+        method:'POST',credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({email,name,password,role:'customer'})
+      });
+      const body = await responseBody(response);
+      if (!response.ok) throw responseError(body, 'Unable to start email registration.');
+      if (typeof body.challengeId !== 'string') throw new Error('Verification service returned an incomplete challenge.');
+      setChallengeId(body.challengeId);
+      setPassword('');
+      setMessage('Enter the six-digit verification code sent to your email address.');
+    } catch(error){setMessage(error instanceof Error ? error.message : 'Registration failed.');}
+    finally{setBusy(false);}
+  }
+
   async function loginEmail(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
@@ -158,7 +179,7 @@ export default function AccountGateway() {
           <h2>Welcome to Ride2View</h2>
           <p>Sign in securely or register as a new customer with your phone.</p>
           <div className="identity-tabs" role="group" aria-label="Sign-in method">
-            <button type="button" aria-pressed={method==='phone'} className={method==='phone'?'selected':''} onClick={()=>{setMethod('phone');setMessage('');}}>Phone + OTP</button>
+            <button type="button" aria-pressed={method==='phone'} className={method==='phone'?'selected':''} onClick={()=>{setMethod('phone');setChallengeId('');setMessage('');}}>Phone + OTP</button>
             <button type="button" aria-pressed={method==='email'} className={method==='email'?'selected':''} onClick={()=>{setMethod('email');setChallengeId('');setMessage('');}}>Email + password</button>
           </div>
           {method==='phone' && !challengeId && <form onSubmit={requestPhoneCode} className="identity-fields">
@@ -169,20 +190,26 @@ export default function AccountGateway() {
             <button disabled={busy} type="submit" className="identity-primary">{busy?'Sending…':'Send verification code'}</button>
             <p className="identity-footnote">Existing customers sign in; new phone users register as customers. Professional privileges require separate approval.</p>
           </form>}
-          {method==='phone' && Boolean(challengeId) && <form onSubmit={verifyPhone} className="identity-fields">
+          {Boolean(challengeId) && <form onSubmit={verifyPhone} className="identity-fields">
             <label htmlFor="identity-code">Six-digit verification code</label>
             <input id="identity-code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required placeholder="123456" value={code} onChange={event=>setCode(event.target.value)}/>
             <button disabled={busy} type="submit" className="identity-primary">{busy?'Verifying…':'Verify & sign in'}</button>
-            <button type="button" className="identity-secondary" onClick={()=>{setChallengeId('');setCode('');setMessage('');}}>Use another number</button>
+            <button type="button" className="identity-secondary" onClick={()=>{setChallengeId('');setCode('');setMessage('');}}>Start again</button>
           </form>}
-          {method==='email' && <form onSubmit={loginEmail} className="identity-fields">
+          {method==='email' && !challengeId && <>
+            <button type="button" className="identity-secondary" onClick={()=>{setEmailRegistration(!emailRegistration);setMessage('');}}>{emailRegistration?'Already registered? Sign in':'New here? Create an email account'}</button>
+            <form onSubmit={emailRegistration?registerEmail:loginEmail} className="identity-fields">
+            {emailRegistration && <>
+              <label htmlFor="identity-email-name">Full name</label>
+              <input id="identity-email-name" autoComplete="name" minLength={2} maxLength={100} required value={name} onChange={event=>setName(event.target.value)}/>
+            </>}
             <label htmlFor="identity-email">Email address</label>
             <input id="identity-email" autoComplete="username" type="email" required placeholder="you@example.com" value={email} onChange={event=>setEmail(event.target.value)}/>
             <label htmlFor="identity-password">Password</label>
-            <input id="identity-password" type="password" autoComplete="current-password" required value={password} onChange={event=>setPassword(event.target.value)}/>
-            <button disabled={busy} type="submit" className="identity-primary">{busy?'Signing in…':'Sign in to your account'}</button>
-            <p className="identity-footnote">For an existing email/password account. New email accounts use the separate verified registration flow.</p>
-          </form>}
+            <input id="identity-password" type="password" autoComplete={emailRegistration?'new-password':'current-password'} minLength={emailRegistration?12:undefined} required value={password} onChange={event=>setPassword(event.target.value)}/>
+            <button disabled={busy} type="submit" className="identity-primary">{busy?'Please wait…':emailRegistration?'Send email verification code':'Sign in to your account'}</button>
+            <p className="identity-footnote">{emailRegistration?'Email verification is required before creating your customer account.':'Sign in using an existing verified email account.'}</p>
+          </form></>}
           {message && <p role="status" className="identity-message">{message}</p>}
         </>}
         {view==='ready' && account && <>
