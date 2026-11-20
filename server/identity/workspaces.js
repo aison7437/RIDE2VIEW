@@ -1,55 +1,56 @@
 'use strict';
 
 /**
- * Identity V1 is an additive compatibility layer.
- * Legacy domain APIs continue to authorize against users.role and their
- * domain-specific verification records; a workspace entry is NOT permission.
+ * Ride2View Identity V1: READ-ONLY workspace discovery.
+ *
+ * This does not change authorization. Existing domain APIs still require the
+ * legacy users.role and independently checked professional eligibility.
+ * Never interpret a workspace link as approval to drive, publish, dispense,
+ * or perform privileged operations.
  */
-const LEGACY_ROLES = Object.freeze(['customer', 'driver', 'agent', 'admin']);
-const WORKSPACE_PATHS = Object.freeze({
-  customer: '/customer',
-  driver: '/driver',
-  agent: '/agent',
-  admin: '/admin'
+const WORKSPACES = Object.freeze({
+  customer: Object.freeze({key:'customer',label:'Customer',path:'/customer'}),
+  driver: Object.freeze({key:'driver',label:'Driver',path:'/driver'}),
+  agent: Object.freeze({key:'agent',label:'Property Agent',path:'/agent'}),
+  admin: Object.freeze({key:'admin',label:'Administration',path:'/admin'})
 });
 
 function allowedWorkspaces(db, user) {
   if (!user) return null;
-  if (!LEGACY_ROLES.includes(user.role)) return { defaultWorkspace: null, workspaces: [], applications: [] };
-  const now = new Date().toISOString();
+  const primary = WORKSPACES[user.role];
+  if (!primary) return {defaultWorkspace:null,workspaces:[],applications:[],phase:'LEGACY_PRIMARY_ROLE_ONLY'};
   const hasVerifiedContact = Boolean(
     db.prepare("SELECT 1 FROM auth_contacts WHERE user_id=? AND verified_at IS NOT NULL LIMIT 1").get(user.id)
   );
-  const identityVerified = Boolean(user.verified || hasVerifiedContact);
-
-  // Do not silently grant customer access to a legacy professional identity.
-  // Existing role guards still enforce all business APIs.
-  const workspaces = [];
-  const applications = [];
-  const approved = user.role === 'customer' ? identityVerified : user.role === 'admin' ? Boolean(user.verified) : Boolean(user.verified);
-  const role = user.role;
-  const operationallyEligible = role === 'customer' || role === 'admin'
-    ? approved : role === 'agent'
-      ? approved && Boolean(db.prepare("SELECT 1 FROM agent_profiles WHERE user_id=? LIMIT 1").get(user.id))
-      : approved && Boolean(db.prepare("SELECT 1 FROM driver_profiles WHERE user_id=? LIMIT 1").get(user.id));
-
-  // Existing service-level guards remain authoritative, including independent
-  // agent publication and driver dispatch eligibility checks. We only advertise
-  // a landing page, not a promise that operational actions are enabled.
-  if (identityVerified) {
-    workspaces.push({
-      key: role,
-      label: {customer:'Customer',driver:'Driver',agent:'Property Agent',admin:'Administration'}[role],
-      path: WORKSPACE_PATHS[role],
-      operationalStatus: operationallyEligible ? 'ELIGIBILITY_REQUIRES_DOMAIN_CHECK' : 'PENDING_VERIFICATION'
-    });
-  }
-  if (role === 'customer') {
-    for (const application of ['driver','agent','pharmacy']) {
-      applications.push({ key: application, status: 'NOT_STARTED', selfServiceEnabled: false });
-    }
-  }
-  return { defaultWorkspace: workspaces[0]?.key || null, workspaces, applications, asOf: now };
+  const contactVerified = hasVerifiedContact;
+  const professional = user.role === 'agent' || user.role === 'driver';
+  // A professional's legacy verified flag is NOT a complete safety/agency
+  // clearance; the operating domain rechecks documentary review every time.
+  const operationalStatus = professional
+    ? 'REQUIRES_DOMAIN_ELIGIBILITY_CHECK'
+    : (Boolean(user.verified) || hasVerifiedContact ? 'IDENTITY_VERIFIED' : 'IDENTITY_PENDING');
+  const workspaces = [{
+    ...primary,
+    membership:'PRIMARY_LEGACY_ROLE',
+    operationalStatus,
+    contactVerified
+  }];
+  // Applications are discovery-only until separate regulated onboarding,
+  // organization roles, approval and server-side policy enforcement exist.
+  const applications = user.role === 'customer'
+    ? ['driver','agent','pharmacy'].map(key=>({
+        key,
+        status:'NOT_STARTED',
+        selfServiceEnabled:false
+      }))
+    : [];
+  return {
+    defaultWorkspace:primary.key,
+    workspaces,
+    applications,
+    phase:'LEGACY_PRIMARY_ROLE_ONLY',
+    multiRoleEnabled:false
+  };
 }
 
-module.exports = {allowedWorkspaces, WORKSPACE_PATHS};
+module.exports = {allowedWorkspaces, WORKSPACES};
