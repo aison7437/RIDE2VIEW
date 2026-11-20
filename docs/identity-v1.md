@@ -5,7 +5,7 @@ This is a **compatibility foundation**, not full multi-role authorization. Its g
 
 ## Implemented
 
-- Next.js `/account` presents **phone OTP** via existing `POST /api/auth/phone/challenges` and `POST /api/auth/challenges/verify`, or **email/password sign-in** via existing `POST /api/auth/login`.
+- Next.js `/account` presents **phone OTP** via existing `POST /api/auth/phone/challenges` and `POST /api/auth/challenges/verify`, or **email/password sign-in** via existing `POST /api/auth/login`. New email customers register via `POST /api/auth/email/challenges` followed by `POST /api/auth/challenges/verify`.
 - Existing verified contact and session mechanisms remain authoritative; session cookies remain HttpOnly, SameSite=Strict and Secure where the configured deployment requires it.
 - `GET /api/auth/me` retains all existing fields and additionally returns `access`, a server-derived workspace directory. The account UI does **not** trust a client-supplied role.
 - Existing role dashboard routes at `/customer`, `/driver`, `/agent`, `/admin` are unchanged. Their API calls continue enforcing the legacy `users.role` and domain-specific eligibility checks.
@@ -55,3 +55,10 @@ Example only; actual values depend on the authenticated account. A workspace lin
 
 ## Validation
 Run `npm test`, `npm run check:api`, `npm run test:acceptance` and the Next.js frontend workflow before merge. Review the security assumptions above. Do not merge a draft PR until required checks pass.
+
+## Deployment audit (2026-11-20)
+- `apps/web/next.config.mjs` rewrites `/api/:path*` only when `RIDE2VIEW_API_ORIGIN` is configured. It requires HTTPS in production and deliberately omits the rewrite when the variable is absent.
+- The Vercel `ride-2-view` project has a sensitive `RIDE2VIEW_API_ORIGIN` variable scoped to production and preview; its **value was not decrypted**, so a reachable backend has not been established.
+- The Vercel `ride2view-premium-web` project did not show a corresponding project environment variable. These are distinct deployments and must not be assumed to have identical routing.
+- Successful Vercel build status means deployment compiled; it does not prove API connectivity, OTP delivery, or authenticated browser flows.
+- Production launch remains gated on real HTTPS backend readiness, browser cookie tests, SMS/email delivery, and a staged account security review.
