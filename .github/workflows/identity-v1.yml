@@ -1,7 +1,7 @@
 name: Identity V1 regression
 on:
   pull_request:
-    branches: [main, feat/identity-workspaces-v1]
+    branches: [main, feat/identity-workspaces-v1, feat/identity-v2-membership-schema]
     paths:
       - 'server/identity/**'
       - 'server/migrations/index.js'
@@ -9,6 +9,7 @@ on:
       - 'server/auth/**'
       - 'tests/identity-workspaces.test.js'
       - 'tests/identity-v2-schema.test.js'
+      - 'tests/identity-v2-authority.test.js'
       - 'tests/v12-registration.test.js'
       - 'apps/web/app/account/**'
       - '.github/workflows/identity-v1.yml'
@@ -27,6 +28,6 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
       - name: Verify account and registration security
-        run: node --test tests/identity-workspaces.test.js tests/identity-v2-schema.test.js tests/v12-registration.test.js tests/api-contract.test.js
+        run: node --test tests/identity-workspaces.test.js tests/identity-v2-schema.test.js tests/identity-v2-authority.test.js tests/v12-registration.test.js tests/api-contract.test.js
       - name: Verify API specification stays synchronized
         run: npm run check:api
