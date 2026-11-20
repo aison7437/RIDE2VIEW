@@ -19,7 +19,13 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "expo-linking": "~57.0.14",
-    "expo-constants": "~57.0.24"
+    "expo-constants": "~57.0.24",
+    "expo-font": "~57.0.4",
+    "react-native-worklets": "0.10.1",
+    "react-native-reanimated": "4.5.1",
+    "react-native-gesture-handler": "~2.32.0",
+    "expo-splash-screen": "~57.0.11",
+    "expo-system-ui": "~57.0.4"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
