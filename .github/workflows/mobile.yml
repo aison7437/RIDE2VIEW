@@ -1,0 +1,29 @@
+name: Ride2View Mobile Foundation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mobile-typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install mobile dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify TypeScript
+        run: npm run typecheck
+      - name: Verify Expo dependencies
+        run: npx expo install --check
+      - name: Expo diagnostics
+        run: npx expo-doctor
