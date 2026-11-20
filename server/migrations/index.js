@@ -12,7 +12,8 @@ const {installAnalyticsSchema}=require('../analytics/schema');
 const {installMemorySchema}=require('../memory/schema');
 const {installIntelligenceSchema}=require('../intelligence/schema');
 const {installShoppingSchema}=require('../shopping/schema');
-const CURRENT_SCHEMA_VERSION=28;
+const {installIdentityMembershipSchema}=require('../identity/schema');
+const CURRENT_SCHEMA_VERSION=29;
 function tableExists(db,name){return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name);}
 function columns(db,table){return new Set(db.prepare(`PRAGMA table_info("${String(table).replaceAll('"','""')}")`).all().map(x=>x.name));}
 function migrateLegacyPriceConfirmations(db){
@@ -103,7 +104,8 @@ const migrations=[
   expires_at TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL,
   created_at TEXT NOT NULL,updated_at TEXT NOT NULL
  );CREATE INDEX auth_challenge_destination ON auth_verification_challenges(kind,destination,created_at);
- CREATE INDEX auth_challenge_expiry ON auth_verification_challenges(status,expires_at);`)}
+ CREATE INDEX auth_challenge_expiry ON auth_verification_challenges(status,expires_at);`)},
+ {version:29,name:'identity-v2-membership-foundation',definition:'v29:add isolated organization membership review evidence and append-only audit tables without changing legacy authorization',up:installIdentityMembershipSchema}
 ];
 function checksum(m){return createHash('sha256').update(`${m.version}:${m.name}:${m.definition}`).digest('hex');}
 function ensureMetadata(db){db.exec("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,name TEXT NOT NULL,applied_at TEXT NOT NULL,checksum TEXT)");}
